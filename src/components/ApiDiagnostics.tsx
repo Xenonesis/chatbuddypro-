@@ -77,7 +77,6 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
       case 'openai': return 'OpenAI';
       case 'gemini': return 'Gemini';
       case 'mistral': return 'Mistral';
-      default: return provider.charAt(0).toUpperCase() + provider.slice(1);
     }
   };
   
