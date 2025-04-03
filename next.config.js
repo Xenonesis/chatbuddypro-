@@ -7,6 +7,10 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Add external packages that should be resolved during build time
+  experimental: {
+    serverComponentsExternalPackages: ['react-syntax-highlighter'],
+  },
 };
 
 module.exports = nextConfig; 
