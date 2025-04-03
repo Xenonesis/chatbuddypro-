@@ -1,8 +1,8 @@
-# 🤖 AI Chatbot with Code Highlighting
+# 🤖 ChatBuddy with Code Highlighting
 
 A modern, full-featured chatbot interface that connects to multiple AI providers, featuring beautiful syntax highlighting for code blocks, response time tracking, and regeneration capabilities.
 
-![AI Chatbot App](https://img.shields.io/badge/AI%20Chatbot-Next.js-blue)
+![ChatBuddy App](https://img.shields.io/badge/ChatBuddy-Next.js-blue)
 ![Version](https://img.shields.io/badge/version-1.0.0-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
@@ -37,6 +37,8 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ## 🆕 Recent Updates
 
+- **Server-Client Component Fixes**: Fixed issues with client components to ensure proper rendering and avoid hydration errors
+- **Toast Notification System**: Integrated toast notifications with proper component architecture
 - **Code Block Highlighting**: Added beautiful syntax highlighting for code responses with copy button
 - **Response Time Tracking**: Now shows how long each AI response took to generate
 - **Regenerate Responses**: One-click regeneration of AI responses
@@ -56,7 +58,7 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ```bash
 git clone <repository-url>
-cd chatbot-app
+cd chatbuddy
 ```
 
 2. Install dependencies
