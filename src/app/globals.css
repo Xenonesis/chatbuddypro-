@@ -1,0 +1,348 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    
+    --font-sans: 'var(--font-geist-sans)';
+    --font-mono: 'var(--font-geist-mono)';
+
+    /* Chat mode theme colors */
+    --thoughtful-color: 221.2 83.2% 53.3%;
+    --quick-color: 39 100% 50%;
+    --creative-color: 21 90% 48%;
+    --technical-color: 220 14% 32%;
+    --learning-color: 146 68% 55%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Custom component styles */
+  .card-hover {
+    @apply transition-all duration-300 ease-in-out;
+    @apply hover:translate-y-[-2px] hover:shadow-lg;
+  }
+
+  .message-bubble {
+    @apply rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-sm;
+  }
+
+  /* Chat mode specific styles */
+  .thoughtful-mode .thinking-indicator {
+    @apply text-blue-500 bg-blue-50 border-blue-200;
+  }
+
+  .quick-mode .thinking-indicator {
+    @apply text-yellow-500 bg-yellow-50 border-yellow-200;
+  }
+
+  .creative-mode .thinking-indicator {
+    @apply text-orange-500 bg-orange-50 border-orange-200;
+  }
+
+  .technical-mode .thinking-indicator {
+    @apply text-slate-700 bg-slate-50 border-slate-200;
+  }
+
+  .learning-mode .thinking-indicator {
+    @apply text-emerald-600 bg-emerald-50 border-emerald-200;
+  }
+}
+
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out forwards;
+  }
+
+  .animate-pulse {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-bounce {
+    animation: bounce 1.5s infinite;
+  }
+
+  .animate-thinking {
+    animation: thinking 2s ease-in-out infinite;
+  }
+
+  .animate-typing {
+    animation: typing 1.2s steps(5, end) infinite;
+  }
+
+  .animate-stream {
+    animation: fadeInChar 0.01s ease-in forwards;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes thinking {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes typing {
+  0% { content: '.'; }
+  25% { content: '..'; }
+  50% { content: '...'; }
+  75% { content: '....'; }
+  100% { content: '.....'; }
+}
+
+@keyframes fadeInChar {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsive styles */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+  height: 100%;
+}
+
+/* Improved responsive styles */
+@media (max-width: 640px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  input, 
+  textarea, 
+  button,
+  select {
+    font-size: 16px !important; /* Prevent iOS zoom on focus */
+  }
+
+  .mobile-full {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-basis: 100% !important;
+  }
+  
+  .mobile-compact-p {
+    padding: 0.5rem !important;
+  }
+  
+  .mobile-compact-m {
+    margin: 0.5rem !important;
+  }
+  
+  .mobile-compact-gap {
+    gap: 0.5rem !important;
+  }
+  
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-adaptive {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .tablet-row {
+    flex-direction: row !important;
+  }
+  
+  .tablet-center {
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  
+  .h-screen {
+    height: 100dvh !important; /* Dynamic viewport height for mobile */
+  }
+}
+
+/* Safe area insets for notched phones */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Touch-friendly hover effects */
+@media (hover: hover) {
+  .hover-scale {
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+}
+
+/* Smooth scrolling for entire page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better scroll experience on mobile */
+@media (max-width: 640px) {
+  .chat-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: 20px;
+    scroll-behavior: smooth;
+  }
+  
+  .chat-input {
+    position: sticky;
+    bottom: 0;
+    background-color: inherit;
+    z-index: 10;
+  }
+}
+
+/* Fix for 100vh on mobile browsers */
+.h-screen, 
+.h-\[100vh\], 
+.min-h-screen,
+.max-h-screen {
+  height: 100dvh;
+}
+
+/* Prevent content from being hidden behind floating elements */
+.pb-safe {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Better responsive text */
+.responsive-text {
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.responsive-heading {
+  font-size: clamp(1.25rem, 3vw, 1.875rem);
+}
