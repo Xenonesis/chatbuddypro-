@@ -10,7 +10,15 @@ A modern chatbot interface built with Next.js and Shadcn UI that can connect to 
   - Google Gemini
   - Mistral AI
 - Real-time chat interface with typing indicators
+- Dark/Light theme support with next-themes
+- Proper TypeScript support with full type safety
 - Easy to customize and extend
+
+## Recent Updates
+
+- Fixed type errors in ApiDiagnostics component for better type safety
+- Improved theme provider implementation with proper next-themes integration
+- Enhanced provider settings handling with proper TypeScript types
 
 ## Setup
 
