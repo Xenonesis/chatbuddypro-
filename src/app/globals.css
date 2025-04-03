@@ -28,12 +28,17 @@
     --font-sans: 'var(--font-geist-sans)';
     --font-mono: 'var(--font-geist-mono)';
 
-    /* Chat mode theme colors */
-    --thoughtful-color: 221.2 83.2% 53.3%;
-    --quick-color: 39 100% 50%;
-    --creative-color: 21 90% 48%;
-    --technical-color: 220 14% 32%;
-    --learning-color: 146 68% 55%;
+    /* Enhanced Chat mode theme colors */
+    --thoughtful-gradient-from: 221.2 83.2% 53.3%;
+    --thoughtful-gradient-to: 225 95% 65%; 
+    --quick-gradient-from: 39 100% 50%;
+    --quick-gradient-to: 45 100% 60%;
+    --creative-gradient-from: 21 90% 48%;
+    --creative-gradient-to: 15 95% 55%;
+    --technical-gradient-from: 220 14% 32%;
+    --technical-gradient-to: 215 20% 45%;
+    --learning-gradient-from: 146 68% 55%;
+    --learning-gradient-to: 150 80% 65%;
   }
 
   .dark {
@@ -56,6 +61,18 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+
+    /* Enhanced Dark mode gradient adjustments */
+    --thoughtful-gradient-from: 220 90% 50%;
+    --thoughtful-gradient-to: 225 95% 60%;
+    --quick-gradient-from: 39 90% 45%;
+    --quick-gradient-to: 45 95% 55%;
+    --creative-gradient-from: 21 80% 45%;
+    --creative-gradient-to: 15 85% 50%;
+    --technical-gradient-from: 220 25% 35%;
+    --technical-gradient-to: 215 30% 45%;
+    --learning-gradient-from: 146 60% 45%;
+    --learning-gradient-to: 150 70% 55%;
   }
   
   body {
@@ -68,32 +85,96 @@
   /* Custom component styles */
   .card-hover {
     @apply transition-all duration-300 ease-in-out;
-    @apply hover:translate-y-[-2px] hover:shadow-lg;
+    @apply hover:translate-y-[-3px] hover:shadow-xl;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right bottom, rgba(255,255,255,0.05), rgba(255,255,255,0));
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    pointer-events: none;
+  }
+
+  .card-hover:hover::after {
+    opacity: 1;
   }
 
   .message-bubble {
     @apply rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-sm;
+    position: relative;
+    overflow: hidden;
   }
 
-  /* Chat mode specific styles */
+  .message-bubble::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.7;
+  }
+
+  /* Enhanced Chat mode specific styles with gradients */
   .thoughtful-mode .thinking-indicator {
-    @apply text-blue-500 bg-blue-50 border-blue-200;
+    @apply text-blue-500 border-blue-200;
+    background: linear-gradient(135deg, hsl(var(--thoughtful-gradient-from) / 0.1), hsl(var(--thoughtful-gradient-to) / 0.15));
   }
 
   .quick-mode .thinking-indicator {
-    @apply text-yellow-500 bg-yellow-50 border-yellow-200;
+    @apply text-yellow-500 border-yellow-200;
+    background: linear-gradient(135deg, hsl(var(--quick-gradient-from) / 0.1), hsl(var(--quick-gradient-to) / 0.15));
   }
 
   .creative-mode .thinking-indicator {
-    @apply text-orange-500 bg-orange-50 border-orange-200;
+    @apply text-orange-500 border-orange-200;
+    background: linear-gradient(135deg, hsl(var(--creative-gradient-from) / 0.1), hsl(var(--creative-gradient-to) / 0.15));
   }
 
   .technical-mode .thinking-indicator {
-    @apply text-slate-700 bg-slate-50 border-slate-200;
+    @apply text-slate-700 border-slate-200;
+    background: linear-gradient(135deg, hsl(var(--technical-gradient-from) / 0.1), hsl(var(--technical-gradient-to) / 0.15));
   }
 
   .learning-mode .thinking-indicator {
-    @apply text-emerald-600 bg-emerald-50 border-emerald-200;
+    @apply text-emerald-600 border-emerald-200;
+    background: linear-gradient(135deg, hsl(var(--learning-gradient-from) / 0.1), hsl(var(--learning-gradient-to) / 0.15));
+  }
+
+  /* Gradient Buttons */
+  .gradient-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .gradient-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .gradient-button:hover::before {
+    opacity: 1;
   }
 }
 
@@ -124,6 +205,22 @@
 
   .animate-stream {
     animation: fadeInChar 0.01s ease-in forwards;
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+  }
+
+  .bg-gradient-accent {
+    background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent) / 0.8));
   }
 }
 
@@ -198,6 +295,27 @@
   }
 }
 
+@keyframes glow {
+  from {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -210,12 +328,25 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: linear-gradient(to bottom, #94a3b8, #64748b);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #475569, #334155);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #334155, #1e293b);
 }
 
 /* Responsive styles */
@@ -264,9 +395,9 @@ html {
 
 @media (min-width: 641px) and (max-width: 1024px) {
   .tablet-adaptive {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-basis: 100% !important;
   }
   
   .tablet-row {
@@ -274,75 +405,130 @@ html {
   }
   
   .tablet-center {
-    align-items: center !important;
+    display: flex !important;
     justify-content: center !important;
-    text-align: center !important;
-  }
-  
-  .h-screen {
-    height: 100dvh !important; /* Dynamic viewport height for mobile */
+    align-items: center !important;
   }
 }
 
-/* Safe area insets for notched phones */
-@supports (padding: max(0px)) {
-  body {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+/* Viewport height fix for mobile browsers */
+.h-screen {
+  height: 100vh; /* Fallback */
+  height: 100dvh; /* Dynamic viewport height */
 }
 
-/* Touch-friendly hover effects */
+/* Ensure the body takes full height */
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hover effects only for devices that support hover */
 @media (hover: hover) {
   .hover-scale {
     transition: transform 0.2s ease-in-out;
   }
   
   .hover-scale:hover {
-    transform: scale(1.02);
+    transform: scale(1.03);
   }
 }
 
-/* Smooth scrolling for entire page */
+/* Fix layout for mobile browsers */
 html {
-  scroll-behavior: smooth;
+  overflow-x: hidden;
+  position: relative;
 }
 
-/* Better scroll experience on mobile */
 @media (max-width: 640px) {
   .chat-scroll {
-    -webkit-overflow-scrolling: touch;
-    scroll-padding-bottom: 20px;
-    scroll-behavior: smooth;
+    max-height: calc(100vh - 150px);
+    max-height: calc(100dvh - 150px);
+    overflow-y: auto;
   }
   
   .chat-input {
     position: sticky;
     bottom: 0;
     background-color: inherit;
-    z-index: 10;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
-/* Fix for 100vh on mobile browsers */
+/* Safe area insets */
 .h-screen, 
-.h-\[100vh\], 
-.min-h-screen,
-.max-h-screen {
-  height: 100dvh;
+.min-h-screen {
+  height: 100vh;
+  height: calc(100vh - env(safe-area-inset-bottom));
+  height: calc(100dvh - env(safe-area-inset-bottom));
 }
 
-/* Prevent content from being hidden behind floating elements */
 .pb-safe {
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Better responsive text */
+/* Responsive text sizing */
 .responsive-text {
   font-size: clamp(0.875rem, 2vw, 1rem);
 }
 
 .responsive-heading {
-  font-size: clamp(1.25rem, 3vw, 1.875rem);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+/* Code block styles */
+.code-message {
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+pre {
+  border-radius: 0.5rem;
+  background-color: hsl(var(--slate-950));
+  color: hsl(var(--slate-100));
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background-color: hsl(var(--slate-100));
+  color: hsl(var(--slate-900));
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+}
+
+.dark code {
+  background-color: hsl(var(--slate-800));
+  color: hsl(var(--slate-100));
+}
+
+/* Syntax highlighting theme colors */
+.hljs-string {
+  color: hsl(var(--green-400));
+}
+
+.hljs-keyword {
+  color: hsl(var(--blue-400));
+}
+
+.hljs-function {
+  color: hsl(var(--purple-400));
+}
+
+.dark .hljs-string {
+  color: hsl(var(--green-300));
+}
+
+.dark .hljs-keyword {
+  color: hsl(var(--blue-300));
+}
+
+.dark .hljs-function {
+  color: hsl(var(--purple-300));
 }

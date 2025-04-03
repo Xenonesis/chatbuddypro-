@@ -1,27 +1,49 @@
-# AI Chatbot with Shadcn UI
+# 🤖 AI Chatbot with Code Highlighting
 
-A modern chatbot interface built with Next.js and Shadcn UI that can connect to multiple AI models including OpenAI, Google Gemini, and Mistral.
+A modern, full-featured chatbot interface that connects to multiple AI providers, featuring beautiful syntax highlighting for code blocks, response time tracking, and regeneration capabilities.
 
-## Features
+![AI Chatbot App](https://img.shields.io/badge/AI%20Chatbot-Next.js-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-green)
+![License](https://img.shields.io/badge/license-MIT-orange)
 
-- Clean, responsive UI built with Shadcn UI components
-- Support for multiple AI providers:
-  - OpenAI (GPT-3.5/GPT-4)
-  - Google Gemini
-  - Mistral AI
-- Real-time chat interface with typing indicators
-- Dark/Light theme support with next-themes
-- Proper TypeScript support with full type safety
-- Easy to customize and extend
+## ✨ Features
 
-## Recent Updates
+- **Multiple AI Providers Support**:
+  - 🔷 OpenAI (GPT-3.5/GPT-4/GPT-4o)
+  - 🔶 Google Gemini
+  - 🟣 Mistral AI
+  - 🟠 Anthropic Claude
+  - 🟢 Meta's Llama
+  - 🔵 Deepseek
+  
+- **Enhanced Code Experience**:
+  - ✅ Syntax highlighting for code blocks with 100+ language support
+  - ✅ Copy-to-clipboard functionality for code snippets
+  - ✅ Automatic language detection and display
+  - ✅ Code organization with proper spacing and indentation
+  
+- **Advanced UI Features**:
+  - 🌙 Dark/Light theme support
+  - ⏱️ Response time tracking for AI replies
+  - 🔄 One-click regeneration for AI responses
+  - 💬 "Thinking process" visualization option
+  - 🧠 Multiple chat modes (Technical, Creative, Quick, etc.)
 
-- Fixed type errors in ApiDiagnostics component for better type safety
-- Added path mapping in tsconfig.json for next-themes module types
-- Improved theme provider implementation with proper next-themes integration
-- Enhanced provider settings handling with proper TypeScript types
+- **Developer Experience**:
+  - 🛠️ Fully typed with TypeScript
+  - 📦 Built with modern React and Next.js
+  - 🎨 Styled with Tailwind CSS and Shadcn UI
+  - 📱 Responsive design for all device sizes
 
-## Setup
+## 🆕 Recent Updates
+
+- **Code Block Highlighting**: Added beautiful syntax highlighting for code responses with copy button
+- **Response Time Tracking**: Now shows how long each AI response took to generate
+- **Regenerate Responses**: One-click regeneration of AI responses
+- **Code Question Detection**: Automatic detection of coding questions for better formatting
+- **UI Enhancements**: Improved dark mode support and responsive design
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -71,12 +93,10 @@ Then edit the `.env.local` file and add your API keys:
 NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
 NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
 NEXT_PUBLIC_MISTRAL_API_KEY=your_mistral_api_key_here
+NEXT_PUBLIC_CLAUDE_API_KEY=your_claude_api_key_here
+NEXT_PUBLIC_LLAMA_API_KEY=your_llama_api_key_here
+NEXT_PUBLIC_DEEPSEEK_API_KEY=your_deepseek_api_key_here
 ```
-
-You can obtain API keys from:
-- OpenAI: https://platform.openai.com/api-keys
-- Google Gemini: https://aistudio.google.com/app/apikey
-- Mistral: https://console.mistral.ai/api-keys/
 
 ### Running the Application
 
@@ -90,28 +110,56 @@ yarn dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-## Usage
+## 💻 Usage
 
-1. Choose your preferred AI model (OpenAI, Gemini, or Mistral)
-2. Type your message in the input field
-3. Press Enter or click the Send button to send your message
-4. The AI will respond with a message
+1. Choose your preferred AI model from the dropdown
+2. Select a chat mode (Thoughtful, Quick, Technical, Creative, Learning)
+3. Type your message or coding question
+4. Press Enter or click the Send button
+5. View the AI's response with beautiful formatting for code blocks
+6. Use the regenerate button if you want a different response
 
-## Customization
+### Code Highlighting
 
-### Changing UI Components
+When asking coding questions, the AI will automatically format code responses with proper syntax highlighting. The code blocks include:
 
-The UI components are built with Shadcn UI. You can customize their appearance by modifying the files in `src/components/ui/`.
+- Proper language detection and display
+- Syntax highlighting based on the language
+- Line numbers for reference
+- Copy-to-clipboard functionality
+- Dark/light mode compatibility
+
+## 🧩 Architecture
+
+The application is built with Next.js and React, using the following architecture:
+
+- **UI Components**: Built with Shadcn UI and Tailwind CSS
+- **AI Integration**: Unified API service that connects to multiple providers
+- **State Management**: React Context API for managing chat state
+- **Theming**: Next-themes for dark/light mode support
+- **Code Formatting**: React Syntax Highlighter for code blocks
+
+## 🛠️ Customization
 
 ### Adding More AI Providers
 
 To add more AI providers, update the following:
 
 1. Add a new API function in `src/lib/api.ts`
-2. Add the new provider to the `APIProvider` type in `src/components/Chat.tsx`
-3. Add a new button for the provider in the Chat component
-4. Update the `handleSend` function to handle the new provider
+2. Add the new provider to the `AIProvider` type in `src/lib/context/ModelSettingsContext.tsx`
+3. Update the settings UI in `src/app/settings/page.tsx`
+4. Add provider specific handling in `src/components/Chat.tsx`
 
-## License
+## 📄 License
 
 MIT
+
+## 👨‍💻 Developer
+
+Developed with ❤️ by [Aditya](https://github.com/addy)
+
+---
+
+### Screenshots
+
+*Coming soon*

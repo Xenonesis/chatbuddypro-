@@ -4,12 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { SendIcon, Settings, Loader2, X, Menu, Brain, Zap, Lightbulb, Code, GraduationCap, Eye, EyeOff, ChevronDown, MessageSquare } from 'lucide-react';
+import { SendIcon, Settings, Loader2, X, Menu, Brain, Zap, Lightbulb, Code, GraduationCap, Eye, EyeOff, ChevronDown, MessageSquare, RefreshCw, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { callAI, ChatMessage } from '@/lib/api';
 import { useModelSettings, AIProvider, ChatMode } from '@/lib/context/ModelSettingsContext';
-import { useClientOnly } from '@/lib/utils';
+import { useClientOnly, containsCodeBlock, isCodingQuestion } from '@/lib/utils';
 import ApiDiagnostics from "./ApiDiagnostics";
+import { FormattedMessage } from '@/components/ui-custom/FormattedMessage';
 
 type Message = {
   id: string;
@@ -17,6 +18,7 @@ type Message = {
   role: 'user' | 'assistant';
   timestamp: Date;
   thinking?: string;
+  responseTime?: number;
 };
 
 export default function Chat() {
@@ -67,6 +69,19 @@ export default function Chat() {
     )
     .map(([key]) => key as AIProvider);
 
+  // Check if the current provider has an API key configured
+  const hasApiKey = (provider: AIProvider): boolean => {
+    return !!settings[provider]?.apiKey;
+  };
+
+  // Get available models for the current provider
+  const getAvailableModels = (): string[] => {
+    // If no API key is configured for this provider, return empty array
+    if (!hasApiKey(currentProvider)) return [];
+    // Otherwise, return all models for this provider
+    return settings[currentProvider].models;
+  };
+
   // Effect to set initial provider
   useEffect(() => {
     // If current provider is disabled, switch to the default or first available
@@ -115,6 +130,22 @@ export default function Chat() {
   const handleSend = async () => {
     if (!input.trim()) return;
     
+    // Check if the current provider has an API key
+    if (!hasApiKey(currentProvider)) {
+      // Add an error message
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: `Error: No API key configured for ${getProviderDisplayName(currentProvider)}. Please go to Settings and add your API key.`,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
+    
+    // Detect if this is a coding question
+    const isCodeQuestion = isCodingQuestion(input);
+    
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -130,15 +161,28 @@ export default function Chat() {
     
     // Track the original provider to detect if we need to fallback
     const originalProvider = currentProvider;
+    const startTime = performance.now();
     
     try {
       // Simulate thinking process
       simulateThinking();
       
       // Convert messages to the format expected by API
-      const apiMessages: ChatMessage[] = messages
+      let apiMessages: ChatMessage[] = messages
         .concat(userMessage)
         .map(({ role, content }) => ({ role, content }));
+      
+      // If this is a coding question, add a hint to the system to format the response with code blocks
+      if (isCodeQuestion) {
+        // Add a system message to guide the AI to format the response with code blocks
+        apiMessages = [
+          { 
+            role: 'system', 
+            content: 'The user is asking a coding question. When appropriate, format your response with code blocks using markdown syntax (```language\ncode```) for any code examples. Make sure to use the correct language identifier for proper syntax highlighting.' 
+          },
+          ...apiMessages
+        ];
+      }
       
       // Debug check for Gemini API key when using Gemini
       if (currentProvider === 'gemini') {
@@ -164,6 +208,8 @@ export default function Chat() {
       
       // Make API call using the unified callAI function
       const response = await callAI(apiMessages, currentProvider, settings);
+      const endTime = performance.now();
+      const responseTime = Math.round(endTime - startTime) / 1000;
       
       // Add assistant message
       const assistantMessage: Message = {
@@ -171,7 +217,8 @@ export default function Chat() {
         content: response,
         role: 'assistant',
         timestamp: new Date(),
-        thinking: thinking || undefined
+        thinking: thinking || undefined,
+        responseTime
       };
       
       setThinking('');
@@ -271,6 +318,94 @@ The app will automatically try to fall back to the standard gemini-pro model. If
     }
   };
 
+  // Add regenerate function to re-send the last user message
+  const handleRegenerate = async () => {
+    if (isLoading || messages.length < 2) return;
+    
+    // Find the last user message index (scanning from the end)
+    const messagesReversed = [...messages].reverse();
+    const lastUserMessageIndex = messagesReversed.findIndex(m => m.role === 'user');
+    
+    if (lastUserMessageIndex === -1) return;
+    
+    // Get the actual index in the original array
+    const actualLastUserIndex = messages.length - 1 - lastUserMessageIndex;
+    
+    // Get the last user message content
+    const lastUserMessage = messages[actualLastUserIndex];
+    
+    // Check if it's a coding question
+    const isCodeQuestion = isCodingQuestion(lastUserMessage.content);
+    
+    // Keep messages up to and including the last user message
+    const messagesToKeep = messages.slice(0, actualLastUserIndex + 1);
+    setMessages(messagesToKeep);
+    
+    // Process the regeneration
+    setIsLoading(true);
+    setThinking('');
+    
+    const startTime = performance.now();
+    
+    try {
+      // Simulate thinking process
+      simulateThinking();
+      
+      // Convert messages to the format expected by API
+      let apiMessages: ChatMessage[] = messagesToKeep
+        .map(({ role, content }) => ({ role, content }));
+      
+      // If this is a coding question, add a hint to the system to format the response with code blocks
+      if (isCodeQuestion) {
+        // Add a system message to guide the AI to format the response with code blocks
+        apiMessages = [
+          { 
+            role: 'system', 
+            content: 'The user is asking a coding question. When appropriate, format your response with code blocks using markdown syntax (```language\ncode```) for any code examples. Make sure to use the correct language identifier for proper syntax highlighting.' 
+          },
+          ...apiMessages
+        ];
+      }
+      
+      // Make API call using the unified callAI function
+      const response = await callAI(apiMessages, currentProvider, settings);
+      const endTime = performance.now();
+      const responseTime = Math.round(endTime - startTime) / 1000;
+      
+      // Add regenerated assistant message
+      const assistantMessage: Message = {
+        id: Date.now().toString(),
+        content: response,
+        role: 'assistant',
+        timestamp: new Date(),
+        thinking: thinking || undefined,
+        responseTime
+      };
+      
+      setThinking('');
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error regenerating response:', error);
+      
+      // Create error message
+      let errorContent = error instanceof Error 
+        ? `Error: ${error.message}` 
+        : 'Sorry, an error occurred while regenerating the response.';
+      
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: errorContent,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -284,22 +419,53 @@ The app will automatically try to fall back to the standard gemini-pro model. If
     return settings[currentProvider].selectedModel;
   };
 
-  // Function to get model pricing info for Gemini models
+  // Function to get model pricing info for models
   const getModelPricingInfo = (model: string) => {
-    if (!model.startsWith('gemini')) return null;
-    
-    switch(model) {
-      case 'gemini-1.5-pro': 
-        return 'Pricing: $1.25/1M input tokens, $5/1M output tokens';
-      case 'gemini-1.5-flash': 
-        return 'Pricing: 7.5¢/1M input tokens, 30¢/1M output tokens';
-      case 'gemini-2.0-flash': 
-        return 'Pricing: 10¢/1M input tokens, 40¢/1M output tokens';
-      case 'gemini-2.0-flash-lite': 
-        return 'Pricing: 7.5¢/1M input tokens, 30¢/1M output tokens';
-      default:
-        return null;
+    // Gemini models
+    if (model.startsWith('gemini')) {
+      switch(model) {
+        case 'gemini-1.5-pro': 
+          return 'Pricing: $1.25/1M input tokens, $5/1M output tokens';
+        case 'gemini-1.5-flash': 
+          return 'Pricing: 7.5¢/1M input tokens, 30¢/1M output tokens';
+        case 'gemini-2.0-flash': 
+          return 'Pricing: 10¢/1M input tokens, 40¢/1M output tokens';
+        case 'gemini-2.0-flash-lite': 
+          return 'Pricing: 7.5¢/1M input tokens, 30¢/1M output tokens';
+        default:
+          return null;
+      }
     }
+    
+    // Claude models
+    if (model.startsWith('claude')) {
+      switch(model) {
+        case 'claude-3-5-sonnet-20240620': 
+          return 'Pricing: $3/1M input tokens, $15/1M output tokens';
+        case 'claude-3-opus-20240229': 
+          return 'Pricing: $15/1M input tokens, $75/1M output tokens';
+        case 'claude-3-sonnet-20240229': 
+          return 'Pricing: $3/1M input tokens, $15/1M output tokens';
+        case 'claude-3-haiku-20240307': 
+          return 'Pricing: $0.25/1M input tokens, $1.25/1M output tokens';
+        default:
+          return null;
+      }
+    }
+    
+    // Llama models via Together.ai
+    if (model.startsWith('llama')) {
+      switch(model) {
+        case 'llama-3-8b-instruct': 
+          return 'Pricing varies by provider';
+        case 'llama-3-70b-instruct': 
+          return 'Pricing varies by provider';
+        default:
+          return null;
+      }
+    }
+    
+    return null;
   };
 
   // Function to get provider display name
@@ -308,6 +474,9 @@ The app will automatically try to fall back to the standard gemini-pro model. If
       case 'openai': return 'OpenAI';
       case 'gemini': return 'Gemini';
       case 'mistral': return 'Mistral';
+      case 'claude': return 'Claude';
+      case 'llama': return 'Llama';
+      case 'deepseek': return 'Deepseek';
       default: return (provider as string).charAt(0).toUpperCase() + (provider as string).slice(1);
     }
   };
@@ -318,6 +487,9 @@ The app will automatically try to fall back to the standard gemini-pro model. If
       case 'openai': return '#10B981'; // text-green-500
       case 'gemini': return '#3B82F6'; // text-blue-500
       case 'mistral': return '#8B5CF6'; // text-purple-500
+      case 'claude': return '#F59E0B'; // text-amber-500
+      case 'llama': return '#F97316'; // text-orange-500 
+      case 'deepseek': return '#14B8A6'; // text-teal-500
       default: return '#6B7280'; // text-gray-500
     }
   };
@@ -328,6 +500,9 @@ The app will automatically try to fall back to the standard gemini-pro model. If
       case 'openai': return 'bg-green-100';
       case 'gemini': return 'bg-blue-100';
       case 'mistral': return 'bg-purple-100';
+      case 'claude': return 'bg-amber-100';
+      case 'llama': return 'bg-orange-100';
+      case 'deepseek': return 'bg-teal-100';
       default: return 'bg-gray-100';
     }
   };
@@ -338,6 +513,9 @@ The app will automatically try to fall back to the standard gemini-pro model. If
       case 'openai': return 'text-green-500';
       case 'gemini': return 'text-blue-500';
       case 'mistral': return 'text-purple-500';
+      case 'claude': return 'text-amber-500';
+      case 'llama': return 'text-orange-500';
+      case 'deepseek': return 'text-teal-500';
       default: return 'text-gray-500';
     }
   };
@@ -412,6 +590,9 @@ The app will automatically try to fall back to the standard gemini-pro model. If
             >
               <div className="w-2 h-2 rounded-full" style={{backgroundColor: getProviderColor(currentProvider)}}></div>
               <span className="font-medium">{getProviderDisplayName(currentProvider)}</span>
+              {!hasApiKey(currentProvider) && (
+                <span className="text-amber-500 dark:text-amber-400" title="API key not configured">⚠️</span>
+              )}
               <ChevronDown className="h-3 w-3 opacity-50" />
             </Button>
             
@@ -429,6 +610,9 @@ The app will automatically try to fall back to the standard gemini-pro model. If
                   >
                     <div className="w-2 h-2 rounded-full" style={{backgroundColor: getProviderColor(provider)}}></div>
                     <span className="font-medium">{getProviderDisplayName(provider)}</span>
+                    {!hasApiKey(provider) && (
+                      <span className="ml-1 text-amber-500 dark:text-amber-400" title="API key not configured">⚠️</span>
+                    )}
                     {currentProvider === provider && (
                       <div className="ml-auto">✓</div>
                     )}
@@ -451,23 +635,32 @@ The app will automatically try to fall back to the standard gemini-pro model. If
             
             {showModelMenu && (
               <div className="absolute top-full left-0 mt-1 w-48 max-h-48 overflow-y-auto bg-white dark:bg-slate-800 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 py-1 z-50">
-                {settings[currentProvider].models.map((model) => (
-                  <button
-                    key={model}
-                    className="flex flex-col items-start gap-1 w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors"
-                    onClick={() => handleModelChange(model)}
-                  >
-                    <span className="font-medium">{model}</span>
-                    {getModelPricingInfo(model) && (
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {getModelPricingInfo(model)}
-                      </span>
-                    )}
-                    {settings[currentProvider].selectedModel === model && (
-                      <div className="ml-auto">✓</div>
-                    )}
-                  </button>
-                ))}
+                {hasApiKey(currentProvider) ? (
+                  settings[currentProvider].models.map((model) => (
+                    <button
+                      key={model}
+                      className="flex flex-col items-start gap-1 w-full px-3 py-1.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors"
+                      onClick={() => handleModelChange(model)}
+                    >
+                      <span className="font-medium">{model}</span>
+                      {getModelPricingInfo(model) && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {getModelPricingInfo(model)}
+                        </span>
+                      )}
+                      {settings[currentProvider].selectedModel === model && (
+                        <div className="ml-auto">✓</div>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-3 py-3 text-xs text-center text-orange-600 dark:text-orange-400">
+                    <p>No API key configured for {getProviderDisplayName(currentProvider)}.</p>
+                    <Link href="/settings" className="mt-2 inline-block underline">
+                      Add API key in Settings
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -550,7 +743,11 @@ The app will automatically try to fall back to the standard gemini-pro model. If
                     <AvatarFallback className={message.role === 'user' ? 'bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-300' : `${getProviderBgColor(currentProvider)} ${getProviderTextColor(currentProvider)} dark:bg-slate-800 dark:text-slate-300`}>
                       {message.role === 'user' ? 'U' : 
                        currentProvider === 'openai' ? 'O' : 
-                       currentProvider === 'gemini' ? 'G' : 'M'}
+                       currentProvider === 'gemini' ? 'G' : 
+                       currentProvider === 'mistral' ? 'M' :
+                       currentProvider === 'claude' ? 'C' :
+                       currentProvider === 'llama' ? 'L' :
+                       currentProvider === 'deepseek' ? 'D' : 'AI'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-1.5 sm:space-y-2">
@@ -559,8 +756,12 @@ The app will automatically try to fall back to the standard gemini-pro model. If
                         ? 'bg-blue-500 text-white dark:bg-blue-600' 
                         : 'bg-white border border-gray-200 text-slate-700 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
                     }`}>
-                      <div className="whitespace-pre-wrap text-xs sm:text-sm responsive-text">
-                        {message.content}
+                      <div className="text-xs sm:text-sm responsive-text">
+                        {message.role === 'user' ? (
+                          <div className="whitespace-pre-wrap">{message.content}</div>
+                        ) : (
+                          <FormattedMessage content={message.content} />
+                        )}
                       </div>
                     </div>
                     {message.thinking && settings.showThinking && (
@@ -570,8 +771,30 @@ The app will automatically try to fall back to the standard gemini-pro model. If
                         </p>
                       </div>
                     )}
-                    <div className={`text-[10px] text-slate-400 ${message.role === 'user' ? 'text-right' : ''}`}>
-                      {new Date(message.timestamp).toLocaleTimeString()}
+                    <div className={`flex items-center text-[10px] text-slate-400 ${message.role === 'user' ? 'justify-end' : 'justify-between'}`}>
+                      <div className="flex items-center">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                        {message.role === 'assistant' && message.responseTime && (
+                          <span className="ml-1.5">· {message.responseTime.toFixed(1)}s</span>
+                        )}
+                        {message.role === 'assistant' && containsCodeBlock(message.content) && (
+                          <span className="ml-1.5 flex items-center bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1 py-0.5 rounded text-[8px] font-medium">
+                            <Code className="h-2.5 w-2.5 mr-0.5" />
+                            CODE
+                          </span>
+                        )}
+                      </div>
+                      {message.role === 'assistant' && !isLoading && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleRegenerate}
+                          className="h-5 w-5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 ml-1"
+                          title="Regenerate response"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
