@@ -18,7 +18,8 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
   const { settings } = useModelSettings();
   const [diagnostics, setDiagnostics] = useState<ReturnType<typeof validateApiConfiguration> | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const hasApiKey = Boolean(settings[provider]?.apiKey);
+  const providerSettings = settings[provider];
+  const hasApiKey = Boolean(providerSettings?.apiKey);
   
   useEffect(() => {
     // Run validation on mount
@@ -147,11 +148,11 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
               <div className="flex items-center justify-between text-sm">
                 <span>Model:</span>
                 <Badge variant="outline" className="font-mono text-xs px-1.5 py-0">
-                  {settings[provider].selectedModel}
+                  {providerSettings.selectedModel}
                 </Badge>
               </div>
               <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {getModelDescription(provider, settings[provider].selectedModel)}
+                {getModelDescription(provider, providerSettings.selectedModel)}
               </div>
             </div>
             
@@ -172,12 +173,12 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
           <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
               <span>Temperature:</span>
-              <span className="font-mono">{settings[provider].temperature}</span>
+              <span className="font-mono">{providerSettings.temperature}</span>
             </div>
             
             <div className="flex items-center justify-between">
               <span>Max Tokens:</span>
-              <span className="font-mono">{settings[provider].maxTokens}</span>
+              <span className="font-mono">{providerSettings.maxTokens}</span>
             </div>
             
             <div className="flex items-center justify-between">
