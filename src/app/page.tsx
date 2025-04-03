@@ -37,7 +37,7 @@ export default function Home() {
               <div className="flex-grow text-center sm:text-left">
                 <h2 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-slate-200 mb-1.5 sm:mb-2">Connect Your AI Service</h2>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-3 sm:mb-4 max-w-md">
-                  To start chatting, you need to add at least one API key for OpenAI, Google Gemini, or Mistral AI.
+                  To start chatting, you need to add at least one API key for OpenAI, Google Gemini, Mistral AI, Claude, Llama, or Deepseek.
                   Your API keys are stored locally in your browser and never sent to any server.
                 </p>
                 <Link href="/settings">
@@ -59,7 +59,7 @@ export default function Home() {
               </div>
               <h3 className="font-medium text-slate-800 dark:text-slate-200 mb-0.5 sm:mb-1 text-sm sm:text-base">Multiple AI Models</h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                Choose between OpenAI, Google Gemini, and Mistral AI models
+                Choose from OpenAI, Google Gemini, Mistral, Claude, Llama, and Deepseek
               </p>
             </div>
             

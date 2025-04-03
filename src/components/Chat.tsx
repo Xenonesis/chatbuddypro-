@@ -4,11 +4,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { SendIcon, Settings, Loader2, X, Menu, Brain, Zap, Lightbulb, Code, GraduationCap, Eye, EyeOff, ChevronDown, MessageSquare, RefreshCw, Copy } from 'lucide-react';
+import { 
+  SendIcon, 
+  Loader2, 
+  Brain, 
+  Zap, 
+  Lightbulb, 
+  Code, 
+  GraduationCap, 
+  Eye, 
+  EyeOff, 
+  ChevronDown, 
+  MessageSquare, 
+  RefreshCw
+} from 'lucide-react';
 import Link from 'next/link';
 import { callAI, ChatMessage } from '@/lib/api';
 import { useModelSettings, AIProvider, ChatMode } from '@/lib/context/ModelSettingsContext';
-import { useClientOnly, containsCodeBlock, isCodingQuestion } from '@/lib/utils';
+import { containsCodeBlock, isCodingQuestion } from '@/lib/utils';
 import ApiDiagnostics from "./ApiDiagnostics";
 import { FormattedMessage } from '@/components/ui-custom/FormattedMessage';
 
@@ -35,7 +48,6 @@ export default function Chat() {
   const providerMenuRef = useRef<HTMLDivElement>(null);
   const modeMenuRef = useRef<HTMLDivElement>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
-  const isClient = useClientOnly();
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -72,14 +84,6 @@ export default function Chat() {
   // Check if the current provider has an API key configured
   const hasApiKey = (provider: AIProvider): boolean => {
     return !!settings[provider]?.apiKey;
-  };
-
-  // Get available models for the current provider
-  const getAvailableModels = (): string[] => {
-    // If no API key is configured for this provider, return empty array
-    if (!hasApiKey(currentProvider)) return [];
-    // Otherwise, return all models for this provider
-    return settings[currentProvider].models;
   };
 
   // Effect to set initial provider
@@ -178,10 +182,40 @@ export default function Chat() {
         apiMessages = [
           { 
             role: 'system', 
-            content: 'The user is asking a coding question. When appropriate, format your response with code blocks using markdown syntax (```language\ncode```) for any code examples. Make sure to use the correct language identifier for proper syntax highlighting.' 
+            content: `The user is asking a coding question. Please provide a COMPLETE and COMPREHENSIVE code solution, following these guidelines:
+
+1. Use markdown code blocks with proper language tags: \`\`\`language\ncode\`\`\`
+2. Always specify the correct language (e.g. \`\`\`javascript, \`\`\`python, \`\`\`css) for syntax highlighting
+3. For JavaScript code, use \`\`\`javascript specifically (not just \`\`\`js)
+4. For CSS code, put it in \`\`\`css code blocks
+5. Provide FULL, WORKING implementations - do not abbreviate or truncate code with comments like "// more code here"
+6. Include ALL necessary imports, dependencies, and supporting code needed to make the solution work
+7. When showing multiple files or components, clearly label each one and provide complete code for each
+8. Use separate code blocks for different languages or files
+9. Format code with proper indentation and maintain consistent style
+10. Include helpful comments to explain complex sections
+11. When appropriate, provide a brief explanation of how the code works
+
+Remember: It's better to provide a COMPLETE solution that fully addresses the user's need than a partial or simplified one.` 
           },
           ...apiMessages
         ];
+      }
+      
+      // Adjust API settings for coding questions to allow for longer responses
+      const apiSettings = {...settings};
+      if (isCodeQuestion) {
+        // For coding questions, increase the max tokens to allow for complete code examples
+        if (apiSettings[currentProvider]?.maxTokens) {
+          const currentMaxTokens = apiSettings[currentProvider].maxTokens;
+          apiSettings[currentProvider].maxTokens = Math.max(currentMaxTokens, 8000);
+        }
+        
+        // Also reduce temperature slightly for more precise code generation
+        if (apiSettings[currentProvider]?.temperature) {
+          const currentTemp = apiSettings[currentProvider].temperature;
+          apiSettings[currentProvider].temperature = Math.min(currentTemp, 0.7);
+        }
       }
       
       // Debug check for Gemini API key when using Gemini
@@ -206,8 +240,8 @@ export default function Chat() {
         }
       }
       
-      // Make API call using the unified callAI function
-      const response = await callAI(apiMessages, currentProvider, settings);
+      // Make API call using the unified callAI function with adjusted settings
+      const response = await callAI(apiMessages, currentProvider, apiSettings);
       const endTime = performance.now();
       const responseTime = Math.round(endTime - startTime) / 1000;
       
@@ -361,14 +395,44 @@ The app will automatically try to fall back to the standard gemini-pro model. If
         apiMessages = [
           { 
             role: 'system', 
-            content: 'The user is asking a coding question. When appropriate, format your response with code blocks using markdown syntax (```language\ncode```) for any code examples. Make sure to use the correct language identifier for proper syntax highlighting.' 
+            content: `The user is asking a coding question. Please provide a COMPLETE and COMPREHENSIVE code solution, following these guidelines:
+
+1. Use markdown code blocks with proper language tags: \`\`\`language\ncode\`\`\`
+2. Always specify the correct language (e.g. \`\`\`javascript, \`\`\`python, \`\`\`css) for syntax highlighting
+3. For JavaScript code, use \`\`\`javascript specifically (not just \`\`\`js)
+4. For CSS code, put it in \`\`\`css code blocks
+5. Provide FULL, WORKING implementations - do not abbreviate or truncate code with comments like "// more code here"
+6. Include ALL necessary imports, dependencies, and supporting code needed to make the solution work
+7. When showing multiple files or components, clearly label each one and provide complete code for each
+8. Use separate code blocks for different languages or files
+9. Format code with proper indentation and maintain consistent style
+10. Include helpful comments to explain complex sections
+11. When appropriate, provide a brief explanation of how the code works
+
+Remember: It's better to provide a COMPLETE solution that fully addresses the user's need than a partial or simplified one.` 
           },
           ...apiMessages
         ];
       }
       
-      // Make API call using the unified callAI function
-      const response = await callAI(apiMessages, currentProvider, settings);
+      // Adjust API settings for coding questions to allow for longer responses
+      const regenerateApiSettings = {...settings};
+      if (isCodeQuestion) {
+        // For coding questions, increase the max tokens to allow for complete code examples
+        if (regenerateApiSettings[currentProvider]?.maxTokens) {
+          const currentMaxTokens = regenerateApiSettings[currentProvider].maxTokens;
+          regenerateApiSettings[currentProvider].maxTokens = Math.max(currentMaxTokens, 4000);
+        }
+        
+        // Also reduce temperature slightly for more precise code generation
+        if (regenerateApiSettings[currentProvider]?.temperature) {
+          const currentTemp = regenerateApiSettings[currentProvider].temperature;
+          regenerateApiSettings[currentProvider].temperature = Math.min(currentTemp, 0.7);
+        }
+      }
+      
+      // Make API call using the unified callAI function with adjusted settings
+      const response = await callAI(apiMessages, currentProvider, regenerateApiSettings);
       const endTime = performance.now();
       const responseTime = Math.round(endTime - startTime) / 1000;
       
@@ -388,7 +452,7 @@ The app will automatically try to fall back to the standard gemini-pro model. If
       console.error('Error regenerating response:', error);
       
       // Create error message
-      let errorContent = error instanceof Error 
+      const errorContent = error instanceof Error 
         ? `Error: ${error.message}` 
         : 'Sorry, an error occurred while regenerating the response.';
       
@@ -730,15 +794,20 @@ The app will automatically try to fall back to the standard gemini-pro model. If
             <h3 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-200 mb-1 sm:mb-2">Start a conversation</h3>
             <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm max-w-md">
               Select your AI provider and model, then ask a question to begin chatting.
-              Your messages are processed directly with the AI provider's API.
+              Your messages are processed directly with the AI provider&apos;s API.
             </p>
           </div>
         ) : (
           <div className="space-y-4 sm:space-y-6">
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`flex max-w-[90%] sm:max-w-[85%] md:max-w-[75%] ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <Avatar className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full ${message.role === 'user' ? 'ml-2 sm:ml-3' : 'mr-2 sm:mr-3'}`}>
+                <div className={`flex ${message.role === 'user' ? 'flex-row-reverse' : ''} ${
+                  // Allow more width for messages with code blocks
+                  containsCodeBlock(message.content) 
+                    ? 'max-w-[95%] sm:max-w-[90%] md:max-w-full' 
+                    : 'max-w-[90%] sm:max-w-[85%] md:max-w-[75%]'
+                }`}>
+                  <Avatar className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full flex-shrink-0 ${message.role === 'user' ? 'ml-2 sm:ml-3' : 'mr-2 sm:mr-3'}`}>
                     <AvatarImage src="" />
                     <AvatarFallback className={message.role === 'user' ? 'bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-300' : `${getProviderBgColor(currentProvider)} ${getProviderTextColor(currentProvider)} dark:bg-slate-800 dark:text-slate-300`}>
                       {message.role === 'user' ? 'U' : 
@@ -750,13 +819,13 @@ The app will automatically try to fall back to the standard gemini-pro model. If
                        currentProvider === 'deepseek' ? 'D' : 'AI'}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="space-y-1.5 sm:space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2 w-full">
                     <div className={`px-2.5 py-2 sm:p-3 rounded-lg ${
                       message.role === 'user' 
                         ? 'bg-blue-500 text-white dark:bg-blue-600' 
                         : 'bg-white border border-gray-200 text-slate-700 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
-                    }`}>
-                      <div className="text-xs sm:text-sm responsive-text">
+                    } ${containsCodeBlock(message.content) ? 'overflow-hidden' : ''}`}>
+                      <div className={`${message.role === 'user' ? 'text-xs sm:text-sm whitespace-pre-wrap' : 'responsive-text'}`}>
                         {message.role === 'user' ? (
                           <div className="whitespace-pre-wrap">{message.content}</div>
                         ) : (

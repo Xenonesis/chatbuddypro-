@@ -412,18 +412,227 @@ export async function callMistral(messages: ChatMessage[], settings?: ModelSetti
   }
 }
 
+// Claude API
+export async function callClaude(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
+  let apiKey = process.env.NEXT_PUBLIC_CLAUDE_API_KEY;
+  let model = 'claude-3-5-sonnet-20240620';
+  let temperature = 0.7;
+  let maxTokens = 500;
+  let finalMessages = [...messages];
+  
+  // Use settings if provided
+  if (settings) {
+    apiKey = settings.claude.apiKey || apiKey;
+    model = settings.claude.selectedModel;
+    
+    // Get parameters based on chat mode
+    const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
+      getParametersForMode(settings, 'claude');
+    
+    temperature = modeTemp;
+    maxTokens = modeMaxTokens;
+    
+    // Add system message if provided
+    if (systemMessage) {
+      finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
+    }
+  }
+  
+  if (!apiKey) {
+    throw new Error('Claude API key is not configured');
+  }
+  
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model,
+        messages: finalMessages.filter(msg => msg.role !== 'system'),
+        system: finalMessages.find(msg => msg.role === 'system')?.content,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to call Claude API');
+    }
+    
+    const data = await response.json();
+    return data.content[0].text;
+  } catch (error) {
+    console.error('Claude API error:', error);
+    throw error;
+  }
+}
+
+// Llama API
+export async function callLlama(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
+  let apiKey = process.env.NEXT_PUBLIC_LLAMA_API_KEY;
+  let model = 'llama-3-8b-instruct';
+  let temperature = 0.7;
+  let maxTokens = 500;
+  let finalMessages = [...messages];
+  
+  // Use settings if provided
+  if (settings) {
+    apiKey = settings.llama.apiKey || apiKey;
+    model = settings.llama.selectedModel;
+    
+    // Get parameters based on chat mode
+    const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
+      getParametersForMode(settings, 'llama');
+    
+    temperature = modeTemp;
+    maxTokens = modeMaxTokens;
+    
+    // Add system message if provided
+    if (systemMessage) {
+      finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
+    }
+  }
+  
+  if (!apiKey) {
+    throw new Error('Llama API key is not configured');
+  }
+  
+  try {
+    // Assuming the Llama API is through a service like Together.ai
+    const response = await fetch('https://api.together.xyz/v1/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        prompt: formatMessagesForLlama(finalMessages),
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to call Llama API');
+    }
+    
+    const data = await response.json();
+    return data.choices[0].text;
+  } catch (error) {
+    console.error('Llama API error:', error);
+    throw error;
+  }
+}
+
+function formatMessagesForLlama(messages: ChatMessage[]): string {
+  let systemPrompt = '';
+  let conversationPrompt = '';
+  
+  // Extract system message if exists
+  const systemMessage = messages.find(msg => msg.role === 'system');
+  if (systemMessage) {
+    systemPrompt = `<|system|>\n${systemMessage.content}\n`;
+  }
+  
+  // Format conversation
+  const conversationMessages = messages.filter(msg => msg.role !== 'system');
+  conversationPrompt = conversationMessages.map(msg => {
+    if (msg.role === 'user') {
+      return `<|user|>\n${msg.content}`;
+    } else if (msg.role === 'assistant') {
+      return `<|assistant|>\n${msg.content}`;
+    }
+    return '';
+  }).join('\n');
+  
+  // Add final assistant prompt to generate response
+  return `${systemPrompt}${conversationPrompt}\n<|assistant|>\n`;
+}
+
+// Deepseek API
+export async function callDeepseek(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
+  let apiKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
+  let model = 'deepseek-chat';
+  let temperature = 0.7;
+  let maxTokens = 500;
+  let finalMessages = [...messages];
+  
+  // Use settings if provided
+  if (settings) {
+    apiKey = settings.deepseek.apiKey || apiKey;
+    model = settings.deepseek.selectedModel;
+    
+    // Get parameters based on chat mode
+    const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
+      getParametersForMode(settings, 'deepseek');
+    
+    temperature = modeTemp;
+    maxTokens = modeMaxTokens;
+    
+    // Add system message if provided
+    if (systemMessage) {
+      finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
+    }
+  }
+  
+  if (!apiKey) {
+    throw new Error('Deepseek API key is not configured');
+  }
+  
+  try {
+    // Deepseek API follows OpenAI format
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: finalMessages,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to call Deepseek API');
+    }
+    
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Deepseek API error:', error);
+    throw error;
+  }
+}
+
 // Function to validate API configuration
 export function validateApiConfiguration() {
   // Focus on localStorage keys stored by the settings component rather than env vars
   let openaiKey = '';
   let geminiKey = '';
   let mistralKey = '';
+  let claudeKey = '';
+  let llamaKey = '';
+  let deepseekKey = '';
   
   // In the browser, check localStorage
   if (typeof window !== 'undefined') {
     openaiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY') || '';
     geminiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY') || '';
     mistralKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY') || '';
+    claudeKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY') || '';
+    llamaKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY') || '';
+    deepseekKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY') || '';
   }
   
   const results = {
@@ -439,7 +648,19 @@ export function validateApiConfiguration() {
       configured: Boolean(mistralKey), 
       keyPrefix: mistralKey ? mistralKey.substring(0, 3) + '...' : 'not set'
     },
-    anyConfigured: Boolean(openaiKey || geminiKey || mistralKey)
+    claude: {
+      configured: Boolean(claudeKey),
+      keyPrefix: claudeKey ? claudeKey.substring(0, 3) + '...' : 'not set'
+    },
+    llama: {
+      configured: Boolean(llamaKey),
+      keyPrefix: llamaKey ? llamaKey.substring(0, 3) + '...' : 'not set'
+    },
+    deepseek: {
+      configured: Boolean(deepseekKey),
+      keyPrefix: deepseekKey ? deepseekKey.substring(0, 3) + '...' : 'not set'
+    },
+    anyConfigured: Boolean(openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey)
   };
   
   return results;
@@ -447,38 +668,38 @@ export function validateApiConfiguration() {
 
 // Unified API function to handle all providers
 export async function callAI(messages: ChatMessage[], provider: AIProvider, settings?: ModelSettings): Promise<string> {
-  try {
-    switch (provider) {
-      case 'openai':
-        return await callOpenAI(messages, settings);
-      case 'gemini':
-        // Gemini needs a specially formatted conversation history
-        // Format: Convert chat messages into a conversation string
-        let conversation = '';
-        
-        // Extract system message if present
-        const systemMessage = messages.find(msg => msg.role === 'system');
-        const regularMessages = messages.filter(msg => msg.role !== 'system');
-        
-        // If we have a system message, add it as context at the beginning
-        if (systemMessage) {
-          conversation += `Context: ${systemMessage.content}\n\n`;
-        }
-        
-        // Add all messages in order
-        for (const msg of regularMessages) {
-          const role = msg.role === 'assistant' ? 'AI' : 'User';
-          conversation += `${role}: ${msg.content}\n\n`;
-        }
-        
-        return await callGemini(conversation, settings);
-      case 'mistral':
-        return await callMistral(messages, settings);
-      default:
-        throw new Error(`Unknown AI provider: ${provider}`);
-    }
-  } catch (error) {
-    console.error(`Error calling ${provider} API:`, error);
-    throw error;
+  switch (provider) {
+    case 'openai':
+      return callOpenAI(messages, settings);
+    case 'gemini':
+      // For Gemini, convert messages to a formatted conversation string
+      let conversation = '';
+      
+      // Extract system message if present
+      const systemMessage = messages.find(msg => msg.role === 'system');
+      const regularMessages = messages.filter(msg => msg.role !== 'system');
+      
+      // If we have a system message, add it as context at the beginning
+      if (systemMessage) {
+        conversation += `Context: ${systemMessage.content}\n\n`;
+      }
+      
+      // Add all messages in order
+      for (const msg of regularMessages) {
+        const role = msg.role === 'assistant' ? 'AI' : 'User';
+        conversation += `${role}: ${msg.content}\n\n`;
+      }
+      
+      return callGemini(conversation, settings);
+    case 'mistral':
+      return callMistral(messages, settings);
+    case 'claude':
+      return callClaude(messages, settings);
+    case 'llama':
+      return callLlama(messages, settings);
+    case 'deepseek':
+      return callDeepseek(messages, settings);
+    default:
+      throw new Error(`Unknown AI provider: ${provider}`);
   }
 } 

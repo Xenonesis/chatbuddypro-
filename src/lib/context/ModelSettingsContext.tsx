@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type AIProvider = 'openai' | 'gemini' | 'mistral';
+export type AIProvider = 'openai' | 'gemini' | 'mistral' | 'claude' | 'llama' | 'deepseek';
 export type ChatMode = 'thoughtful' | 'quick' | 'creative' | 'technical' | 'learning';
 
 export type ModelSettings = {
@@ -23,6 +23,30 @@ export type ModelSettings = {
     temperature: number;
   };
   mistral: {
+    enabled: boolean;
+    apiKey: string;
+    models: string[];
+    selectedModel: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  claude: {
+    enabled: boolean;
+    apiKey: string;
+    models: string[];
+    selectedModel: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  llama: {
+    enabled: boolean;
+    apiKey: string;
+    models: string[];
+    selectedModel: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  deepseek: {
     enabled: boolean;
     apiKey: string;
     models: string[];
@@ -64,6 +88,30 @@ const defaultSettings: ModelSettings = {
     apiKey: '',
     models: ['mistral-tiny', 'mistral-small', 'mistral-medium'],
     selectedModel: 'mistral-small',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  claude: {
+    enabled: true,
+    apiKey: '',
+    models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
+    selectedModel: 'claude-3-5-sonnet-20240620',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  llama: {
+    enabled: true,
+    apiKey: '',
+    models: ['llama-3-8b-instruct', 'llama-3-70b-instruct', 'llama-3-8b', 'llama-3-70b'],
+    selectedModel: 'llama-3-8b-instruct',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  deepseek: {
+    enabled: true,
+    apiKey: '',
+    models: ['deepseek-coder', 'deepseek-chat', 'deepseek-llm'],
+    selectedModel: 'deepseek-chat',
     maxTokens: 500,
     temperature: 0.7
   },
@@ -118,7 +166,11 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
             chatMode: parsedSettings.chatMode || defaultSettings.chatMode,
             showThinking: parsedSettings.showThinking !== undefined 
               ? parsedSettings.showThinking 
-              : defaultSettings.showThinking
+              : defaultSettings.showThinking,
+            // Initialize the new providers from default settings if they don't exist
+            claude: parsedSettings.claude || defaultSettings.claude,
+            llama: parsedSettings.llama || defaultSettings.llama,
+            deepseek: parsedSettings.deepseek || defaultSettings.deepseek
           };
           
           // Make sure gemini models are correct
@@ -148,8 +200,11 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       const openaiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY');
       const geminiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY');
       const mistralKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY');
+      const claudeKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY');
+      const llamaKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY');
+      const deepseekKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY');
 
-      if (openaiKey || geminiKey || mistralKey) {
+      if (openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey) {
         setSettings(prev => ({
           ...prev,
           openai: {
@@ -163,6 +218,18 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
           mistral: {
             ...prev.mistral,
             apiKey: mistralKey || prev.mistral.apiKey
+          },
+          claude: {
+            ...prev.claude,
+            apiKey: claudeKey || prev.claude.apiKey
+          },
+          llama: {
+            ...prev.llama,
+            apiKey: llamaKey || prev.llama.apiKey
+          },
+          deepseek: {
+            ...prev.deepseek,
+            apiKey: deepseekKey || prev.deepseek.apiKey
           }
         }));
       }
@@ -188,6 +255,15 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       }
       if (newSettings.mistral.apiKey) {
         localStorage.setItem('NEXT_PUBLIC_MISTRAL_API_KEY', newSettings.mistral.apiKey);
+      }
+      if (newSettings.claude.apiKey) {
+        localStorage.setItem('NEXT_PUBLIC_CLAUDE_API_KEY', newSettings.claude.apiKey);
+      }
+      if (newSettings.llama.apiKey) {
+        localStorage.setItem('NEXT_PUBLIC_LLAMA_API_KEY', newSettings.llama.apiKey);
+      }
+      if (newSettings.deepseek.apiKey) {
+        localStorage.setItem('NEXT_PUBLIC_DEEPSEEK_API_KEY', newSettings.deepseek.apiKey);
       }
     }
   };

@@ -8,9 +8,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   // Add external packages that should be resolved during build time
-  experimental: {
-    serverComponentsExternalPackages: ['react-syntax-highlighter'],
-  },
+  serverExternalPackages: ['react-syntax-highlighter'],
 };
 
 module.exports = nextConfig; 

@@ -4,7 +4,7 @@ import "./globals.css";
 import { ModelSettingsProvider } from '@/lib/context/ModelSettingsContext';
 import { MessageSquare, Settings as SettingsIcon, Brain, Zap, Lightbulb, Code, GraduationCap, Github, Moon, Sun } from "lucide-react";
 import Link from "next/link";
-import ThemeToggle from "@/components/ui-custom/ThemeToggle";
+import { ThemeToggle } from "@/components/ui-custom/ThemeToggle";
 import { ThemeProvider } from "@/components/ui-custom/ThemeProvider";
 
 const geistSans = Geist({

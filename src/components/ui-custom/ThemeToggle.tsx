@@ -1,45 +1,45 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
-import { Button } from '@/components/ui/button';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
 
-export default function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Avoid hydration mismatch by only rendering the toggle on the client
+export function ThemeToggle() {
+  const { setTheme, theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  
+  // Only render the toggle after component has mounted to avoid hydration mismatch
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
+  // Render placeholder with same dimensions during SSR to avoid layout shift
   if (!mounted) {
     return (
       <Button
         variant="ghost"
         size="icon"
-        className="w-8 h-8 opacity-0"
-        aria-label="Toggle theme"
+        className="relative overflow-hidden rounded-full w-9 h-9"
       >
-        <Sun className="h-4 w-4" />
+        <span className="sr-only">Toggle theme</span>
       </Button>
-    );
+    )
   }
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="w-8 h-8 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"
-      aria-label="Toggle theme"
+      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+      className="relative overflow-hidden rounded-full w-9 h-9 transition-all duration-500 ease-in-out hover:bg-transparent"
     >
-      {theme === 'dark' ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/10 opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100"></div>
+      <div className="relative z-10 transition-all duration-500 ease-in-out animate-float">
+        <Sun className={`h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all duration-300 ease-in-out ${theme === "dark" ? "rotate-90 scale-0" : ""}`} />
+        <Moon className={`absolute h-[1.2rem] w-[1.2rem] top-0 left-0 rotate-90 scale-0 transition-all duration-300 ease-in-out ${theme === "dark" ? "rotate-0 scale-100" : ""}`} />
+      </div>
+      <span className="sr-only">Toggle theme</span>
     </Button>
-  );
+  )
 } 

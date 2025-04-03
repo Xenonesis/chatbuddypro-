@@ -111,30 +111,39 @@ export default function SettingsPage() {
   // Function to get provider color
   const getProviderColor = (provider: AIProvider) => {
     switch(provider) {
-      case 'openai': return 'border-green-400 bg-green-50';
-      case 'gemini': return 'border-blue-400 bg-blue-50';
-      case 'mistral': return 'border-purple-400 bg-purple-50';
-      default: return 'border-gray-300 bg-gray-50';
+      case 'openai': return 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20';
+      case 'gemini': return 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20';
+      case 'mistral': return 'border-purple-400 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/20';
+      case 'claude': return 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20';
+      case 'llama': return 'border-orange-400 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20';
+      case 'deepseek': return 'border-teal-400 dark:border-teal-600 bg-teal-50 dark:bg-teal-900/20';
+      default: return 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800';
     }
   };
 
   // Function to get provider text color
   const getProviderTextColor = (provider: AIProvider) => {
     switch(provider) {
-      case 'openai': return 'text-green-700';
-      case 'gemini': return 'text-blue-700';
-      case 'mistral': return 'text-purple-700';
-      default: return 'text-gray-700';
+      case 'openai': return 'text-green-700 dark:text-green-400';
+      case 'gemini': return 'text-blue-700 dark:text-blue-400';
+      case 'mistral': return 'text-purple-700 dark:text-purple-400';
+      case 'claude': return 'text-amber-700 dark:text-amber-400';
+      case 'llama': return 'text-orange-700 dark:text-orange-400';
+      case 'deepseek': return 'text-teal-700 dark:text-teal-400';
+      default: return 'text-gray-700 dark:text-gray-400';
     }
   };
 
   const getProviderButtonColor = (provider: AIProvider, isEnabled: boolean) => {
-    if (!isEnabled) return 'bg-slate-200 hover:bg-slate-300 text-slate-700';
+    if (!isEnabled) return 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300';
     
     switch(provider) {
       case 'openai': return 'bg-green-500 hover:bg-green-600 text-white';
       case 'gemini': return 'bg-blue-500 hover:bg-blue-600 text-white';
       case 'mistral': return 'bg-purple-500 hover:bg-purple-600 text-white';
+      case 'claude': return 'bg-amber-500 hover:bg-amber-600 text-white';
+      case 'llama': return 'bg-orange-500 hover:bg-orange-600 text-white';
+      case 'deepseek': return 'bg-teal-500 hover:bg-teal-600 text-white';
       default: return 'bg-gray-500 hover:bg-gray-600 text-white';
     }
   };
@@ -152,7 +161,7 @@ export default function SettingsPage() {
 
   // Function to get chat mode color
   const getChatModeColor = (mode: ChatMode, isSelected: boolean) => {
-    if (!isSelected) return 'bg-slate-200 hover:bg-slate-300 text-slate-700';
+    if (!isSelected) return 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300';
     
     switch(mode) {
       case 'thoughtful': return 'bg-blue-600 hover:bg-blue-700 text-white';
@@ -179,12 +188,12 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Sliders className="h-6 w-6 text-slate-700" />
+            <Sliders className="h-6 w-6 text-slate-700 dark:text-slate-300" />
             Settings
           </h1>
           <div className="flex gap-3">
             <Link href="/">
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button variant="outline" className="flex items-center gap-2 dark:border-slate-700 dark:text-slate-300">
                 <ArrowLeft className="h-4 w-4" />
                 Back to Chat
               </Button>
@@ -202,13 +211,16 @@ export default function SettingsPage() {
             </Button>
             <Button 
               variant="outline" 
-              className="border-red-300 text-red-600 hover:bg-red-50"
+              className="border-red-300 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
               onClick={() => {
                 if (window.confirm('Reset all settings to default values? This will clear your API keys and preferences.')) {
                   localStorage.removeItem('aiSettings');
                   localStorage.removeItem('NEXT_PUBLIC_OPENAI_API_KEY');
                   localStorage.removeItem('NEXT_PUBLIC_GEMINI_API_KEY');
                   localStorage.removeItem('NEXT_PUBLIC_MISTRAL_API_KEY');
+                  localStorage.removeItem('NEXT_PUBLIC_CLAUDE_API_KEY');
+                  localStorage.removeItem('NEXT_PUBLIC_LLAMA_API_KEY');
+                  localStorage.removeItem('NEXT_PUBLIC_DEEPSEEK_API_KEY');
                   updateSettings(getDefaultSettings());
                   setSaveStatus('Settings reset to defaults');
                   setSavedAnimation(true);
@@ -227,13 +239,13 @@ export default function SettingsPage() {
         {saveStatus && (
           <div className={`mb-6 p-4 rounded-lg ${
             saveStatus.includes('Error') 
-              ? 'bg-red-100 text-red-700 border border-red-300' 
-              : 'bg-green-100 text-green-700 border border-green-300'
+              ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800' 
+              : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-800'
           } flex items-center gap-2 animate-fadeIn`}>
             {saveStatus.includes('Error') ? (
-              <span className="text-red-500">⚠️</span>
+              <span className="text-red-500 dark:text-red-400">⚠️</span>
             ) : (
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" />
             )}
             {saveStatus}
           </div>
@@ -242,12 +254,12 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Default Provider Settings Card */}
           <Card className="shadow-md border-0 overflow-hidden col-span-full">
-            <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 border-b">
+            <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 border-b dark:border-slate-700">
               <CardTitle className="flex items-center gap-2">
-                <Laptop className="h-5 w-5 text-slate-700" />
+                <Laptop className="h-5 w-5 text-slate-700 dark:text-slate-300" />
                 Default AI Provider
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-slate-400">
                 Choose which AI provider to use by default when starting a new chat
               </CardDescription>
             </CardHeader>
@@ -262,7 +274,7 @@ export default function SettingsPage() {
                   )
                   .map(provider => {
                     // Check if this key is a valid AIProvider
-                    const isAIProvider = provider === 'openai' || provider === 'gemini' || provider === 'mistral';
+                    const isAIProvider = provider === 'openai' || provider === 'gemini' || provider === 'mistral' || provider === 'claude' || provider === 'llama' || provider === 'deepseek';
                     if (!isAIProvider) return null;
                     
                     const providerKey = provider as AIProvider;
@@ -291,26 +303,26 @@ export default function SettingsPage() {
 
           {/* Chat Mode Settings Card */}
           <Card className="shadow-md border-0 overflow-hidden col-span-full">
-            <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 border-b">
+            <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 border-b dark:border-slate-700">
               <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-slate-700" />
+                <MessageSquare className="h-5 w-5 text-slate-700 dark:text-slate-300" />
                 Chat Mode Settings
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-slate-400">
                 Choose the default chat mode and display preferences
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <h3 className="text-sm font-medium text-slate-700 mb-3">Default Chat Mode</h3>
+              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Default Chat Mode</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-6">
                 {(['thoughtful', 'quick', 'creative', 'technical', 'learning'] as ChatMode[]).map(mode => (
                   <div 
                     key={mode}
                     className={`border rounded-lg ${
                       localSettings.chatMode === mode 
-                        ? 'border-blue-300 ring-1 ring-blue-300' 
-                        : 'border-slate-200'
-                    } p-4 cursor-pointer transition-all hover:border-blue-200`}
+                        ? 'border-blue-300 dark:border-blue-500 ring-1 ring-blue-300 dark:ring-blue-500' 
+                        : 'border-slate-200 dark:border-slate-700'
+                    } p-4 cursor-pointer transition-all hover:border-blue-200 dark:hover:border-blue-700`}
                     onClick={() => handleChatModeChange(mode)}
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -320,47 +332,44 @@ export default function SettingsPage() {
                         } text-white`}>
                           {getChatModeIcon(mode)}
                         </div>
-                        <span className="font-medium">{mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-200">{mode.charAt(0).toUpperCase() + mode.slice(1)}</span>
                       </div>
                       {localSettings.chatMode === mode && (
-                        <CheckCircle className="h-4 w-4 text-blue-500" />
+                        <CheckCircle className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                       )}
                     </div>
-                    <p className="text-xs text-slate-600">{getChatModeDescription(mode)}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{getChatModeDescription(mode)}</p>
                   </div>
                 ))}
               </div>
               
-              <div className="border-t pt-5 mt-2">
-                <h3 className="text-sm font-medium text-slate-700 mb-3">Display Options</h3>
+              <div className="mt-8">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Display Options</h3>
+                <div className="border dark:border-slate-700 rounded-lg p-4">
                 <div 
-                  className={`border rounded-lg flex items-center justify-between p-4 cursor-pointer transition-all hover:border-blue-200 ${
-                    localSettings.showThinking ? 'border-blue-300 bg-blue-50' : 'border-slate-200'
+                    className={`flex items-center justify-between p-3 rounded-md cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                      localSettings.showThinking ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
                   onClick={handleToggleShowThinking}
                 >
                   <div className="flex items-center gap-3">
                     {localSettings.showThinking ? (
-                      <Eye className="h-5 w-5 text-blue-500" />
+                        <Eye className="h-5 w-5 text-blue-500 dark:text-blue-400" />
                     ) : (
-                      <EyeOff className="h-5 w-5 text-slate-500" />
+                        <EyeOff className="h-5 w-5 text-slate-500 dark:text-slate-400" />
                     )}
                     <div>
-                      <p className="font-medium">Show Thinking Process</p>
-                      <p className="text-xs text-slate-600">
-                        {localSettings.showThinking 
-                          ? "Thinking process will be displayed when available" 
-                          : "Thinking process will be hidden"
-                        }
-                      </p>
+                        <h4 className="font-medium text-slate-800 dark:text-slate-300">Show Thinking Process</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Thinking process will be hidden</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className={`w-10 h-5 rounded-full relative transition-colors ${
-                    localSettings.showThinking ? 'bg-blue-500' : 'bg-slate-300'
+                    <div className={`w-12 h-6 flex items-center rounded-full p-1 duration-300 ease-in-out ${
+                      localSettings.showThinking ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-700'
                   }`}>
-                    <div className={`absolute w-4 h-4 rounded-full bg-white top-0.5 transition-all ${
-                      localSettings.showThinking ? 'right-0.5' : 'left-0.5'
+                      <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${
+                        localSettings.showThinking ? 'translate-x-6' : ''
                     }`} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -368,383 +377,423 @@ export default function SettingsPage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* OpenAI Settings */}
-          <Card className={`${localSettings.openai.enabled ? '' : 'opacity-75'} shadow-md border-t-4 ${getProviderColor('openai').split(' ')[0]} overflow-hidden`}>
-            <CardHeader className="bg-gradient-to-r from-green-50 to-white border-b p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* API Key Settings */}
+          <h2 className="text-xl font-semibold mb-5 col-span-full flex items-center gap-2 mt-4">
+            <Key className="h-5 w-5 text-slate-700 dark:text-slate-300" /> 
+            API Keys
+          </h2>
+          
+          <Card className={`shadow-md border-l-4 ${getProviderColor('openai')}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Key className={`h-5 w-5 ${getProviderTextColor('openai')}`} />
+                OpenAI API
+              </CardTitle>
               <div className="flex justify-between items-center">
-                <CardTitle className={`flex items-center gap-2 ${getProviderTextColor('openai')}`}>
-                  OpenAI
-                </CardTitle>
-                <Button 
-                  variant={localSettings.openai.enabled ? "default" : "outline"}
+                <CardDescription className="dark:text-slate-400">
+                  Connect to OpenAI models
+                </CardDescription>
+                <Button
+                  size="sm"
                   onClick={() => handleToggleProvider('openai')}
-                  className={localSettings.openai.enabled ? 'bg-green-500 hover:bg-green-600' : ''}
+                  className={`${getProviderButtonColor('openai', localSettings.openai.enabled)}`}
                 >
-                  {localSettings.openai.enabled ? "Enabled" : "Disabled"}
+                  {localSettings.openai.enabled ? 'Enabled' : 'Disabled'}
                 </Button>
               </div>
-              <CardDescription>
-                Configure your OpenAI API settings
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5 p-5">
-              <div className="space-y-2">
-                <label className="flex items-center justify-between text-sm font-medium mb-1">
-                  <div className="flex items-center gap-2">
-                    <Key className="h-4 w-4 text-slate-500" /> API Key
-                  </div>
-                  <a 
-                    href="https://platform.openai.com/api-keys" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs text-green-600 hover:text-green-800"
-                  >
-                    Get OpenAI API Key →
-                  </a>
-                </label>
-                <Textarea 
-                  placeholder="Enter your OpenAI API key" 
-                  value={localSettings.openai.apiKey}
+            <CardContent>
+              <div className="space-y-4">
+              <div>
+                  <label htmlFor="openai-api-key" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    API Key
+                  </label>
+                <Textarea
+                    id="openai-api-key"
+                    value={localSettings.openai.apiKey || ''}
                   onChange={(e) => handleApiKeyChange('openai', e.target.value)}
-                  className="font-mono text-sm resize-none h-[60px] border-slate-200 focus-visible:ring-green-400"
-                  disabled={!localSettings.openai.enabled}
+                    placeholder="Enter your OpenAI API key (starts with sk-...)"
+                    className="font-mono text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                    rows={1}
                 />
-                {localSettings.openai.enabled && !localSettings.openai.apiKey && (
-                  <p className="text-xs text-orange-600 mt-1">
-                    You'll need an API key to use OpenAI models
-                  </p>
-                )}
-                {localSettings.openai.enabled && localSettings.openai.apiKey && (
-                  <p className="text-xs text-green-600 mt-1">
-                    API key saved ✓
-                  </p>
-                )}
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex gap-1 items-center">
+                    <span>Get your API key from the</span>
+                    <a 
+                      href="https://platform.openai.com" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      OpenAI platform
+                    </a>
+                </p>
               </div>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                  <Dna className="h-4 w-4 text-slate-500" /> Model
+              <div>
+                  <label htmlFor="openai-model" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Model
                 </label>
-                <select 
-                  className="w-full p-2.5 border rounded border-slate-200 focus:border-green-400 focus:ring-green-400 text-sm bg-white"
+                <select
+                    id="openai-model"
                   value={localSettings.openai.selectedModel}
                   onChange={(e) => handleModelChange('openai', e.target.value)}
-                  aria-label="Select OpenAI model"
-                  disabled={!localSettings.openai.enabled}
-                >
-                  {localSettings.openai.models.map((model) => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
+                    className="w-full rounded-md px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    disabled={!localSettings.openai.enabled}
+                  >
+                    <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                    <option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</option>
+                    <option value="gpt-4">gpt-4</option>
+                    <option value="gpt-4-turbo">gpt-4-turbo</option>
+                    <option value="gpt-4o">gpt-4o</option>
                 </select>
-              </div>
-              <div className="grid grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                    <Thermometer className="h-4 w-4 text-slate-500" /> 
-                    Temperature: <span className="ml-1 text-green-600 font-semibold">{localSettings.openai.temperature.toFixed(1)}</span>
-                  </label>
-                  <div className="pt-1">
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="2" 
-                      step="0.1"
-                      value={localSettings.openai.temperature}
-                      onChange={(e) => handleTemperatureChange('openai', parseFloat(e.target.value))}
-                      className="w-full accent-green-500"
-                      aria-label={`OpenAI temperature: ${localSettings.openai.temperature}`}
-                      disabled={!localSettings.openai.enabled}
-                    />
-                    <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>Precise</span>
-                      <span>Balanced</span>
-                      <span>Creative</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                    Max Tokens: <span className="ml-1 text-green-600 font-semibold">{localSettings.openai.maxTokens}</span>
-                  </label>
-                  <div className="pt-1">
-                    <input 
-                      type="range" 
-                      min="100" 
-                      max="2000" 
-                      step="100"
-                      value={localSettings.openai.maxTokens}
-                      onChange={(e) => handleMaxTokensChange('openai', parseInt(e.target.value))}
-                      className="w-full accent-green-500"
-                      aria-label={`OpenAI max tokens: ${localSettings.openai.maxTokens}`}
-                      disabled={!localSettings.openai.enabled}
-                    />
-                    <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>Short</span>
-                      <span>Medium</span>
-                      <span>Long</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Gemini Settings */}
-          <Card className={`${localSettings.gemini.enabled ? '' : 'opacity-75'} shadow-md border-t-4 ${getProviderColor('gemini').split(' ')[0]} overflow-hidden`}>
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b p-5">
+          {/* Gemini API Card */}
+          <Card className={`shadow-md border-l-4 ${getProviderColor('gemini')}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Key className={`h-5 w-5 ${getProviderTextColor('gemini')}`} />
+                Google Gemini API
+              </CardTitle>
               <div className="flex justify-between items-center">
-                <CardTitle className={`flex items-center gap-2 ${getProviderTextColor('gemini')}`}>
-                  Google Gemini
-                </CardTitle>
-                <Button 
-                  variant={localSettings.gemini.enabled ? "default" : "outline"}
+                <CardDescription className="dark:text-slate-400">
+                  Connect to Google AI Studio
+                </CardDescription>
+                <Button
+                  size="sm"
                   onClick={() => handleToggleProvider('gemini')}
-                  className={localSettings.gemini.enabled ? 'bg-blue-500 hover:bg-blue-600' : ''}
+                  className={`${getProviderButtonColor('gemini', localSettings.gemini.enabled)}`}
                 >
-                  {localSettings.gemini.enabled ? "Enabled" : "Disabled"}
+                  {localSettings.gemini.enabled ? 'Enabled' : 'Disabled'}
                 </Button>
               </div>
-              <CardDescription>
-                Configure your Google Gemini API settings
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5 p-5">
-              <div className="space-y-2">
-                <label className="flex items-center justify-between text-sm font-medium mb-1">
-                  <div className="flex items-center gap-2">
-                    <Key className="h-4 w-4 text-slate-500" /> API Key
-                  </div>
-                  <a 
-                    href="https://aistudio.google.com/app/apikey" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:text-blue-800"
-                  >
-                    Get Gemini API Key →
-                  </a>
-                </label>
-                <Textarea 
-                  placeholder="Enter your Gemini API key (starts with AIza...)" 
-                  value={localSettings.gemini.apiKey}
-                  onChange={(e) => handleApiKeyChange('gemini', e.target.value)}
-                  className="font-mono text-sm resize-none h-[60px] border-slate-200 focus-visible:ring-blue-400"
-                  disabled={!localSettings.gemini.enabled}
+            <CardContent>
+              <div className="space-y-4">
+              <div>
+                  <label htmlFor="gemini-api-key" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    API Key
+                  </label>
+                <Textarea
+                    id="gemini-api-key"
+                    value={localSettings.gemini.apiKey || ''}
+                    onChange={(e) => handleApiKeyChange('gemini', e.target.value)}
+                  placeholder="Enter your Gemini API key (starts with AIza...)"
+                    className="font-mono text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                    rows={1}
                 />
-                {localSettings.gemini.enabled && !localSettings.gemini.apiKey && (
-                  <p className="text-xs text-orange-600 mt-1">
-                    You'll need an API key to use Gemini models
-                  </p>
-                )}
-                {localSettings.gemini.enabled && localSettings.gemini.apiKey && !localSettings.gemini.apiKey.startsWith('AIza') && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Gemini API keys must start with 'AIza'
-                  </p>
-                )}
-                {localSettings.gemini.enabled && localSettings.gemini.apiKey && localSettings.gemini.apiKey.startsWith('AIza') && (
-                  <p className="text-xs text-green-600 mt-1">
-                    API key saved ✓
-                  </p>
-                )}
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex gap-1 items-center">
+                    <span>Get your API key from the</span>
+                    <a 
+                      href="https://aistudio.google.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Google AI Studio
+                    </a>
+                </p>
               </div>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                  <Dna className="h-4 w-4 text-slate-500" /> Model
+              <div>
+                  <label htmlFor="gemini-model" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Model
                 </label>
-                <select 
-                  className="w-full p-2.5 border rounded border-slate-200 focus:border-blue-400 focus:ring-blue-400 text-sm bg-white"
+                <select
+                    id="gemini-model"
                   value={localSettings.gemini.selectedModel}
                   onChange={(e) => handleModelChange('gemini', e.target.value)}
-                  aria-label="Select Gemini model"
-                  disabled={!localSettings.gemini.enabled}
-                >
-                  {localSettings.gemini.models.map((model) => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
+                    className="w-full rounded-md px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    disabled={!localSettings.gemini.enabled}
+                  >
+                    <option value="gemini-pro">gemini-pro</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                    <option value="gemini-1.5-flash">gemini-1.5-flash</option>
                 </select>
-              </div>
-              <div className="grid grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                    <Thermometer className="h-4 w-4 text-slate-500" /> 
-                    Temperature: <span className="ml-1 text-blue-600 font-semibold">{localSettings.gemini.temperature.toFixed(1)}</span>
-                  </label>
-                  <div className="pt-1">
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="2" 
-                      step="0.1"
-                      value={localSettings.gemini.temperature}
-                      onChange={(e) => handleTemperatureChange('gemini', parseFloat(e.target.value))}
-                      className="w-full accent-blue-500"
-                      aria-label={`Gemini temperature: ${localSettings.gemini.temperature}`}
-                      disabled={!localSettings.gemini.enabled}
-                    />
-                    <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>Precise</span>
-                      <span>Balanced</span>
-                      <span>Creative</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                    Max Tokens: <span className="ml-1 text-blue-600 font-semibold">{localSettings.gemini.maxTokens}</span>
-                  </label>
-                  <div className="pt-1">
-                    <input 
-                      type="range" 
-                      min="100" 
-                      max="2000" 
-                      step="100"
-                      value={localSettings.gemini.maxTokens}
-                      onChange={(e) => handleMaxTokensChange('gemini', parseInt(e.target.value))}
-                      className="w-full accent-blue-500"
-                      aria-label={`Gemini max tokens: ${localSettings.gemini.maxTokens}`}
-                      disabled={!localSettings.gemini.enabled}
-                    />
-                    <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>Short</span>
-                      <span>Medium</span>
-                      <span>Long</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Mistral Settings */}
-          <Card className={`${localSettings.mistral.enabled ? '' : 'opacity-75'} shadow-md border-t-4 ${getProviderColor('mistral').split(' ')[0]} overflow-hidden md:col-span-2`}>
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-white border-b p-5">
+          {/* Mistral API Card */}
+          <Card className={`shadow-md border-l-4 ${getProviderColor('mistral')}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Key className={`h-5 w-5 ${getProviderTextColor('mistral')}`} />
+                Mistral API
+              </CardTitle>
               <div className="flex justify-between items-center">
-                <CardTitle className={`flex items-center gap-2 ${getProviderTextColor('mistral')}`}>
-                  Mistral AI
-                </CardTitle>
-                <Button 
-                  variant={localSettings.mistral.enabled ? "default" : "outline"}
+                <CardDescription className="dark:text-slate-400">
+                  Connect to Mistral AI models
+                </CardDescription>
+                <Button
+                  size="sm"
                   onClick={() => handleToggleProvider('mistral')}
-                  className={localSettings.mistral.enabled ? 'bg-purple-500 hover:bg-purple-600' : ''}
+                  className={`${getProviderButtonColor('mistral', localSettings.mistral.enabled)}`}
                 >
-                  {localSettings.mistral.enabled ? "Enabled" : "Disabled"}
+                  {localSettings.mistral.enabled ? 'Enabled' : 'Disabled'}
                 </Button>
               </div>
-              <CardDescription>
-                Configure your Mistral AI API settings
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5 p-5">
-              <div className="space-y-2">
-                <label className="flex items-center justify-between text-sm font-medium mb-1">
-                  <div className="flex items-center gap-2">
-                    <Key className="h-4 w-4 text-slate-500" /> API Key
-                  </div>
-                  <a 
-                    href="https://console.mistral.ai/api-keys/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs text-purple-600 hover:text-purple-800"
-                  >
-                    Get Mistral API Key →
-                  </a>
-                </label>
-                <Textarea 
-                  placeholder="Enter your Mistral API key" 
-                  value={localSettings.mistral.apiKey}
-                  onChange={(e) => handleApiKeyChange('mistral', e.target.value)}
-                  className="font-mono text-sm resize-none h-[60px] border-slate-200 focus-visible:ring-purple-400"
-                  disabled={!localSettings.mistral.enabled}
-                />
-                {localSettings.mistral.enabled && !localSettings.mistral.apiKey && (
-                  <p className="text-xs text-orange-600 mt-1">
-                    You'll need an API key to use Mistral models
-                  </p>
-                )}
-                {localSettings.mistral.enabled && localSettings.mistral.apiKey && (
-                  <p className="text-xs text-green-600 mt-1">
-                    API key saved ✓
-                  </p>
-                )}
-              </div>
-              <div className="grid md:grid-cols-3 gap-5">
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                    <Dna className="h-4 w-4 text-slate-500" /> Model
+            <CardContent>
+              <div className="space-y-4">
+              <div>
+                  <label htmlFor="mistral-api-key" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    API Key
                   </label>
-                  <select 
-                    className="w-full p-2.5 border rounded border-slate-200 focus:border-purple-400 focus:ring-purple-400 text-sm bg-white"
-                    value={localSettings.mistral.selectedModel}
-                    onChange={(e) => handleModelChange('mistral', e.target.value)}
-                    aria-label="Select Mistral model"
+                <Textarea
+                    id="mistral-api-key"
+                    value={localSettings.mistral.apiKey || ''}
+                    onChange={(e) => handleApiKeyChange('mistral', e.target.value)}
+                  placeholder="Enter your Mistral API key"
+                    className="font-mono text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                    rows={1}
+                />
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex gap-1 items-center">
+                    <span>Get your API key from the</span>
+                    <a 
+                      href="https://console.mistral.ai/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Mistral Console
+                    </a>
+                </p>
+              </div>
+              <div>
+                  <label htmlFor="mistral-model" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Model
+                </label>
+                <select
+                    id="mistral-model"
+                  value={localSettings.mistral.selectedModel}
+                  onChange={(e) => handleModelChange('mistral', e.target.value)}
+                    className="w-full rounded-md px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                     disabled={!localSettings.mistral.enabled}
                   >
-                    {localSettings.mistral.models.map((model) => (
-                      <option key={model} value={model}>{model}</option>
-                    ))}
-                  </select>
+                    <option value="mistral-small">mistral-small</option>
+                    <option value="mistral-medium">mistral-medium</option>
+                    <option value="mistral-large">mistral-large</option>
+                </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                    <Thermometer className="h-4 w-4 text-slate-500" /> 
-                    Temperature: <span className="ml-1 text-purple-600 font-semibold">{localSettings.mistral.temperature.toFixed(1)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Claude API Card */}
+          <Card className={`shadow-md border-l-4 ${getProviderColor('claude')}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Key className={`h-5 w-5 ${getProviderTextColor('claude')}`} />
+                Anthropic Claude API
+              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardDescription className="dark:text-slate-400">
+                  Connect to Anthropic Claude AI models
+                </CardDescription>
+                <Button
+                  size="sm"
+                  onClick={() => handleToggleProvider('claude')}
+                  className={`${getProviderButtonColor('claude', localSettings.claude.enabled)}`}
+                >
+                  {localSettings.claude.enabled ? 'Enabled' : 'Disabled'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+              <div>
+                  <label htmlFor="claude-api-key" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    API Key
                   </label>
-                  <div className="pt-1">
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="2" 
-                      step="0.1"
-                      value={localSettings.mistral.temperature}
-                      onChange={(e) => handleTemperatureChange('mistral', parseFloat(e.target.value))}
-                      className="w-full accent-purple-500"
-                      aria-label={`Mistral temperature: ${localSettings.mistral.temperature}`}
-                      disabled={!localSettings.mistral.enabled}
-                    />
-                    <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>Precise</span>
-                      <span>Balanced</span>
-                      <span>Creative</span>
-                    </div>
-                  </div>
+                <Textarea
+                    id="claude-api-key"
+                    value={localSettings.claude.apiKey || ''}
+                    onChange={(e) => handleApiKeyChange('claude', e.target.value)}
+                  placeholder="Enter your Claude API key"
+                    className="font-mono text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                    rows={1}
+                />
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex gap-1 items-center">
+                    <span>Get your API key from the</span>
+                    <a 
+                      href="https://console.anthropic.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Anthropic Console
+                    </a>
+                </p>
+              </div>
+              <div>
+                  <label htmlFor="claude-model" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Model
+                </label>
+                <select
+                    id="claude-model"
+                  value={localSettings.claude.selectedModel}
+                  onChange={(e) => handleModelChange('claude', e.target.value)}
+                    className="w-full rounded-md px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    disabled={!localSettings.claude.enabled}
+                  >
+                    <option value="claude-3-5-sonnet-20240620">claude-3.5-sonnet</option>
+                    <option value="claude-3-opus-20240229">claude-3-opus</option>
+                    <option value="claude-3-sonnet-20240229">claude-3-sonnet</option>
+                    <option value="claude-3-haiku-20240307">claude-3-haiku</option>
+                </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-medium mb-1">
-                    Max Tokens: <span className="ml-1 text-purple-600 font-semibold">{localSettings.mistral.maxTokens}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Llama API Card */}
+          <Card className={`shadow-md border-l-4 ${getProviderColor('llama')}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Key className={`h-5 w-5 ${getProviderTextColor('llama')}`} />
+                Meta's Llama API
+              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardDescription className="dark:text-slate-400">
+                  Connect to Meta's Llama models via Together.ai
+                </CardDescription>
+                <Button
+                  size="sm"
+                  onClick={() => handleToggleProvider('llama')}
+                  className={`${getProviderButtonColor('llama', localSettings.llama.enabled)}`}
+                >
+                  {localSettings.llama.enabled ? 'Enabled' : 'Disabled'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+              <div>
+                  <label htmlFor="llama-api-key" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Together.ai API Key
                   </label>
-                  <div className="pt-1">
-                    <input 
-                      type="range" 
-                      min="100" 
-                      max="2000" 
-                      step="100"
-                      value={localSettings.mistral.maxTokens}
-                      onChange={(e) => handleMaxTokensChange('mistral', parseInt(e.target.value))}
-                      className="w-full accent-purple-500"
-                      aria-label={`Mistral max tokens: ${localSettings.mistral.maxTokens}`}
-                      disabled={!localSettings.mistral.enabled}
-                    />
-                    <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>Short</span>
-                      <span>Medium</span>
-                      <span>Long</span>
-                    </div>
-                  </div>
+                <Textarea
+                    id="llama-api-key"
+                    value={localSettings.llama.apiKey || ''}
+                    onChange={(e) => handleApiKeyChange('llama', e.target.value)}
+                  placeholder="Enter your Together.ai API key for Llama"
+                    className="font-mono text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                    rows={1}
+                />
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex gap-1 items-center">
+                    <span>Get your API key from</span>
+                    <a 
+                      href="https://api.together.xyz/settings/api-keys" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Together.ai
+                    </a>
+                </p>
+              </div>
+              <div>
+                  <label htmlFor="llama-model" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Model
+                </label>
+                <select
+                    id="llama-model"
+                  value={localSettings.llama.selectedModel}
+                  onChange={(e) => handleModelChange('llama', e.target.value)}
+                    className="w-full rounded-md px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    disabled={!localSettings.llama.enabled}
+                  >
+                    <option value="llama-3-8b-instruct">llama-3-8b-instruct</option>
+                    <option value="llama-3-70b-instruct">llama-3-70b-instruct</option>
+                    <option value="llama-2-70b-chat">llama-2-70b-chat</option>
+                </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Deepseek API Card */}
+          <Card className={`shadow-md border-l-4 ${getProviderColor('deepseek')}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Key className={`h-5 w-5 ${getProviderTextColor('deepseek')}`} />
+                Deepseek API
+              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardDescription className="dark:text-slate-400">
+                  Connect to Deepseek AI models
+                </CardDescription>
+                <Button
+                  size="sm"
+                  onClick={() => handleToggleProvider('deepseek')}
+                  className={`${getProviderButtonColor('deepseek', localSettings.deepseek.enabled)}`}
+                >
+                  {localSettings.deepseek.enabled ? 'Enabled' : 'Disabled'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+              <div>
+                  <label htmlFor="deepseek-api-key" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    API Key
+                  </label>
+                <Textarea
+                    id="deepseek-api-key"
+                    value={localSettings.deepseek.apiKey || ''}
+                    onChange={(e) => handleApiKeyChange('deepseek', e.target.value)}
+                  placeholder="Enter your Deepseek API key"
+                    className="font-mono text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+                    rows={1}
+                />
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex gap-1 items-center">
+                    <span>Get your API key from the</span>
+                    <a 
+                      href="https://platform.deepseek.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Deepseek platform
+                    </a>
+                </p>
+              </div>
+              <div>
+                  <label htmlFor="deepseek-model" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Model
+                </label>
+                <select
+                    id="deepseek-model"
+                  value={localSettings.deepseek.selectedModel}
+                  onChange={(e) => handleModelChange('deepseek', e.target.value)}
+                    className="w-full rounded-md px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    disabled={!localSettings.deepseek.enabled}
+                >
+                    <option value="deepseek-chat">deepseek-chat</option>
+                    <option value="deepseek-coder">deepseek-coder</option>
+                </select>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="flex justify-between items-center mt-8">
-          <p className="text-sm text-slate-500">Your settings are stored locally on your device.</p>
+        <div className="mt-8 border-t dark:border-slate-700 pt-6 text-center">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Your settings are stored locally on your device.
+          </p>
           <Button 
             onClick={handleSaveSettings} 
-            className={`${savedAnimation ? 'bg-green-500' : 'bg-blue-500 hover:bg-blue-600'} flex items-center gap-2 transition-all`}
+            className="bg-blue-500 hover:bg-blue-600 mt-4 transition-all"
           >
             {savedAnimation ? (
-              <CheckCircle className="h-4 w-4 animate-pulse" />
+              <CheckCircle className="h-4 w-4 mr-2 animate-pulse" />
             ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4 mr-2" />
             )}
             Save Settings
           </Button>

@@ -27,8 +27,12 @@ export interface CodeBlock {
 
 // Function to detect and parse code blocks from text
 export function parseCodeBlocks(text: string): CodeBlock[] {
-  // Regular expression to match markdown code blocks (```language\ncode```)
-  const codeBlockRegex = /```([a-zA-Z0-9_+-]+)?\n([\s\S]*?)```/g;
+  // Regular expression to match markdown code blocks with various formats:
+  // 1. Standard ```language\ncode```
+  // 2. No language specified ```\ncode```
+  // 3. Handles optional spaces between backticks and language
+  // 4. Handles language with or without newline
+  const codeBlockRegex = /```([a-zA-Z0-9_+\-.*]*)?([\s\n])([\s\S]*?)```/g;
   
   const codeBlocks: CodeBlock[] = [];
   let lastIndex = 0;
@@ -41,8 +45,9 @@ export function parseCodeBlocks(text: string): CodeBlock[] {
     preBlockText = text.substring(lastIndex, match.index);
     
     // Process the code block
-    const language = match[1] || 'plaintext';
-    const code = match[2];
+    const language = (match[1] || 'plaintext').trim();
+    // The actual code is in group 3 after the newline
+    const code = match[3].trim();
     
     // Update last index to the end of this match
     lastIndex = match.index + match[0].length;
@@ -63,6 +68,17 @@ export function parseCodeBlocks(text: string): CodeBlock[] {
     return [];
   }
   
+  // Process each block to fix up the pre/post text
+  // This handles multiple consecutive code blocks correctly
+  for (let i = 1; i < codeBlocks.length; i++) {
+    const prevBlock = codeBlocks[i - 1];
+    const currentBlock = codeBlocks[i];
+    
+    // The post text of the previous block becomes the pre text of the current block
+    prevBlock.postBlockText = currentBlock.preBlockText;
+    // Current block pre text is already set correctly
+  }
+  
   // Add any remaining text after the last code block
   if (lastIndex < text.length) {
     const lastBlock = codeBlocks[codeBlocks.length - 1];
@@ -74,17 +90,36 @@ export function parseCodeBlocks(text: string): CodeBlock[] {
 
 // Check if content contains code - for deciding if we should apply special formatting
 export function containsCodeBlock(text: string): boolean {
-  const codeBlockRegex = /```([a-zA-Z0-9_+-]+)?\n([\s\S]*?)```/;
+  const codeBlockRegex = /```([a-zA-Z0-9_+\-.*]*)?([\s\n])([\s\S]*?)```/;
   return codeBlockRegex.test(text);
 }
 
 // Function to detect if a message is likely a coding question
 export function isCodingQuestion(text: string): boolean {
   const codingKeywords = [
-    'code', 'function', 'class', 'method', 'api', 'programming', 
-    'javascript', 'typescript', 'python', 'java', 'c#', 'c++', 
-    'react', 'angular', 'vue', 'component', 'html', 'css', 
-    'algorithm', 'data structure', 'framework', 'library'
+    // General programming terms
+    'code', 'function', 'class', 'method', 'api', 'programming', 'syntax', 'snippet',
+    
+    // Languages
+    'javascript', 'js', 'typescript', 'ts', 'python', 'java', 'c#', 'c++', 'ruby', 'php', 'go',
+    
+    // JavaScript specific
+    'es6', 'es2015', 'es2020', 'es2021', 'es2022', 'ecmascript', 'node', 'nodejs', 'npm', 'yarn', 'pnpm',
+    'promise', 'async', 'await', 'callback', 'closure', 'prototype', 'this', 'arrow function',
+    'spread', 'destructuring', 'module', 'import', 'export', 'json', 'dom', 'event', 'listener',
+    
+    // Frameworks and libraries
+    'react', 'angular', 'vue', 'svelte', 'next', 'nuxt', 'express', 'jquery', 'axios', 'fetch',
+    'redux', 'mobx', 'zustand', 'recoil', 'webpack', 'vite', 'rollup', 'babel', 'eslint', 'jest',
+    'mocha', 'chai', 'cypress', 'playwright', 'tailwind', 'bootstrap', 'material ui', 'chakra',
+    
+    // Web technologies
+    'component', 'html', 'css', 'scss', 'less', 'styled', 'animation', 'transition', 'grid', 'flexbox',
+    'responsive', 'media query', 'selector', 'pseudo', 'specificity', 'variable', 'property',
+    
+    // Data structures and patterns
+    'algorithm', 'data structure', 'framework', 'library', 'pattern', 'middleware',
+    'hook', 'state', 'props', 'context', 'render', 'component', 'virtual dom'
   ];
   
   const lowerText = text.toLowerCase();
@@ -95,7 +130,13 @@ export function isCodingQuestion(text: string): boolean {
       lowerText.includes('can you help') || 
       lowerText.includes('example of') ||
       lowerText.includes('write a') ||
-      lowerText.includes('implement a')) {
+      lowerText.includes('implement a') ||
+      lowerText.includes('create a') ||
+      lowerText.includes('fix this') ||
+      lowerText.includes('debug this') ||
+      lowerText.includes('explain this code') ||
+      lowerText.includes('what does this') ||
+      lowerText.includes('error in my')) {
     
     // Check if it contains any coding keywords
     return codingKeywords.some(keyword => lowerText.includes(keyword));
@@ -106,5 +147,23 @@ export function isCodingQuestion(text: string): boolean {
     return true;
   }
   
-  return false;
+  // Check for specific code patterns that suggest code content
+  const codePatterns = [
+    /function\s*\w*\s*\(/i, // function declarations
+    /const|let|var\s+\w+\s*=/i, // variable declarations
+    /import\s+[\w\s{}]+\s+from/i, // ES6 imports
+    /export\s+/i, // ES6 exports
+    /class\s+\w+/i, // class declarations
+    /if\s*\(.+\)\s*{/i, // if statements
+    /for\s*\(.+\)\s*{/i, // for loops
+    /=>/i, // arrow functions
+    /\.then\s*\(/i, // promise chains
+    /\$\(.*\)\./i, // jQuery patterns
+    /document\.get/i, // DOM manipulation
+    /console\.log/i, // console logs
+    /\<\w+(\s+\w+=".*")*\s*\>/i, // HTML tags
+    /\{\s*\w+:.*\}/i, // Object literals
+  ];
+  
+  return codePatterns.some(pattern => pattern.test(text));
 } 
