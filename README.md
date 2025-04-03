@@ -17,6 +17,7 @@ A modern chatbot interface built with Next.js and Shadcn UI that can connect to 
 ## Recent Updates
 
 - Fixed type errors in ApiDiagnostics component for better type safety
+- Added path mapping in tsconfig.json for next-themes module types
 - Improved theme provider implementation with proper next-themes integration
 - Enhanced provider settings handling with proper TypeScript types
 
