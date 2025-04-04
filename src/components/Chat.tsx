@@ -77,6 +77,11 @@ export default function Chat() {
   const [typingAnimationComplete, setTypingAnimationComplete] = useState(true);
   const [scrollLocked, setScrollLocked] = useState(true);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isInputVisible, setIsInputVisible] = useState(true);
+  const [lastScrollTop, setLastScrollTop] = useState(0);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputAreaRef = useRef<HTMLDivElement>(null);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -135,6 +140,34 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, thinking]);
+
+  // New effect to measure and set input height as CSS variable
+  useEffect(() => {
+    // Function to measure input height and set CSS variable
+    const setInputHeight = () => {
+      if (inputAreaRef.current) {
+        const height = inputAreaRef.current.offsetHeight;
+        document.documentElement.style.setProperty('--input-height', `${height}px`);
+      }
+    };
+
+    // Set initial height
+    setInputHeight();
+
+    // Update height on resize
+    window.addEventListener('resize', setInputHeight);
+
+    // Also update when input content changes
+    const resizeObserver = new ResizeObserver(setInputHeight);
+    if (inputAreaRef.current) {
+      resizeObserver.observe(inputAreaRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', setInputHeight);
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -429,6 +462,82 @@ The app will automatically try to fall back to the standard gemini-pro model. If
     
     return () => {
       window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Add scroll event listener to track scrolling
+  useEffect(() => {
+    const chatContainer = chatContainerRef.current;
+    
+    const handleScroll = () => {
+      if (!chatContainer) return;
+      
+      const scrollTop = chatContainer.scrollTop;
+      const scrollHeight = chatContainer.scrollHeight;
+      const clientHeight = chatContainer.clientHeight;
+      
+      // Determine scroll direction
+      const isScrollingDown = scrollTop > lastScrollTop;
+      setLastScrollTop(scrollTop);
+      
+      // Calculate distance from bottom
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const isNearBottom = distanceFromBottom < 100;
+      
+      // Show input when:
+      // 1. User is scrolling up
+      // 2. User is near the bottom of the chat
+      // 3. Chat is short enough that the user can see most of it
+      const isShortContent = scrollHeight < clientHeight * 1.5;
+      
+      if (!isScrollingDown || isNearBottom || isShortContent) {
+        setIsInputVisible(true);
+      } else if (isScrollingDown && Math.abs(scrollTop - lastScrollTop) > 10) {
+        // Only hide when actually scrolling down meaningfully (not just tiny movements)
+        setIsInputVisible(false);
+      }
+      
+      // Set scrolling state to track active scrolling
+      setIsScrolling(true);
+      
+      // Clear previous timeout and set a new one
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Show input area after scrolling stops for a short period
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+        
+        // When scrolling stops, always show input if at the bottom
+        if (isNearBottom || isShortContent) {
+          setIsInputVisible(true);
+        }
+      }, 800);
+    };
+    
+    chatContainer?.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      chatContainer?.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollTop]);
+
+  // Show input area when user interacts with the page
+  useEffect(() => {
+    const handleInteraction = () => {
+      setIsInputVisible(true);
+    };
+    
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
+    
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
     };
   }, []);
 
@@ -982,10 +1091,10 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
   };
 
   return (
-    <div className="flex flex-col w-full max-w-4xl mx-auto rounded-lg overflow-hidden border border-gray-100 shadow-lg bg-white dark:bg-slate-900 dark:border-slate-800 h-[calc(100vh-8rem)] sm:h-[calc(100vh-10rem)] md:h-[calc(100vh-12rem)]">
-      {/* Control Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 p-1.5 sm:p-3 bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/95 dark:to-slate-800/95 border-b dark:border-slate-700/50 sticky top-0 z-10 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+    <div className="flex flex-col h-full relative overflow-hidden">
+      {/* Chat controls bar */}
+      <div className="border-b dark:border-slate-700/50 p-2 sm:p-3 flex items-center justify-between sticky top-0 z-10 bg-gray-50/95 dark:bg-slate-900/95 backdrop-blur-sm">
+        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
           {/* Provider Selector */}
           <div className="relative" ref={providerMenuRef}>
             <Button 
@@ -1105,10 +1214,11 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
         </div>
       </div>
       
-      {/* Messages Area */}
+      {/* Messages Area - Add bottom padding to accommodate the fixed input */}
       <div 
         ref={chatContainerRef}
         className="flex-1 overflow-y-auto px-2 sm:px-4 bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-950 chat-scroll"
+        style={{ paddingBottom: "calc(var(--input-height, 90px) + 20px)" }}
       >
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-4 sm:p-6">
@@ -1139,8 +1249,21 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
         )}
       </div>
       
-      {/* Input Area */}
-      <div className="border-t dark:border-slate-700/50 p-0 relative bg-gradient-to-r from-gray-50 to-white dark:from-slate-900 dark:to-slate-950">
+      {/* Input Area - Fixed to bottom with transition */}
+      <div 
+        ref={inputAreaRef}
+        className={`fixed bottom-0 left-0 right-0 chat-input-fixed border-t dark:border-slate-700/50 p-0 bg-gradient-to-r from-gray-50 to-white dark:from-slate-900 dark:to-slate-950 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-in-out ${
+          isInputVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
+        } max-w-screen-2xl mx-auto`}
+        style={{ 
+          zIndex: 20,
+        }}
+      >
+        {/* Add a pill-shaped handle at the top of the input area for visual affordance */}
+        <div className="w-full flex justify-center">
+          <div className="w-12 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mt-1 mb-0.5"></div>
+        </div>
+        
         <div className="p-2 sm:p-3">
           <div className="flex items-start gap-2">
             <Textarea
@@ -1149,6 +1272,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
+              onFocus={() => setIsInputVisible(true)}
               className="min-h-[2.5rem] sm:min-h-[3.5rem] max-h-[12rem] resize-none rounded-2xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800/80 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:focus:ring-blue-400/50 dark:focus:border-blue-400 transition-all duration-200 backdrop-blur-sm"
             />
             <Button 
@@ -1197,11 +1321,24 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
                 if (textareaRef.current) {
                   textareaRef.current.focus();
                 }
+                // Always show the input when selecting a suggestion
+                setIsInputVisible(true);
               }}
             />
           </div>
         )}
       </div>
+
+      {/* Floating action button to show input when hidden */}
+      {!isInputVisible && (
+        <button 
+          onClick={() => setIsInputVisible(true)} 
+          className="fixed bottom-4 right-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full p-4 shadow-lg transition-all z-30 animate-bounceIn hover:from-blue-600 hover:to-indigo-700"
+          aria-label="Show message input"
+        >
+          <MessageSquare className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -1239,6 +1376,66 @@ const styles = `
 
 .animate-slideIn {
   animation: slideIn 0.3s ease-out forwards;
+}
+
+@keyframes bounceIn {
+  0% { 
+    opacity: 0;
+    transform: scale(0.3) translateY(20px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05) translateY(-10px);
+  }
+  70% { transform: scale(0.9) translateY(5px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+.animate-bounceIn {
+  animation: bounceIn 0.5s ease-out forwards;
+}
+
+/* Prevent iOS Safari address bar from affecting the fixed position */
+@supports (-webkit-touch-callout: none) {
+  .chat-input-fixed {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+}
+
+/* Custom scrollbar for chat area */
+.chat-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  .chat-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .chat-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  
+  .chat-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
 }
 `;
 
