@@ -11,9 +11,9 @@ const rl = readline.createInterface({
 const envExamplePath = path.join(__dirname, '.env.example');
 const envLocalPath = path.join(__dirname, '.env.local');
 
-console.log('AI Chatbot Setup');
+console.log('ChatBuddy Setup');
 console.log('================');
-console.log('This script will help you set up your environment variables for the AI Chatbot.');
+console.log('This script will help you set up your environment variables for the ChatBuddy.');
 console.log('');
 
 if (!fs.existsSync(envExamplePath)) {

@@ -37,6 +37,8 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ## 🆕 Recent Updates
 
+- **Build & Hydration Fixes**: Resolved 500 internal server errors by fixing type assertions in utils.ts, correcting Navbar component hydration, and ensuring proper component imports
+- **Type Safety Improvements**: Enhanced TypeScript type safety across the application, particularly in API calls and context handling
 - **Server-Client Component Fixes**: Fixed issues with client components to ensure proper rendering and avoid hydration errors
 - **Toast Notification System**: Integrated toast notifications with proper component architecture
 - **Code Block Highlighting**: Added beautiful syntax highlighting for code responses with copy button

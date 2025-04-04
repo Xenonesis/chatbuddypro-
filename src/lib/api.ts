@@ -131,10 +131,15 @@ export async function callOpenAI(messages: ChatMessage[], settings?: ModelSettin
 // Gemini API
 export async function callGemini(prompt: string, settings?: ModelSettings): Promise<string> {
   let apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  let model = 'gemini-pro';
+  let model = 'gemini-pro'; // Default to known working model
   let temperature = 0.7;
   let maxTokens = 500;
   let systemInstruction = '';
+  
+  console.log("callGemini: Initial settings", { 
+    hasApiKey: !!apiKey,
+    initialModel: model
+  });
   
   // First check if we have a cached successful API version
   let cachedApiVersion = null;
@@ -142,22 +147,43 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
     cachedApiVersion = localStorage.getItem('GEMINI_API_VERSION');
   }
   
-  // Use settings if provided
+  // Use settings if provided - with enhanced error handling
   if (settings) {
-    apiKey = settings.gemini.apiKey || apiKey;
-    model = settings.gemini.selectedModel;
-    
-    // Get parameters based on chat mode
-    const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
-      getParametersForMode(settings, 'gemini');
-    
-    temperature = modeTemp;
-    maxTokens = modeMaxTokens;
-    
-    // For Gemini, we'll prepend the system message to the prompt
-    if (systemMessage) {
-      systemInstruction = `${systemMessage}\n\nUser query: `;
+    // Check if gemini settings exist before trying to access apiKey
+    if (settings.gemini) {
+      apiKey = settings.gemini.apiKey || apiKey;
+      // Only use selectedModel if it's a non-empty string
+      if (settings.gemini.selectedModel && typeof settings.gemini.selectedModel === 'string' && settings.gemini.selectedModel.trim() !== '') {
+        model = settings.gemini.selectedModel;
+      }
+      
+      console.log("callGemini: Using model from settings:", model);
+      
+      // Get parameters based on chat mode
+      try {
+        const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
+          getParametersForMode(settings, 'gemini');
+        
+        temperature = modeTemp || temperature;
+        maxTokens = modeMaxTokens || maxTokens;
+        
+        // For Gemini, we'll prepend the system message to the prompt
+        if (systemMessage) {
+          systemInstruction = `${systemMessage}\n\nUser query: `;
+        }
+      } catch (error) {
+        console.warn('Error getting parameters for Gemini:', error);
+        // Continue with default parameters
+      }
+    } else {
+      console.warn('Gemini settings not found in settings object, using defaults');
     }
+  }
+  
+  // Ensure we're using a valid model - force gemini-pro if unsure
+  if (!model || model.trim() === '' || !model.includes('gemini')) {
+    console.warn(`Invalid model name detected: "${model}", falling back to gemini-pro`);
+    model = 'gemini-pro';
   }
   
   // Transform model name to API format if needed
@@ -173,10 +199,17 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
       'gemini-2.0-flash-lite': 'gemini-2.0-flash-lite',
     };
     
-    return modelMap[modelName] || modelName;
+    // If model isn't in our map, default to gemini-pro
+    if (!modelMap[modelName]) {
+      console.warn(`Model name "${modelName}" not found in model map, using gemini-pro instead`);
+      return 'gemini-pro';
+    }
+    
+    return modelMap[modelName];
   };
   
   const apiModelName = getApiModelName(model);
+  console.log("callGemini: Using API model name:", apiModelName);
   
   // More robust API key validation - check for proper format
   if (!apiKey) {
@@ -263,7 +296,20 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
           if (response.status === 403) {
             throw new Error(`Gemini API key is invalid or has insufficient permissions`);
           } else if (response.status === 404) {
-            throw new Error(`Gemini API model not found. This may be due to using an outdated API version or incorrect model name.`);
+            // This is likely a model not found error - try with a different model
+            if (apiModelName !== 'gemini-pro') {
+              console.log(`Model ${apiModelName} not found. Falling back to gemini-pro...`);
+              model = 'gemini-pro';
+              
+              // Reset API version to try again with the basic model
+              currentVersionIndex = 0;
+              
+              if (retries < MAX_RETRIES) {
+                retries++;
+                continue;
+              }
+            }
+            throw new Error(`Gemini API model not found. Model "${apiModelName}" may not exist or be available for the "${apiVersion}" API version.`);
           } else if (response.status === 429) {
             throw new Error(`Gemini API rate limit exceeded. Please try again later.`);
           } else {
@@ -299,10 +345,11 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
     } catch (error) {
       console.error(`Gemini API error (attempt ${retries + 1}/${MAX_RETRIES + 1}):`, error);
       
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
       // Check for specific API version errors and retry with alternate API version
-      if (error instanceof Error && 
-          (error.message.includes('not found for API version') || 
-           error.message.includes('not supported for generateContent'))) {
+      if (errorMessage.includes('not found for API version') || 
+          errorMessage.includes('not supported for generateContent')) {
         console.log('Detected API version issue, trying different API version...');
         
         // Try the next API version
@@ -317,12 +364,12 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
       }
       
       // Check for model-specific errors
-      if (error instanceof Error && 
-          (error.message.includes('Model not found') || 
-           error.message.includes('not available'))) {
+      if (errorMessage.includes('Model not found') || 
+          errorMessage.includes('not available') ||
+          errorMessage.includes('Gemini API model not found')) {
         // If using newer models but they aren't available, try falling back to gemini-pro
-        if (model !== 'gemini-pro' && model !== 'gemini-pro-vision') {
-          console.log(`Model ${model} not found. Falling back to gemini-pro...`);
+        if (apiModelName !== 'gemini-pro') {
+          console.log(`Model ${apiModelName} not found. Falling back to gemini-pro...`);
           model = 'gemini-pro';
           
           // Reset API version to try again with the basic model
@@ -363,53 +410,111 @@ export async function callMistral(messages: ChatMessage[], settings?: ModelSetti
   let finalMessages = [...messages];
   
   // Use settings if provided
-  if (settings) {
+  if (settings && settings.mistral) {
     apiKey = settings.mistral.apiKey || apiKey;
-    model = settings.mistral.selectedModel;
+    model = settings.mistral.selectedModel || model;
     
     // Get parameters based on chat mode
-    const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
-      getParametersForMode(settings, 'mistral');
-    
-    temperature = modeTemp;
-    maxTokens = modeMaxTokens;
-    
-    // Add system message if provided
-    if (systemMessage) {
-      finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
+    try {
+      const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
+        getParametersForMode(settings, 'mistral');
+      
+      temperature = modeTemp || temperature;
+      maxTokens = modeMaxTokens || maxTokens;
+      
+      // Add system message if provided
+      if (systemMessage) {
+        finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
+      }
+    } catch (error) {
+      console.warn('Error getting parameters for Mistral, using defaults:', error);
     }
   }
   
   if (!apiKey) {
-    throw new Error('Mistral API key is not configured');
+    throw new Error('Mistral API key is not configured. Please add it to your .env.local file or settings.');
   }
   
-  try {
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages: finalMessages,
-        temperature,
-        max_tokens: maxTokens
-      })
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to call Mistral API');
+  // Maximum retries
+  const MAX_RETRIES = 2;
+  let retries = 0;
+  
+  while (retries <= MAX_RETRIES) {
+    try {
+      console.log(`Calling Mistral API with model: ${model}, attempt ${retries + 1}/${MAX_RETRIES + 1}`);
+      
+      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: finalMessages,
+          temperature,
+          max_tokens: maxTokens
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log(`Mistral API error text: ${errorText}`);
+        
+        let errorJson;
+        try {
+          errorJson = errorText ? JSON.parse(errorText) : { error: { message: 'Empty response' } };
+        } catch (e) {
+          // If response is not JSON, use the text directly
+          console.error(`Mistral API error (${response.status}): ${errorText || response.statusText}`);
+          throw new Error(`Mistral API error: ${response.status} - ${errorText || response.statusText}`);
+        }
+        
+        console.error('Mistral API error response:', errorJson);
+        
+        // Check for specific error types and provide more helpful messages
+        if (response.status === 401) {
+          throw new Error(`Mistral API key is invalid or has expired`);
+        } else if (response.status === 404) {
+          throw new Error(`Mistral API model not found: "${model}". The model may not exist or be available.`);
+        } else if (response.status === 429) {
+          throw new Error(`Mistral API rate limit exceeded. Please try again later.`);
+        } else {
+          throw new Error(errorJson.error?.message || `Mistral API error: ${response.status} - ${response.statusText}`);
+        }
+      }
+      
+      const data = await response.json();
+      
+      // Check if we got a valid response structure
+      if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
+        console.error('Unexpected Mistral API response structure:', data);
+        throw new Error('Received unexpected response structure from Mistral API');
+      }
+      
+      return data.choices[0].message.content;
+    } catch (error) {
+      console.error(`Mistral API error (attempt ${retries + 1}/${MAX_RETRIES + 1}):`, error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // If we're on the final retry, throw the error
+      if (retries === MAX_RETRIES) {
+        if (error instanceof Error) {
+          throw new Error(`Mistral API error: ${error.message}`);
+        } else {
+          throw new Error('Unknown error occurred while calling Mistral API');
+        }
+      }
+      
+      // Wait before retrying (exponential backoff: 1s, then a bit longer for next retry)
+      await new Promise(resolve => setTimeout(resolve, 1000 * (retries + 1)));
+      retries++;
     }
-    
-    const data = await response.json();
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error('Mistral API error:', error);
-    throw error;
   }
+  
+  // This should not be reached but TypeScript needs it
+  throw new Error('Failed to call Mistral API after maximum retries');
 }
 
 // Claude API

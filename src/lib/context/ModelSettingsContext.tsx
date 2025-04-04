@@ -54,6 +54,16 @@ export type ModelSettings = {
     maxTokens: number;
     temperature: number;
   };
+  suggestionsSettings: {
+    enabled: boolean;
+    saveHistory: boolean;
+    maxHistoryItems: number;
+    showFollowUpQuestions: boolean;
+    showTopicSuggestions: boolean;
+    showPromptRecommendations: boolean;
+    useAI: boolean;
+    favoritePrompts: string[];
+  };
   defaultProvider: AIProvider;
   chatMode: ChatMode;
   showThinking: boolean;
@@ -115,6 +125,16 @@ const defaultSettings: ModelSettings = {
     maxTokens: 500,
     temperature: 0.7
   },
+  suggestionsSettings: {
+    enabled: true,
+    saveHistory: true,
+    maxHistoryItems: 50,
+    showFollowUpQuestions: true, 
+    showTopicSuggestions: true,
+    showPromptRecommendations: true,
+    useAI: true,
+    favoritePrompts: []
+  },
   defaultProvider: 'openai',
   chatMode: 'thoughtful',
   showThinking: false
@@ -129,6 +149,14 @@ interface ModelSettingsContextType {
   setChatMode: (mode: ChatMode) => void;
   toggleShowThinking: () => void;
   getDefaultSettings: () => ModelSettings;
+  addFavoritePrompt: (prompt: string) => void;
+  removeFavoritePrompt: (prompt: string) => void;
+  toggleSuggestionsEnabled: () => void;
+  toggleSaveHistory: () => void;
+  toggleFollowUpQuestions: () => void;
+  toggleTopicSuggestions: () => void;
+  togglePromptRecommendations: () => void;
+  toggleUseAI: () => void;
 }
 
 const ModelSettingsContext = createContext<ModelSettingsContextType | undefined>(undefined);
@@ -269,7 +297,21 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   };
 
   const getApiKey = (provider: AIProvider): string => {
-    return settings[provider].apiKey;
+    const apiKey = settings[provider].apiKey;
+    
+    // Validate API keys
+    if (provider === 'gemini' && apiKey && !apiKey.startsWith('AIza')) {
+      console.warn('Invalid Gemini API key format, should start with AIza');
+      return ''; // Return empty string to trigger fallbacks
+    }
+    
+    // Mistral API keys are typically long strings
+    if (provider === 'mistral' && apiKey && apiKey.length < 30) {
+      console.warn('Mistral API key appears to be invalid (too short)');
+      return ''; // Return empty string to trigger fallbacks
+    }
+    
+    return apiKey;
   };
 
   const setChatMode = (mode: ChatMode) => {
@@ -303,6 +345,155 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
     return JSON.parse(JSON.stringify(defaultSettings));
   };
 
+  const addFavoritePrompt = (prompt: string) => {
+    setSettings(prev => {
+      // Don't add duplicate prompts
+      if (prev.suggestionsSettings.favoritePrompts.includes(prompt)) {
+        return prev;
+      }
+      
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          favoritePrompts: [...prev.suggestionsSettings.favoritePrompts, prompt]
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const removeFavoritePrompt = (prompt: string) => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          favoritePrompts: prev.suggestionsSettings.favoritePrompts.filter(p => p !== prompt)
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleSuggestionsEnabled = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          enabled: !prev.suggestionsSettings.enabled
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleSaveHistory = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          saveHistory: !prev.suggestionsSettings.saveHistory
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleFollowUpQuestions = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          showFollowUpQuestions: !prev.suggestionsSettings.showFollowUpQuestions
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleTopicSuggestions = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          showTopicSuggestions: !prev.suggestionsSettings.showTopicSuggestions
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const togglePromptRecommendations = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          showPromptRecommendations: !prev.suggestionsSettings.showPromptRecommendations
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleUseAI = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          useAI: !prev.suggestionsSettings.useAI
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
   return (
     <ModelSettingsContext.Provider
       value={{
@@ -313,7 +504,15 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
         getApiKey,
         setChatMode,
         toggleShowThinking,
-        getDefaultSettings
+        getDefaultSettings,
+        addFavoritePrompt,
+        removeFavoritePrompt,
+        toggleSuggestionsEnabled,
+        toggleSaveHistory,
+        toggleFollowUpQuestions,
+        toggleTopicSuggestions,
+        togglePromptRecommendations,
+        toggleUseAI
       }}
     >
       {children}

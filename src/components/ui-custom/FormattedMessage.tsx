@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { containsCodeBlock, parseCodeBlocks } from '@/lib/utils';
-import { CodeBlock } from './CodeBlock';
+import CodeBlock from './CodeBlock';
 
 interface FormattedMessageProps {
   content: string;
@@ -86,7 +86,7 @@ export function FormattedMessage({ content }: FormattedMessageProps) {
       lastIndex = header.index + header.fullMatch.length;
     });
     
-    // Add any remaining text
+    // Add any remaining text after the last file header
     if (lastIndex < text.length) {
       parts.push(
         <div key="text-final" className="whitespace-pre-wrap">
@@ -109,9 +109,8 @@ export function FormattedMessage({ content }: FormattedMessageProps) {
           {/* Code block */}
           <div className="w-full">
             <CodeBlock 
-              code={block.code} 
+              value={block.code} 
               language={block.language} 
-              showLineNumbers={true} 
             />
           </div>
           

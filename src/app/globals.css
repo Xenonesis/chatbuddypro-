@@ -79,6 +79,35 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  
+  /* Custom scrollbar for desktop - hidden for mobile */
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+  
+  .dark ::-webkit-scrollbar-track {
+    @apply bg-slate-800;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
 }
 
 @layer components {
@@ -222,6 +251,20 @@
   .bg-gradient-accent {
     background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent) / 0.8));
   }
+
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Hide scrollbar but maintain functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
 }
 
 /* Animations */
@@ -250,7 +293,7 @@
     opacity: 1;
   }
   50% {
-    opacity: .5;
+    opacity: 0.5;
   }
 }
 
@@ -259,22 +302,22 @@
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-5px);
+    transform: translateY(-10px);
   }
 }
 
 @keyframes thinking {
   0% {
-    opacity: 0.5;
-    transform: scale(0.9);
+    transform: scale(1);
+    opacity: 0.7;
   }
   50% {
-    opacity: 1;
     transform: scale(1.05);
+    opacity: 1;
   }
   100% {
-    opacity: 0.5;
-    transform: scale(0.9);
+    transform: scale(1);
+    opacity: 0.7;
   }
 }
 
@@ -309,44 +352,11 @@
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-5px);
+    transform: translateY(-8px);
   }
   100% {
     transform: translateY(0px);
   }
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #94a3b8, #64748b);
-}
-
-/* Dark mode scrollbar */
-.dark ::-webkit-scrollbar-track {
-  background: #1e293b;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #475569, #334155);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #334155, #1e293b);
 }
 
 /* Responsive styles */
@@ -391,6 +401,151 @@ html {
   .mobile-hide {
     display: none !important;
   }
+
+  /* Improved touch targets */
+  button, 
+  [role="button"],
+  a {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem;
+    touch-action: manipulation;
+  }
+
+  /* Better spacing for mobile */
+  .chat-scroll {
+    max-height: calc(100vh - 180px) !important;
+    max-height: calc(100dvh - 180px) !important;
+  }
+
+  /* Improved mobile input experience */
+  .chat-input {
+    position: sticky;
+    bottom: 0;
+    background-color: inherit;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    z-index: 10;
+  }
+
+  /* Better mobile message bubbles */
+  .message-bubble {
+    max-width: 85% !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Improved mobile scrolling */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better mobile text sizing */
+  .responsive-text {
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Floating suggestions for mobile */
+  .suggestions-panel {
+    border-radius: 0;
+    max-height: 7rem;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+  
+  .suggestions-panel::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* New Suggestions Styles */
+.suggestions-panel {
+  transition: all 0.2s ease-in-out;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.2) transparent;
+}
+
+.suggestions-panel::-webkit-scrollbar {
+  height: 4px;
+}
+
+.suggestions-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.suggestions-panel::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.2);
+  border-radius: 20px;
+}
+
+/* Smart suggestion button styles */
+.smart-suggestion {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  margin-right: 0.5rem;
+  margin-bottom: 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: rgba(59, 130, 246, 1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.dark .smart-suggestion {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: rgba(96, 165, 250, 1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.smart-suggestion:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+  cursor: pointer;
+}
+
+.smart-suggestion:active {
+  transform: translateY(0);
+}
+
+/* Animation for suggestions appearance/disappearance */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.suggestions-panel {
+  animation: fadeSlideIn 0.2s forwards;
+}
+
+.suggestions-panel.hiding {
+  animation: fadeSlideOut 0.2s forwards;
 }
 
 @media (min-width: 641px) and (max-width: 1024px) {
@@ -442,22 +597,7 @@ html {
   position: relative;
 }
 
-@media (max-width: 640px) {
-  .chat-scroll {
-    max-height: calc(100vh - 150px);
-    max-height: calc(100dvh - 150px);
-    overflow-y: auto;
-  }
-  
-  .chat-input {
-    position: sticky;
-    bottom: 0;
-    background-color: inherit;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-}
-
-/* Safe area insets */
+/* Safe area insets for modern mobile browsers */
 .h-screen, 
 .min-h-screen {
   height: 100vh;
@@ -469,13 +609,15 @@ html {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Responsive text sizing */
+/* Improved responsive text sizing */
 .responsive-text {
   font-size: clamp(0.875rem, 2vw, 1rem);
+  line-height: 1.6;
 }
 
 .responsive-heading {
   font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.2;
 }
 
 /* Code block styles */
@@ -531,4 +673,105 @@ code {
 
 .dark .hljs-function {
   color: hsl(var(--purple-300));
+}
+
+/* Enhanced touch feedback */
+@media (hover: none) {
+  .hover-scale:active {
+    transform: scale(0.98);
+  }
+
+  .hover-shadow:active {
+    box-shadow: none;
+  }
+
+  .hover-opacity:active {
+    opacity: 0.7;
+  }
+}
+
+/* Improved mobile layout */
+@supports (padding: max(0px)) {
+  .mobile-safe-padding {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Better mobile keyboard handling */
+.has-keyboard .chat-scroll {
+  max-height: calc(100vh - 280px) !important;
+  max-height: calc(100dvh - 280px) !important;
+}
+
+/* Improved mobile animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Add animations for enhanced Chat component */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bounceSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 3s infinite ease-in-out;
+}
+
+/* Ensure message bubbles have consistent styling across devices */
+.message-bubble {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.message-bubble:hover {
+  background-color: rgba(0,0,0,0.02);
+}
+
+@media (max-width: 640px) {
+  .message-bubble {
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem !important;
+  }
 }
