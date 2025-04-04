@@ -69,10 +69,37 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "pulse-subtle": {
+          "0%, 100%": { 
+            opacity: "1",
+            transform: "scale(1)"
+          },
+          "50%": { 
+            opacity: "0.95",
+            transform: "scale(0.98)"
+          },
+        },
+        "fadeIn": {
+          from: { opacity: "0" },
+          to: { opacity: "1" }
+        },
+        "slideIn": {
+          from: { 
+            opacity: "0",
+            transform: "translateY(10px)"
+          },
+          to: { 
+            opacity: "1",
+            transform: "translateY(0)"
+          }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-subtle": "pulse-subtle 3s ease-in-out infinite",
+        "fadeIn": "fadeIn 0.5s ease-out forwards",
+        "slideIn": "slideIn 0.3s ease-out forwards"
       },
     },
   },

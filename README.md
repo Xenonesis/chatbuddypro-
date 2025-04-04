@@ -28,6 +28,7 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
   - 🔄 One-click regeneration for AI responses
   - 💬 "Thinking process" visualization option
   - 🧠 Multiple chat modes (Technical, Creative, Quick, etc.)
+  - 🎤 Voice input support with speech recognition
 
 - **Developer Experience**:
   - 🛠️ Fully typed with TypeScript
@@ -37,6 +38,8 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ## 🆕 Recent Updates
 
+- **Production Build Fixes**: Added TypeScript declaration file for react-speech-recognition, resolved ESLint warnings for production build
+- **Speech Recognition**: Added voice input support with browser's speech recognition API
 - **Build & Hydration Fixes**: Resolved 500 internal server errors by fixing type assertions in utils.ts, correcting Navbar component hydration, and ensuring proper component imports
 - **Type Safety Improvements**: Enhanced TypeScript type safety across the application, particularly in API calls and context handling
 - **Server-Client Component Fixes**: Fixed issues with client components to ensure proper rendering and avoid hydration errors
@@ -112,13 +115,20 @@ npm run dev
 yarn dev
 ```
 
+For production build:
+
+```bash
+npm run build
+npm start
+```
+
 Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
 ## 💻 Usage
 
 1. Choose your preferred AI model from the dropdown
 2. Select a chat mode (Thoughtful, Quick, Technical, Creative, Learning)
-3. Type your message or coding question
+3. Type your message or coding question, or use the voice input feature
 4. Press Enter or click the Send button
 5. View the AI's response with beautiful formatting for code blocks
 6. Use the regenerate button if you want a different response
@@ -133,6 +143,15 @@ When asking coding questions, the AI will automatically format code responses wi
 - Copy-to-clipboard functionality
 - Dark/light mode compatibility
 
+### Voice Input
+
+The application supports voice input through your browser's speech recognition API:
+
+- Click the microphone icon to start/stop voice recording
+- Speak clearly into your microphone
+- The transcript will automatically appear in the input field
+- Supports multiple languages (configurable in settings)
+
 ## 🧩 Architecture
 
 The application is built with Next.js and React, using the following architecture:
@@ -142,6 +161,7 @@ The application is built with Next.js and React, using the following architectur
 - **State Management**: React Context API for managing chat state
 - **Theming**: Next-themes for dark/light mode support
 - **Code Formatting**: React Syntax Highlighter for code blocks
+- **Voice Input**: Web Speech API with custom hook implementation
 
 ## 🛠️ Customization
 

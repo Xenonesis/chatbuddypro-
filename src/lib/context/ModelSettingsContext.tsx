@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 
 export type AIProvider = 'openai' | 'gemini' | 'mistral' | 'claude' | 'llama' | 'deepseek';
 export type ChatMode = 'thoughtful' | 'quick' | 'creative' | 'technical' | 'learning';
@@ -64,9 +64,20 @@ export type ModelSettings = {
     useAI: boolean;
     favoritePrompts: string[];
   };
+  voiceInputSettings: {
+    enabled: boolean;
+    language: string;
+    continuous: boolean;
+  };
   defaultProvider: AIProvider;
   chatMode: ChatMode;
   showThinking: boolean;
+};
+
+export type VoiceInputSettings = {
+  enabled: boolean;
+  language: string;
+  continuous: boolean;
 };
 
 const defaultSettings: ModelSettings = {
@@ -135,6 +146,11 @@ const defaultSettings: ModelSettings = {
     useAI: true,
     favoritePrompts: []
   },
+  voiceInputSettings: {
+    enabled: true,
+    language: 'en-US',
+    continuous: true
+  },
   defaultProvider: 'openai',
   chatMode: 'thoughtful',
   showThinking: false
@@ -157,6 +173,9 @@ interface ModelSettingsContextType {
   toggleTopicSuggestions: () => void;
   togglePromptRecommendations: () => void;
   toggleUseAI: () => void;
+  toggleVoiceInput: () => void;
+  setVoiceLanguage: (language: string) => void;
+  toggleContinuousListening: () => void;
 }
 
 const ModelSettingsContext = createContext<ModelSettingsContextType | undefined>(undefined);
@@ -478,7 +497,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
 
   const toggleUseAI = () => {
     setSettings(prev => {
-      const updatedSettings = {
+      const newSettings = {
         ...prev,
         suggestionsSettings: {
           ...prev.suggestionsSettings,
@@ -487,33 +506,92 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       };
       
       if (typeof window !== 'undefined') {
-        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
       }
       
-      return updatedSettings;
+      return newSettings;
     });
+  };
+
+  const toggleVoiceInput = useCallback(() => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        voiceInputSettings: {
+          ...prev.voiceInputSettings,
+          enabled: !prev.voiceInputSettings.enabled
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+      
+      return newSettings;
+    });
+  }, []);
+
+  const setVoiceLanguage = useCallback((language: string) => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        voiceInputSettings: {
+          ...prev.voiceInputSettings,
+          language
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+      
+      return newSettings;
+    });
+  }, []);
+
+  const toggleContinuousListening = useCallback(() => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        voiceInputSettings: {
+          ...prev.voiceInputSettings,
+          continuous: !prev.voiceInputSettings.continuous
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+      
+      return newSettings;
+    });
+  }, []);
+
+  const contextValue: ModelSettingsContextType = {
+    settings,
+    currentProvider,
+    setCurrentProvider,
+    updateSettings,
+    getApiKey,
+    setChatMode,
+    toggleShowThinking,
+    getDefaultSettings,
+    addFavoritePrompt,
+    removeFavoritePrompt,
+    toggleSuggestionsEnabled,
+    toggleSaveHistory,
+    toggleFollowUpQuestions,
+    toggleTopicSuggestions,
+    togglePromptRecommendations,
+    toggleUseAI,
+    toggleVoiceInput,
+    setVoiceLanguage,
+    toggleContinuousListening
   };
 
   return (
     <ModelSettingsContext.Provider
-      value={{
-        settings,
-        currentProvider,
-        setCurrentProvider,
-        updateSettings,
-        getApiKey,
-        setChatMode,
-        toggleShowThinking,
-        getDefaultSettings,
-        addFavoritePrompt,
-        removeFavoritePrompt,
-        toggleSuggestionsEnabled,
-        toggleSaveHistory,
-        toggleFollowUpQuestions,
-        toggleTopicSuggestions,
-        togglePromptRecommendations,
-        toggleUseAI
-      }}
+      value={contextValue}
     >
       {children}
     </ModelSettingsContext.Provider>

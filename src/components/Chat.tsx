@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,7 +34,12 @@ import {
   Sun,
   PlusCircle,
   Activity,
-  RotateCw
+  RotateCw,
+  Mic,
+  MicOff,
+  VolumeX,
+  Square,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { callAI, ChatMessage } from '@/lib/api';
@@ -46,6 +51,8 @@ import { SmartSuggestions } from '@/components/ui-custom/SmartSuggestions';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import CodeBlock from '@/components/ui-custom/CodeBlock';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { cn } from '@/lib/utils';
 
 type Message = {
   id: string;
@@ -82,6 +89,36 @@ export default function Chat() {
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
+  
+  const { voiceInputSettings } = settings;
+  
+  const { 
+    isListening, 
+    toggleListening, 
+    transcript, 
+    resetTranscript,
+    noSpeechDetected,
+    browserSupportsSpeechRecognition,
+    microphoneAvailable,
+    micPermissionDenied,
+    requestMicrophonePermission
+  } = useVoiceInput({
+    onTranscriptChange: (text) => {
+      if (text && text.trim()) {
+        setInput(prev => {
+          // Avoid duplicating text if it's already in the input
+          if (prev.includes(text)) return prev;
+          return prev ? `${prev} ${text}`.trim() : text.trim();
+        });
+      }
+    }
+  });
+  
+  useEffect(() => {
+    if (voiceInputSettings.enabled && !microphoneAvailable && !micPermissionDenied) {
+      requestMicrophonePermission();
+    }
+  }, [voiceInputSettings.enabled, microphoneAvailable, micPermissionDenied, requestMicrophonePermission]);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -822,10 +859,12 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (input.trim()) {
+        handleSend();
+      }
     }
   };
 
@@ -1028,10 +1067,21 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     .filter(msg => msg.role === 'assistant')
     .pop()?.content || '';
 
-  // Hide suggestions when typing
+  // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    setIsTyping(e.target.value.length > 0);
+    const newValue = e.target.value;
+    setInput(newValue);
+    
+    // Check if user started typing (new characters added)
+    const userStartedTyping = newValue.length > input.length;
+    
+    // Set typing state
+    setIsTyping(newValue.length > 0);
+    
+    // If user is manually typing and the microphone is on, turn it off
+    if (userStartedTyping && isListening) {
+      toggleListening();
+    }
   };
 
   // Reset typing state when input is cleared or message is sent
@@ -1088,6 +1138,23 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     iconBounce: 'animate-bounce',
     fadeIn: 'animate-fadeIn',
     slideIn: 'animate-slideIn',
+  };
+
+  // Handle voice input toggle
+  const handleVoiceInputToggle = async () => {
+    // If microphone permission was denied, request it again
+    if (micPermissionDenied) {
+      const permissionGranted = await requestMicrophonePermission();
+      if (!permissionGranted) return;
+    }
+    
+    // Toggle listening state
+    await toggleListening();
+    
+    // Reset transcript if stopping
+    if (isListening) {
+      resetTranscript();
+    }
   };
 
   return (
@@ -1235,8 +1302,8 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             {renderMessages()}
             <div ref={messagesEndRef} />
             
-            {/* Thinking display */}
-            {thinking && settings.showThinking && (
+            {/* Thinking display - Only show when loading responses */}
+            {isLoading && thinking && settings.showThinking && (
               <div className="p-3 my-2 rounded-lg bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 text-xs text-slate-600 dark:text-slate-400 font-mono whitespace-pre-line">
                 <div className="flex items-center gap-2 mb-2">
                   <Brain className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 animate-pulse" />
@@ -1273,24 +1340,90 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onFocus={() => setIsInputVisible(true)}
-              className="min-h-[2.5rem] sm:min-h-[3.5rem] max-h-[12rem] resize-none rounded-2xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800/80 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:focus:ring-blue-400/50 dark:focus:border-blue-400 transition-all duration-200 backdrop-blur-sm"
+              className="min-h-[2.5rem] sm:min-h-[3.5rem] max-h-[12rem] resize-none rounded-2xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800/80 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:focus:ring-blue-400/50 dark:focus:border-blue-400 transition-all duration-200 backdrop-blur-sm pr-20"
             />
-            <Button 
-              className={`rounded-full transition-all duration-300 shadow-md ${
-                input.trim() 
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 dark:from-blue-600 dark:to-indigo-700 dark:hover:from-blue-500 dark:hover:to-indigo-600 hover:shadow-lg scale-100 hover:scale-105' 
-                  : 'bg-gradient-to-r from-blue-400 to-indigo-400 dark:from-blue-500/60 dark:to-indigo-600/60 cursor-not-allowed opacity-70'
-              } w-12 h-12 flex items-center justify-center`}
-              onClick={handleSend} 
-              disabled={isLoading || !input.trim()}
-              aria-label="Send message"
-            >
-              {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <SendIcon className="h-5 w-5" />
+            <div className="absolute right-4 bottom-4 sm:right-5 sm:bottom-5 flex items-center gap-2">
+              {!isListening && settings.voiceInputSettings.enabled && browserSupportsSpeechRecognition && microphoneAvailable && 
+               !isTyping && !isLoading && (
+                <Button
+                  size="icon"
+                  onClick={handleVoiceInputToggle}
+                  className="h-8 w-8 rounded-full flex items-center justify-center transition-colors bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300"
+                  title="Start voice input"
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
               )}
-            </Button>
+              
+              {!isListening && settings.voiceInputSettings.enabled && isListening && (
+                <div className="mt-2 flex items-center px-3 py-2 text-sm text-green-600 dark:text-green-400 animate-pulse bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-md">
+                  <Mic className="h-4 w-4 mr-2" />
+                  <span className="font-medium">Listening... Speak now</span>
+                  <Button
+                    onClick={toggleListening}
+                    className="ml-auto px-2 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-300 rounded border border-red-200 dark:border-red-800/50"
+                  >
+                    Stop
+                  </Button>
+                </div>
+              )}
+              
+              <Button
+                size="icon"
+                disabled={isLoading || !input.trim()}
+                onClick={handleSend}
+                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none"
+                title="Send message"
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendIcon className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          
+          {/* No speech detected message */}
+          {noSpeechDetected && isListening && settings.voiceInputSettings.enabled && (
+            <div className="mt-2 flex items-center px-3 py-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 rounded-md">
+              <Mic className="h-4 w-4 mr-2" />
+              <span className="font-medium">No speech detected. Try speaking louder or check your microphone.</span>
+              <Button
+                onClick={handleVoiceInputToggle}
+                className="ml-2 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/40 dark:hover:bg-green-900/60 dark:text-green-300 rounded border border-green-200 dark:border-green-800/50"
+              >
+                Try Again
+              </Button>
+            </div>
+          )}
+          
+          {/* Microphone permission error message */}
+          {micPermissionDenied && settings.voiceInputSettings.enabled && (
+            <div className="mt-2 flex items-center px-3 py-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded-md">
+              <MicOff className="h-4 w-4 mr-2" />
+              <span className="font-medium">
+                Microphone access denied. Please enable microphone access in your browser settings.
+              </span>
+              <Button
+                onClick={() => requestMicrophonePermission()}
+                className="ml-2 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700/50"
+              >
+                Allow Microphone
+              </Button>
+            </div>
+          )}
+          
+          {/* Browser compatibility message */}
+          {!browserSupportsSpeechRecognition && settings.voiceInputSettings.enabled && (
+            <div className="mt-2 flex items-center px-3 py-2 text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 rounded-md">
+              <MicOff className="h-4 w-4 mr-2" />
+              <span className="font-medium">
+                Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.
+              </span>
+            </div>
+          )}
+          
+          <div className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-slate-400 flex justify-between items-center">
+            <div>
+              Press <kbd className="px-1 sm:px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600">Enter</kbd> to send, <kbd className="px-1 sm:px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600">Shift+Enter</kbd> for new line
+            </div>
           </div>
           
           {/* Character count and model info */}
@@ -1311,7 +1444,6 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
           </div>
         </div>
         
-        {/* Smart Suggestions (if enabled) */}
         {settings.suggestionsSettings.enabled && messageHasBeenSent && !isTyping && messages.length > 0 && (
           <div className="pb-2 px-3">
             <SmartSuggestions 
@@ -1338,6 +1470,66 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
         >
           <MessageSquare className="h-5 w-5" />
         </button>
+      )}
+
+      {/* Voice input listening indicator */}
+      {isListening && settings.voiceInputSettings.enabled && (
+        <div className="absolute bottom-24 left-0 right-0 mx-auto w-fit px-4 py-2 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800 z-10">
+          <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center">
+            <Mic className="h-4 w-4 mr-2 animate-pulse" />
+            Listening... speak clearly
+          </p>
+        </div>
+      )}
+      
+      {/* No speech detected message */}
+      {noSpeechDetected && isListening && settings.voiceInputSettings.enabled && (
+        <div className="absolute bottom-24 left-0 right-0 mx-auto w-fit px-4 py-2 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800 z-10">
+          <div className="flex flex-col items-center">
+            <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center">
+              <VolumeX className="h-4 w-4 mr-2" />
+              No speech detected. Try speaking louder or check your microphone.
+            </p>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="mt-1 text-amber-600 dark:text-amber-400 h-7" 
+              onClick={() => handleVoiceInputToggle()}
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Microphone permission denied message */}
+      {micPermissionDenied && settings.voiceInputSettings.enabled && (
+        <div className="absolute bottom-24 left-0 right-0 mx-auto w-fit px-4 py-2 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800 z-10">
+          <div className="flex flex-col items-center">
+            <p className="text-sm text-red-600 dark:text-red-400 flex items-center">
+              <MicOff className="h-4 w-4 mr-2" />
+              Microphone access denied. Please enable microphone access in your browser settings.
+            </p>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="mt-1 text-red-600 dark:text-red-400 h-7" 
+              onClick={() => requestMicrophonePermission()}
+            >
+              Allow Microphone
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Browser compatibility message */}
+      {!browserSupportsSpeechRecognition && settings.voiceInputSettings.enabled && (
+        <div className="absolute bottom-24 left-0 right-0 mx-auto w-fit px-4 py-2 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800 z-10">
+          <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.
+          </p>
+        </div>
       )}
     </div>
   );

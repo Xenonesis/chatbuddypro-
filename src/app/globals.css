@@ -460,6 +460,80 @@ html {
   .suggestions-panel::-webkit-scrollbar {
     display: none;
   }
+  
+  /* Settings page mobile optimizations */
+  .container {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  
+  /* Improved card styles for mobile */
+  .card {
+    border-radius: 0.75rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .card-header {
+    padding: 0.75rem 1rem !important;
+  }
+  
+  .card-content {
+    padding: 0.75rem 1rem !important;
+  }
+  
+  /* Better form controls on mobile */
+  .input, 
+  .textarea {
+    padding: 0.75rem !important;
+    border-radius: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Optimized provider buttons on mobile */
+  .provider-btn {
+    min-height: 3rem !important;
+    padding: 0.5rem !important;
+    border-radius: 0.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 1 1 auto !important;
+  }
+  
+  /* Improved touch experience for toggles/switches */
+  [type="checkbox"],
+  [type="radio"] {
+    transform: scale(1.2) !important;
+  }
+  
+  /* Better bottom navigation */
+  .sticky-bottom {
+    position: sticky !important;
+    bottom: 0 !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
+    z-index: 10 !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  
+  /* Add bottom spacing for safe area */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0) !important;
+  }
+  
+  /* Faster transitions for better feeling on mobile */
+  .transition-all {
+    transition-duration: 200ms !important;
+  }
+  
+  /* Better active state feedback */
+  button:active,
+  [role="button"]:active,
+  a:active {
+    transform: scale(0.98) !important;
+    transition: transform 0.1s ease-in-out !important;
+  }
 }
 
 /* New Suggestions Styles */

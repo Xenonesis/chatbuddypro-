@@ -1,14 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Add output: 'standalone' to improve stability
-  output: 'standalone',
-  // Disable ESLint during build
   eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Add external packages that should be resolved during build time
-  serverExternalPackages: ['react-syntax-highlighter'],
-};
+}
 
 module.exports = nextConfig; 
