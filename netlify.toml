@@ -18,6 +18,19 @@
 [functions]
   included_files = ["node_modules/**/*", "next.config.js", ".env.local"]
 
+# Special handling for auth routes
+[[redirects]]
+  from = "/auth/callback"
+  to = "/.netlify/functions/auth/callback"
+  status = 200
+  force = true
+  
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
 # Create redirects for SPA fallback
 [[redirects]]
   from = "/*"

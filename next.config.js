@@ -13,6 +13,11 @@ const nextConfig = {
   },
   // Modify the output strategy for better Netlify compatibility
   output: process.env.NETLIFY ? 'export' : 'standalone',
+  
+  // Define which routes should be statically generated
+  // This is needed for static export mode with dynamic routes
+  distDir: process.env.NETLIFY ? '.next-export' : '.next',
+  
   // Disable image optimization for Netlify compatibility
   images: {
     unoptimized: true,
@@ -64,6 +69,10 @@ const nextConfig = {
   },
   // For Netlify deployment
   trailingSlash: true,
+  // Enable app directory
+  experimental: {
+    appDir: true
+  }
 }
 
 module.exports = nextConfig; 

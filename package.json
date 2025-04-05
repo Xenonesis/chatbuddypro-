@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && ([ -d out ] || next export)",
+    "build": "next build && ([ ! \"$NETLIFY\" ] || cp -r .next-export/static out/static)",
     "start": "next start",
     "lint": "next lint",
     "setup": "node setup.js",
