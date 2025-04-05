@@ -58,10 +58,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { chatService } from '@/lib/services/chatService';
 import dynamic from 'next/dynamic';
 
-// Dynamically import heavy components
-const MessageRenderer = dynamic(() => import('@/components/ui-custom/MessageRenderer'), {
-  loading: () => <div className="animate-pulse bg-secondary/40 rounded-lg p-4 mb-4"></div>
-});
+// Import the Message type from our types
+import { Message } from '@/types/chat';
+
+// Regular import for MessageRenderer instead of dynamic import for now to fix the error
+import MessageRenderer from '@/components/ui-custom/MessageRenderer';
 
 type Message = {
   id: string;
