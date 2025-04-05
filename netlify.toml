@@ -1,10 +1,14 @@
 [build]
-  command = "npm run build"
+  command = "npm install && NODE_OPTIONS=--max_old_space_size=4096 npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "16"
   NPM_FLAGS = "--legacy-peer-deps"
+  NEXT_TELEMETRY_DISABLED = "1"
 
 [[plugins]]
-  package = "@netlify/plugin-nextjs" 
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  included_files = ["node_modules/next/dist/compiled/**"] 

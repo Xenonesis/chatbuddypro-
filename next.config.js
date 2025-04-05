@@ -9,6 +9,15 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  webpack: (config, { isServer }) => {
+    // Fix for url module resolution issue
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'next/dist/compiled/url': require.resolve('url/'),
+    };
+    
+    return config;
+  },
 }
 
 module.exports = nextConfig; 
