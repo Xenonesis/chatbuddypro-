@@ -3,7 +3,7 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "16"
+  NODE_VERSION = "18"
   NPM_FLAGS = "--legacy-peer-deps --no-optional"
   NEXT_TELEMETRY_DISABLED = "1"
   NETLIFY_USE_YARN = "false"
@@ -12,4 +12,4 @@
   package = "@netlify/plugin-nextjs"
 
 [functions]
-  included_files = ["node_modules/next/dist/compiled/**", "node_modules/url/**", "node_modules/path-browserify/**", "node_modules/crypto-browserify/**", "node_modules/stream-browserify/**"] 
+  included_files = ["node_modules/next/dist/compiled/**", "node_modules/url/**", "node_modules/path-browserify/**", "node_modules/crypto-browserify/**", "node_modules/stream-browserify/**", "node_modules/next/**", "node_modules/react/**", "node_modules/react-dom/**", "node_modules/next-themes/**"] 

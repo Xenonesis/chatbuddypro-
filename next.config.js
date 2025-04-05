@@ -19,12 +19,20 @@ const nextConfig = {
         stream: require.resolve('stream-browserify'),
         crypto: require.resolve('crypto-browserify'),
         url: require.resolve('url/'),
+        http: false,
+        https: false,
+        os: false,
+        zlib: false,
+        assert: false,
+        buffer: false,
+        util: false,
       };
 
       // Fix for url module resolution issue
       config.resolve.alias = {
         ...config.resolve.alias,
         'next/dist/compiled/url': require.resolve('url/'),
+        'next/dist/compiled/path': require.resolve('path-browserify'),
       };
     }
     
