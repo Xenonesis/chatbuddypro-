@@ -115,7 +115,7 @@ export default function SuggestionsSettings() {
           <div className="space-y-0.5">
             <Label htmlFor="use-ai">AI-Powered Suggestions</Label>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Use AI to generate more relevant and context-aware suggestions
+              Use your current AI provider to generate more relevant and context-aware suggestions
             </p>
           </div>
           <Switch

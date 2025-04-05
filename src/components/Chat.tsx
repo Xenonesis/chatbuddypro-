@@ -1651,6 +1651,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
           <div className="pb-2 px-3">
             <SmartSuggestions 
               latestMessage={lastAssistantMessage} 
+              messages={messages}
               onSuggestionClick={(suggestion) => {
                 setInput(suggestion);
                 if (textareaRef.current) {

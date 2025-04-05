@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, MessageCircle, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { extractSuggestionsFromText, getGeneralSuggestions, generateFollowUpQuestion } from '@/lib/suggestions';
+import { 
+  extractSuggestionsFromText, 
+  getGeneralSuggestions, 
+  generateFollowUpQuestions,
+  generateAISuggestions,
+  ChatHistoryItem 
+} from '@/lib/utils';
 import { useModelSettings } from '@/lib/context/ModelSettingsContext';
 
 interface SmartSuggestionsProps {
   latestMessage: string;
   onSuggestionClick: (suggestion: string) => void;
+  messages?: { role: 'user' | 'assistant', content: string }[];
 }
 
-export function SmartSuggestions({ latestMessage, onSuggestionClick }: SmartSuggestionsProps) {
+export function SmartSuggestions({ latestMessage, onSuggestionClick, messages = [] }: SmartSuggestionsProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const { settings } = useModelSettings();
+  const { settings, currentProvider, getApiKey } = useModelSettings();
   
   useEffect(() => {
     // Only generate suggestions if the feature is enabled
@@ -26,21 +33,65 @@ export function SmartSuggestions({ latestMessage, onSuggestionClick }: SmartSugg
       try {
         let newSuggestions: string[] = [];
         
-        // First try to extract suggestions directly from the message
+        // First try to extract suggestions directly from the latest message
         const extractedSuggestions = extractSuggestionsFromText(latestMessage);
         
-        if (extractedSuggestions.length > 0) {
-          // If we found suggestions in the text, use those
-          newSuggestions = extractedSuggestions.slice(0, 5);
-        } else if (latestMessage) {
-          // Otherwise generate follow-up questions based on the message
-          const followUpQuestion = await generateFollowUpQuestion(latestMessage);
-          if (followUpQuestion) {
-            newSuggestions.push(followUpQuestion);
+        // If AI-powered suggestions are enabled, use the current provider's API
+        if (settings.suggestionsSettings.useAI && messages.length > 0) {
+          try {
+            // Convert messages to the expected ChatHistoryItem format
+            const chatHistory: ChatHistoryItem[] = messages.map((msg, index) => ({
+              id: String(index),
+              content: msg.content,
+              role: msg.role,
+              timestamp: new Date()
+            }));
+            
+            // Get the API key for the current provider
+            const apiKey = getApiKey(currentProvider);
+            
+            if (apiKey) {
+              console.log(`Using ${currentProvider} for AI-powered suggestions`);
+              const aiSuggestions = await generateAISuggestions(
+                chatHistory,
+                currentProvider,
+                apiKey
+              );
+              
+              // Combine all suggestion types, prioritizing follow-up questions
+              const combinedSuggestions = [
+                ...aiSuggestions.followUpQuestions,
+                ...aiSuggestions.topicSuggestions,
+                ...aiSuggestions.recommendedPrompts
+              ];
+              
+              if (combinedSuggestions.length > 0) {
+                // If AI generated suggestions, use those (limit to 5)
+                newSuggestions = combinedSuggestions.slice(0, 5);
+              }
+            } else {
+              console.log('No API key available for the current provider, falling back to basic suggestions');
+            }
+          } catch (aiError) {
+            console.error('Error generating AI-powered suggestions:', aiError);
           }
         }
         
-        // If we couldn't generate enough suggestions, add some general ones
+        // If we have extracted suggestions from the text and no AI suggestions,
+        // or if AI suggestions failed, use the extracted ones
+        if (newSuggestions.length === 0 && extractedSuggestions.length > 0) {
+          newSuggestions = extractedSuggestions.slice(0, 5);
+        } 
+        
+        // If we still don't have enough suggestions, generate follow-up questions
+        if (newSuggestions.length === 0 && latestMessage) {
+          const followUpQuestions = generateFollowUpQuestions(latestMessage);
+          if (followUpQuestions.length > 0) {
+            newSuggestions = [...newSuggestions, ...followUpQuestions.slice(0, 3)];
+          }
+        }
+        
+        // If we still couldn't generate enough suggestions, add some general ones
         if (newSuggestions.length < 3) {
           const generalSuggestions = getGeneralSuggestions();
           newSuggestions = [...newSuggestions, ...generalSuggestions].slice(0, 5);
@@ -61,7 +112,7 @@ export function SmartSuggestions({ latestMessage, onSuggestionClick }: SmartSugg
     } else {
       setSuggestions(getGeneralSuggestions().slice(0, 3));
     }
-  }, [latestMessage, settings.suggestionsSettings?.enabled]);
+  }, [latestMessage, settings.suggestionsSettings?.enabled, settings.suggestionsSettings.useAI, messages, currentProvider, getApiKey]);
 
   if (!settings.suggestionsSettings?.enabled || suggestions.length === 0) {
     return null;

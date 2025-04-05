@@ -958,9 +958,9 @@ export const generateAISuggestions = async (
     recommendedPrompts: getRecommendedPrompts(history)
   };
 
-  // TEMPORARY FIX: Skip Gemini API calls completely as they're causing errors
-  if (apiProvider === 'gemini') {
-    console.log('Skipping Gemini API call and using rule-based suggestions instead');
+  // Skip if API key is missing for the provider
+  if (!apiKey) {
+    console.log(`No API key available for ${apiProvider}, using rule-based suggestions instead`);
     return fallbackSuggestions;
   }
 
