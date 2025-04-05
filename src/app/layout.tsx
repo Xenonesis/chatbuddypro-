@@ -41,7 +41,7 @@ export default function RootLayout({
                 <AppInitializer />
                 <Navbar />
                 <main className="flex-1 flex flex-col">
-                  <ErrorBoundary fallback={<ErrorFallback />}>
+                  <ErrorBoundary>
                     <Suspense fallback={<LoadingIndicator />}>
                       {children}
                     </Suspense>
