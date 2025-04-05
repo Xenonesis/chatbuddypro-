@@ -25,7 +25,9 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
+  
+  // Enhance performance with webpack optimizations
+  webpack: (config, { isServer, dev }) => {
     // Handle react-markdown requiring fs
     if (!isServer) {
       // react-markdown sees process.platform so we need to set it
@@ -61,10 +63,109 @@ const nextConfig = {
       };
     }
     
+    // Add performance optimizations for production
+    if (!dev) {
+      // Enable module concatenation for better tree-shaking
+      config.optimization.concatenateModules = true;
+      
+      // Reduce bundle size by removing console in production
+      config.optimization.minimizer.push(
+        new webpack.DefinePlugin({
+          'process.env.NODE_ENV': JSON.stringify('production'),
+        })
+      );
+      
+      // Add additional performance hints
+      config.performance = {
+        hints: 'warning',
+        maxEntrypointSize: 512000,
+        maxAssetSize: 512000,
+      };
+      
+      // Split chunks more aggressively for better caching
+      if (!isServer) {
+        config.optimization.splitChunks = {
+          chunks: 'all',
+          maxInitialRequests: 25,
+          minSize: 20000,
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            framework: {
+              chunks: 'all',
+              name: 'framework',
+              test: /[\\/]node_modules[\\/](react|react-dom|next|scheduler)[\\/]/,
+              priority: 40,
+              enforce: true,
+            },
+            lib: {
+              test: /[\\/]node_modules[\\/]/,
+              name(module) {
+                const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+                return `npm.${packageName.replace('@', '')}`;
+              },
+              priority: 30,
+              minChunks: 1,
+              reuseExistingChunk: true,
+            },
+            commons: {
+              name: 'commons',
+              minChunks: 2,
+              priority: 20,
+            },
+            shared: {
+              name: false,
+              priority: 10,
+              minChunks: 2,
+              reuseExistingChunk: true,
+            },
+          },
+        };
+      }
+    }
+    
     return config;
   },
+  
+  // Enable progressive web app features
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      'date-fns',
+      'framer-motion',
+    ],
+  },
+  
   // For Netlify deployment
-  trailingSlash: true
-}
+  trailingSlash: true,
+  
+  // Add compression
+  compress: true,
+  
+  // Add security headers
+  headers: async () => {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ];
+  },
+};
 
 module.exports = nextConfig; 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,7 +39,8 @@ import {
   MicOff,
   VolumeX,
   Square,
-  AlertCircle
+  AlertCircle,
+  ArrowDown
 } from 'lucide-react';
 import Link from 'next/link';
 import { callAI, ChatMessage } from '@/lib/api';
@@ -55,6 +56,12 @@ import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatService } from '@/lib/services/chatService';
+import dynamic from 'next/dynamic';
+
+// Dynamically import heavy components
+const MessageRenderer = dynamic(() => import('@/components/ui-custom/MessageRenderer'), {
+  loading: () => <div className="animate-pulse bg-secondary/40 rounded-lg p-4 mb-4"></div>
+});
 
 type Message = {
   id: string;
@@ -567,10 +574,17 @@ The app will automatically try to fall back to the standard gemini-pro model. If
   };
 
   // Scroll to bottom of chat
-  const scrollToBottom = () => {
-    if (scrollLocked && chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    // Use requestAnimationFrame for smoother scrolling
+    requestAnimationFrame(() => {
+      const chatContainer = document.getElementById('chat-container');
+      if (chatContainer) {
+        chatContainer.scrollTo({
+          top: chatContainer.scrollHeight,
+          behavior,
+        });
+      }
+    });
   };
   
   // Watch for new messages to scroll

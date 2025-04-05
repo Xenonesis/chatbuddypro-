@@ -8,6 +8,12 @@ export interface ApiKeyInfo {
   created?: string;
 }
 
+// Add this near the top of the file, outside of the userService object
+// In-memory cache for API keys to minimize localStorage and DB access
+const apiKeyCache: Record<string, { key: string, timestamp: number }> = {};
+// Cache expiration time: 30 minutes
+const CACHE_EXPIRY = 30 * 60 * 1000;
+
 export const userService = {
   // Get user preferences
   async getUserPreferences(userId: string): Promise<UserPreferences | null> {
@@ -472,17 +478,24 @@ export const userService = {
     }
   },
 
-  // Retrieve and decrypt an API key - optimized to check localStorage first
+  // Retrieve and decrypt an API key - optimized with multi-level caching
   async getApiKey(provider: string, userId: string): Promise<string | null> {
     try {
-      console.debug(`Attempting to get API key for provider: ${provider}`);
-      
-      if (!userId) {
-        console.error('Cannot get API key: userId is missing');
+      if (!userId || !provider) {
+        console.error('Cannot get API key: userId or provider is missing');
         return null;
       }
-
-      // First check in localStorage for faster access
+      
+      const cacheKey = `${provider}_${userId}`;
+      const now = Date.now();
+      
+      // 1. Check in-memory cache first (fastest)
+      if (apiKeyCache[cacheKey] && (now - apiKeyCache[cacheKey].timestamp) < CACHE_EXPIRY) {
+        console.debug(`Using in-memory cached API key for ${provider}`);
+        return apiKeyCache[cacheKey].key;
+      }
+      
+      // 2. Check localStorage next (second fastest)
       if (typeof window !== 'undefined') {
         try {
           const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
@@ -490,7 +503,15 @@ export const userService = {
           
           if (localApiKey) {
             console.debug(`Found API key in localStorage for ${provider}`);
-            return decryptApiKey(localApiKey, userId);
+            const decryptedKey = decryptApiKey(localApiKey, userId);
+            
+            // Update in-memory cache
+            apiKeyCache[cacheKey] = { 
+              key: decryptedKey, 
+              timestamp: now 
+            };
+            
+            return decryptedKey;
           }
         } catch (localStorageError) {
           console.warn('Error accessing localStorage:', localStorageError);
@@ -498,7 +519,8 @@ export const userService = {
         }
       }
 
-      // If not in localStorage, check database
+      // 3. If not in caches, check database (slowest)
+      console.debug(`Cache miss for ${provider} API key, checking database`);
       const userPreferences = await this.getUserPreferences(userId);
       
       if (!userPreferences) {
@@ -507,30 +529,29 @@ export const userService = {
       }
       
       try {
+        let apiKey = null;
+        
         // Check in preferences.api_keys (new structure)
         const preferences = userPreferences.preferences || {};
         
         if (preferences.api_keys && preferences.api_keys[provider]) {
-          const apiKey = preferences.api_keys[provider];
+          apiKey = preferences.api_keys[provider];
           console.debug(`Found API key in preferences.api_keys for ${provider}`);
-          
-          // Store in localStorage for future fast access
-          if (typeof window !== 'undefined') {
-            try {
-              const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
-              localStorage.setItem(localStorageKey, apiKey);
-            } catch (e) {
-              // Ignore localStorage errors
-            }
-          }
-          
-          return decryptApiKey(apiKey, userId);
+        }
+        // Check in legacy api_keys structure
+        else if (userPreferences.api_keys && userPreferences.api_keys[provider]) {
+          apiKey = userPreferences.api_keys[provider];
+          console.debug(`Found API key in legacy api_keys for ${provider}`);
         }
         
-        // Check in legacy api_keys structure
-        if (userPreferences.api_keys && userPreferences.api_keys[provider]) {
-          const apiKey = userPreferences.api_keys[provider];
-          console.debug(`Found API key in legacy api_keys for ${provider}`);
+        if (apiKey) {
+          const decryptedKey = decryptApiKey(apiKey, userId);
+          
+          // Update caches
+          apiKeyCache[cacheKey] = { 
+            key: decryptedKey, 
+            timestamp: now 
+          };
           
           // Store in localStorage for future fast access
           if (typeof window !== 'undefined') {
@@ -538,25 +559,23 @@ export const userService = {
               const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
               localStorage.setItem(localStorageKey, apiKey);
             } catch (e) {
-              // Ignore localStorage errors
+              // Ignore localStorage errors, we still have memory cache
+              console.warn('Failed to cache API key in localStorage:', e);
             }
           }
           
-          return decryptApiKey(apiKey, userId);
+          return decryptedKey;
         }
         
         console.warn(`No API key found for provider ${provider}`);
         return null;
       } catch (prefError) {
-        console.error(`Error accessing API key data: ${prefError instanceof Error ? prefError.message : String(prefError)}`);
+        console.error(`Error accessing API key data:`, prefError);
         return null;
       }
     } catch (error) {
-      const safeError = error instanceof Error 
-        ? { message: error.message, name: error.name } 
-        : { message: String(error) };
-      
-      console.error(`Exception in getApiKey for provider ${provider}: ${JSON.stringify(safeError)}`);
+      console.error(`Exception in getApiKey for provider ${provider}:`, error);
+      // Return null instead of throwing to prevent UI crashes
       return null;
     }
   },
@@ -567,7 +586,14 @@ export const userService = {
     provider: string
   ): Promise<boolean> {
     try {
-      // Remove from localStorage first
+      const cacheKey = `${provider}_${userId}`;
+      
+      // Remove from in-memory cache
+      if (apiKeyCache[cacheKey]) {
+        delete apiKeyCache[cacheKey];
+      }
+      
+      // Remove from localStorage
       if (typeof window !== 'undefined') {
         try {
           const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
@@ -579,22 +605,31 @@ export const userService = {
         }
       }
       
+      // Remove from database
       const preferences = await this.getUserPreferences(userId);
       
-      if (!preferences || !preferences.api_keys) {
+      if (!preferences) {
         return false;
       }
       
-      const apiKeys = { ...preferences.api_keys };
+      // Handle both preference structures
+      const updated = { ...preferences };
       
-      if (apiKeys[provider]) {
+      // Check new structure
+      if (updated.preferences?.api_keys && updated.preferences.api_keys[provider]) {
+        const apiKeys = { ...updated.preferences.api_keys };
         delete apiKeys[provider];
-        
-        await this.upsertUserPreferences(userId, {
-          api_keys: apiKeys,
-        });
+        updated.preferences.api_keys = apiKeys;
       }
       
+      // Check legacy structure
+      if (updated.api_keys && updated.api_keys[provider]) {
+        const apiKeys = { ...updated.api_keys };
+        delete apiKeys[provider];
+        updated.api_keys = apiKeys;
+      }
+      
+      await this.upsertUserPreferences(userId, updated);
       return true;
     } catch (error) {
       console.error('Error deleting API key:', error);
