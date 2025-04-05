@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { userService } from '@/lib/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export type AIProvider = 'openai' | 'gemini' | 'mistral' | 'claude' | 'llama' | 'deepseek';
 export type ChatMode = 'thoughtful' | 'quick' | 'creative' | 'technical' | 'learning';
@@ -447,6 +448,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = async (newSettings: ModelSettings) => {
     try {
+      // Update local state and localStorage first
       setSettings(newSettings);
       localStorage.setItem('aiSettings', JSON.stringify(newSettings));
       
@@ -494,7 +496,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
           }
         }
         
-        // Create a clean version of settings without API keys
+        // Create a clean version of settings without API keys for direct storage
         const settingsForStorage = {
           defaultProvider: newSettings.defaultProvider,
           chatMode: newSettings.chatMode,
@@ -503,8 +505,90 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
           voiceInputSettings: newSettings.voiceInputSettings
         };
         
-        // Save to database
-        await userService.saveUserSettings(user.id, settingsForStorage);
+        // Try to save settings using the direct Supabase approach instead of userService
+        try {
+          // Get existing preferences to check if we need to update or insert
+          const { data: existingPrefs, error: fetchError } = await supabase
+            .from('user_preferences')
+            .select('id, preferences')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+            
+          if (fetchError) {
+            console.error('Error fetching preferences:', fetchError);
+            throw fetchError;
+          }
+          
+          // Prepare new preferences object
+          let updatedPreferences = {};
+          
+          // If we have existing preferences, use them
+          if (existingPrefs && existingPrefs.length > 0) {
+            // Handle different data formats
+            if (existingPrefs[0].preferences) {
+              if (typeof existingPrefs[0].preferences === 'string') {
+                try {
+                  updatedPreferences = JSON.parse(existingPrefs[0].preferences);
+                } catch (e) {
+                  console.error('Failed to parse preferences string:', e);
+                }
+              } else {
+                updatedPreferences = { ...existingPrefs[0].preferences };
+              }
+            }
+            
+            // Add settings to existing preferences
+            updatedPreferences = {
+              ...updatedPreferences,
+              settings: settingsForStorage
+            };
+            
+            // Update the existing record
+            const { error: updateError } = await supabase
+              .from('user_preferences')
+              .update({
+                preferences: updatedPreferences,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingPrefs[0].id);
+              
+            if (updateError) {
+              console.error('Error updating preferences:', updateError);
+              throw updateError;
+            }
+            
+            console.log('Successfully updated settings in database');
+          } else {
+            // Create new preferences record
+            const { error: insertError } = await supabase
+              .from('user_preferences')
+              .insert({
+                id: crypto.randomUUID(),
+                user_id: user.id,
+                preferences: { settings: settingsForStorage },
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+              
+            if (insertError) {
+              console.error('Error creating preferences:', insertError);
+              throw insertError;
+            }
+            
+            console.log('Successfully created settings in database');
+          }
+        } catch (directDbError) {
+          console.error('Error with direct database operations:', directDbError);
+          
+          // Fall back to userService as a last resort
+          const saveResult = await userService.saveUserSettings(user.id, settingsForStorage);
+          if (!saveResult) {
+            console.error('Both direct and service methods failed to save settings');
+          } else {
+            console.log('Settings saved via userService fallback');
+          }
+        }
       }
     } catch (error) {
       console.error('Error updating settings:', error);
