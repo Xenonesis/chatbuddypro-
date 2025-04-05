@@ -184,19 +184,19 @@ export default function ProfileSettings() {
 
     // Create a new profile object to send to the API
     const profileToSave = {
-      full_name: profile.full_name,
-      age: profile.age,
-      gender: profile.gender,
-      profession: profile.profession || null,
-      organization_name: profile.organization_name || null,
-      mobile_number: profile.mobile_number || null,
+      full_name: profile.full_name?.trim(),
+      age: profile.age === '' ? null : profile.age,
+      gender: profile.gender === '' ? null : profile.gender,
+      profession: profile.profession?.trim() || null,
+      organization_name: profile.organization_name?.trim() || null,
+      mobile_number: profile.mobile_number === '' ? null : profile.mobile_number,
     };
 
     // Validate the data
     const errors: Record<string, string> = {};
     
     // Basic validation
-    if (!profileToSave.full_name?.trim()) {
+    if (!profileToSave.full_name) {
       errors.full_name = "Full name is required";
     }
     
@@ -234,6 +234,7 @@ export default function ProfileSettings() {
       const result = await userService.upsertUserProfile(user.id, profileToSave);
       
       if (!result) {
+        console.error('Profile save operation returned null result');
         toast({
           title: "Error",
           description: "Failed to save profile changes. Please try again.",
@@ -246,7 +247,6 @@ export default function ProfileSettings() {
       // Verify the save operation with a delay to ensure DB consistency
       const verified = await verifyProfileSave();
       
-      // Set which fields were updated for UI feedback
       // Mark all fields as updated for better UI feedback
       const fieldsToUpdate = ['full_name', 'age', 'gender', 'profession', 'organization_name', 'mobile_number'];
       setUpdatedFields(fieldsToUpdate);
@@ -254,7 +254,12 @@ export default function ProfileSettings() {
       // Update local state with the saved data
       setProfile({
         ...profile,
-        ...result
+        full_name: result.full_name,
+        age: result.age,
+        gender: result.gender,
+        profession: result.profession || '',
+        organization_name: result.organization_name || '',
+        mobile_number: result.mobile_number
       });
       
       if (verified) {

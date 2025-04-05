@@ -330,55 +330,109 @@ export const userService = {
     profile: Partial<UserProfile>
   ): Promise<UserProfile | null> {
     try {
-      console.log('Attempting to upsert profile for user:', userId, profile);
+      console.log('Attempting to upsert profile for user:', userId);
+      console.log('Profile data:', JSON.stringify(profile, null, 2));
       
-      // Prepare the data to upsert
-      const profileData = {
-        user_id: userId,
-        full_name: profile.full_name || '',
-        age: profile.age || null,
-        gender: profile.gender || null,
-        profession: profile.profession || null,
-        organization_name: profile.organization_name || null,
-        mobile_number: profile.mobile_number || null,
-        updated_at: new Date().toISOString()
-      };
-      
-      // For new profiles, add creation timestamp
-      if (!profile.id) {
-        profileData['id'] = uuidv4();
-        profileData['created_at'] = new Date().toISOString();
-      }
-
-      // Directly upsert the profile using the user_id as the conflict key
-      const { data, error } = await supabase
+      // First check if profile exists to determine if we're updating or creating
+      const { data: existingProfile, error: fetchError } = await supabase
         .from('user_profiles')
-        .upsert(profileData, {
-          onConflict: 'user_id',
-          returning: 'representation'
-        })
-        .select()
-        .single();
-        
-      if (error) {
-        console.error('Error upserting profile:', {
-          code: error.code,
-          message: error.message,
-          details: error.details
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error checking for existing profile:', {
+          code: fetchError.code,
+          message: fetchError.message,
+          details: fetchError.details || 'No details'
         });
+        throw fetchError;
+      }
+      
+      // If we have an existing profile, update it
+      if (existingProfile) {
+        console.log('Found existing profile, updating:', existingProfile.id);
         
-        // Check for foreign key constraint issues
-        if (error.message.includes('foreign key constraint')) {
-          console.error('Foreign key constraint violation - user may not exist in auth.users');
+        // Prepare data for update
+        const updateData = {
+          full_name: profile.full_name ?? existingProfile.full_name,
+          age: profile.age ?? existingProfile.age,
+          gender: profile.gender ?? existingProfile.gender,
+          profession: profile.profession ?? existingProfile.profession,
+          organization_name: profile.organization_name ?? existingProfile.organization_name,
+          mobile_number: profile.mobile_number ?? existingProfile.mobile_number,
+          updated_at: new Date().toISOString()
+        };
+        
+        // Update using specific ID
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .update(updateData)
+          .eq('id', existingProfile.id)
+          .select('*')
+          .single();
+        
+        if (error) {
+          console.error('Error updating profile:', {
+            code: error.code, 
+            message: error.message,
+            details: error.details || 'No details'
+          });
+          return null;
         }
         
-        return null;
+        console.log('Successfully updated profile:', data);
+        return data as UserProfile;
+      } 
+      // Otherwise create a new profile
+      else {
+        console.log('No existing profile found, creating new profile');
+        
+        // Prepare data for insert
+        const insertData = {
+          id: uuidv4(),
+          user_id: userId,
+          full_name: profile.full_name || '',
+          age: profile.age ?? null,
+          gender: profile.gender ?? null,
+          profession: profile.profession ?? null,
+          organization_name: profile.organization_name ?? null,
+          mobile_number: profile.mobile_number ?? null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        // Insert new profile
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .insert(insertData)
+          .select('*')
+          .single();
+        
+        if (error) {
+          console.error('Error creating profile:', {
+            code: error.code,
+            message: error.message,
+            details: error.details || 'No details'
+          });
+          
+          // Check for foreign key constraint issues
+          if (error.message.includes('foreign key constraint')) {
+            console.error('Foreign key constraint violation - user may not exist in auth.users');
+          }
+          
+          return null;
+        }
+        
+        console.log('Successfully created profile:', data);
+        return data as UserProfile;
       }
-      
-      console.log('Successfully upserted profile:', data);
-      return data as UserProfile;
     } catch (error) {
-      console.error('Fatal error in upsertUserProfile:', error);
+      const errorDetails = error instanceof Error 
+        ? { message: error.message, stack: error.stack }
+        : { error };
+        
+      console.error('Exception in upsertUserProfile:', errorDetails);
       return null;
     }
   },
