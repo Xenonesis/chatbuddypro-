@@ -332,73 +332,51 @@ export const userService = {
     try {
       console.log('Attempting to upsert profile for user:', userId, profile);
       
-      // First try direct insert - if the profile doesn't exist, this will create it
-      try {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: uuidv4(),
-            user_id: userId,
-            full_name: profile.full_name || '',
-            age: profile.age || null,
-            gender: profile.gender || null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
-          
-        if (!error) {
-          console.log('Successfully created new profile:', data);
-          return data as UserProfile;
-        }
-        
-        // If error is not related to uniqueness constraint, something else went wrong
-        if (!error.message.includes('duplicate') && !error.message.includes('unique constraint')) {
-          console.error('Error creating profile (not a duplicate error):', error);
-          throw error;
-        }
-        
-        console.log('Profile already exists, will update instead');
-      } catch (insertError) {
-        console.log('Insert failed, trying update instead:', insertError);
-      }
+      // Prepare the data to upsert
+      const profileData = {
+        user_id: userId,
+        full_name: profile.full_name || '',
+        age: profile.age || null,
+        gender: profile.gender || null,
+        profession: profile.profession || null,
+        organization_name: profile.organization_name || null,
+        mobile_number: profile.mobile_number || null,
+        updated_at: new Date().toISOString()
+      };
       
-      // If we're here, the profile likely exists, so get it first
-      const { data: existingProfile, error: fetchError } = await supabase
+      // For new profiles, add creation timestamp
+      if (!profile.id) {
+        profileData['id'] = uuidv4();
+        profileData['created_at'] = new Date().toISOString();
+      }
+
+      // Directly upsert the profile using the user_id as the conflict key
+      const { data, error } = await supabase
         .from('user_profiles')
-        .select('*')
-        .eq('user_id', userId as any)
+        .upsert(profileData, {
+          onConflict: 'user_id',
+          returning: 'representation'
+        })
+        .select()
         .single();
-      
-      if (fetchError) {
-        console.error('Error fetching existing profile for update:', fetchError);
-        throw fetchError;
-      }
-      
-      if (!existingProfile) {
-        console.error('No existing profile found but insert failed');
+        
+      if (error) {
+        console.error('Error upserting profile:', {
+          code: error.code,
+          message: error.message,
+          details: error.details
+        });
+        
+        // Check for foreign key constraint issues
+        if (error.message.includes('foreign key constraint')) {
+          console.error('Foreign key constraint violation - user may not exist in auth.users');
+        }
+        
         return null;
       }
       
-      // Now update the existing profile
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from('user_profiles')
-        .update({
-          ...profile,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existingProfile.id as any)
-        .select()
-        .single();
-      
-      if (updateError) {
-        console.error('Error updating profile:', updateError);
-        throw updateError;
-      }
-      
-      console.log('Successfully updated profile:', updatedProfile);
-      return updatedProfile as UserProfile;
+      console.log('Successfully upserted profile:', data);
+      return data as UserProfile;
     } catch (error) {
       console.error('Fatal error in upsertUserProfile:', error);
       return null;

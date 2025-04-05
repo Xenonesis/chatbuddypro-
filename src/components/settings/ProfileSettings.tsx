@@ -85,30 +85,68 @@ export default function ProfileSettings() {
     try {
       console.log('Verifying profile save for user:', user.id);
       
-      // Use the userService instead of direct Supabase calls
-      const savedProfile = await userService.getUserProfile(user.id);
+      // Add delay to ensure database has time to commit changes
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (!savedProfile) {
-        console.error('No profile found in verification check');
+      // Use direct database query to ensure we're getting fresh data
+      const { data: savedProfile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error || !savedProfile) {
+        console.error('Error or no profile found in verification check:', error);
         return false;
       }
       
-      // Compare with local state
-      const fieldsMatch = 
-        savedProfile.full_name === profile.full_name &&
-        savedProfile.age === profile.age &&
-        savedProfile.gender === profile.gender &&
-        savedProfile.profession === profile.profession &&
-        savedProfile.organization_name === profile.organization_name &&
-        savedProfile.mobile_number === profile.mobile_number;
-        
-      console.log('Profile verification:', {
-        databaseData: savedProfile,
-        localData: profile,
-        fieldsMatch
+      // Compare with local state, logging each field for debugging
+      const fieldComparisons = {
+        full_name: {
+          local: profile.full_name,
+          db: savedProfile.full_name,
+          matches: savedProfile.full_name === profile.full_name
+        },
+        age: {
+          local: profile.age,
+          db: savedProfile.age,
+          matches: savedProfile.age === profile.age
+        },
+        gender: {
+          local: profile.gender,
+          db: savedProfile.gender,
+          matches: savedProfile.gender === profile.gender
+        },
+        profession: {
+          local: profile.profession,
+          db: savedProfile.profession,
+          matches: savedProfile.profession === profile.profession
+        },
+        organization_name: {
+          local: profile.organization_name,
+          db: savedProfile.organization_name,
+          matches: savedProfile.organization_name === profile.organization_name
+        },
+        mobile_number: {
+          local: profile.mobile_number,
+          db: savedProfile.mobile_number,
+          matches: savedProfile.mobile_number === profile.mobile_number
+        }
+      };
+      
+      // Log detailed comparisons for debugging
+      console.log('Profile field comparisons:', fieldComparisons);
+      
+      // Check if all fields match
+      const allFieldsMatch = Object.values(fieldComparisons).every(f => f.matches);
+      
+      console.log('Profile verification complete:', {
+        allFieldsMatch,
+        savedProfile,
+        localProfile: profile
       });
       
-      return fieldsMatch;
+      return allFieldsMatch;
     } catch (error: unknown) {
       console.error('Error in profile verification:', error);
       return false;
@@ -144,8 +182,39 @@ export default function ProfileSettings() {
   const handleSave = async () => {
     if (!user) return;
 
-    // Validate profile data before saving
-    if (!validateProfile()) {
+    // Create a new profile object to send to the API
+    const profileToSave = {
+      full_name: profile.full_name,
+      age: profile.age,
+      gender: profile.gender,
+      profession: profile.profession || null,
+      organization_name: profile.organization_name || null,
+      mobile_number: profile.mobile_number || null,
+    };
+
+    // Validate the data
+    const errors: Record<string, string> = {};
+    
+    // Basic validation
+    if (!profileToSave.full_name?.trim()) {
+      errors.full_name = "Full name is required";
+    }
+    
+    if (profileToSave.age !== null) {
+      if (isNaN(Number(profileToSave.age))) {
+        errors.age = "Age must be a number";
+      } else if (Number(profileToSave.age) < 13) {
+        errors.age = "Age must be at least 13";
+      } else if (Number(profileToSave.age) > 120) {
+        errors.age = "Age must be less than 120";
+      }
+    }
+    
+    // Update errors state
+    setErrors(errors);
+    
+    // Don't proceed if there are validation errors
+    if (Object.keys(errors).length > 0) {
       toast({
         title: "Validation Error",
         description: "Please correct the errors in the form",
@@ -159,47 +228,12 @@ export default function ProfileSettings() {
 
     try {
       console.log('Saving profile for user:', user.id);
-      
-      // Get current profile to check what's changing
-      const existingProfile = await userService.getUserProfile(user.id);
-      
-      // Track which fields we're changing for UI updates
-      const changedFields: string[] = [];
-      
-      if (existingProfile) {
-        // Check which fields are actually changing
-        if (existingProfile.full_name !== profile.full_name) changedFields.push('full_name');
-        if (existingProfile.age !== profile.age) changedFields.push('age');
-        if (existingProfile.gender !== profile.gender) changedFields.push('gender');
-        if (existingProfile.profession !== profile.profession) changedFields.push('profession');
-        if (existingProfile.organization_name !== profile.organization_name) changedFields.push('organization_name');
-        if (existingProfile.mobile_number !== profile.mobile_number) changedFields.push('mobile_number');
-        
-        // If nothing is changing, skip the update
-        if (changedFields.length === 0) {
-          toast({
-            title: "No Changes",
-            description: "Your profile is already up to date.",
-          });
-          setIsSaving(false);
-          return;
-        }
-      } else {
-        // All fields are considered "changed" when creating a new profile
-        changedFields.push('full_name', 'age', 'gender', 'profession', 'organization_name', 'mobile_number');
-      }
+      console.log('Profile data to save:', profileToSave);
       
       // Use userService to save the profile
-      const success = await userService.upsertUserProfile(user.id, {
-        full_name: profile.full_name,
-        age: profile.age,
-        gender: profile.gender,
-        profession: profile.profession,
-        organization_name: profile.organization_name,
-        mobile_number: profile.mobile_number,
-      });
+      const result = await userService.upsertUserProfile(user.id, profileToSave);
       
-      if (!success) {
+      if (!result) {
         toast({
           title: "Error",
           description: "Failed to save profile changes. Please try again.",
@@ -209,11 +243,19 @@ export default function ProfileSettings() {
         return;
       }
       
-      // Verify the save operation
+      // Verify the save operation with a delay to ensure DB consistency
       const verified = await verifyProfileSave();
       
       // Set which fields were updated for UI feedback
-      setUpdatedFields(changedFields);
+      // Mark all fields as updated for better UI feedback
+      const fieldsToUpdate = ['full_name', 'age', 'gender', 'profession', 'organization_name', 'mobile_number'];
+      setUpdatedFields(fieldsToUpdate);
+      
+      // Update local state with the saved data
+      setProfile({
+        ...profile,
+        ...result
+      });
       
       if (verified) {
         toast({
@@ -224,8 +266,8 @@ export default function ProfileSettings() {
         console.warn('Profile verification failed - data may not have saved correctly');
         toast({
           title: "Warning",
-          description: "Your profile may not have saved correctly. Please check your information.",
-          variant: "destructive",
+          description: "Your profile was saved but verification failed. Please check your information.",
+          variant: "warning",
         });
       }
     } catch (error) {
