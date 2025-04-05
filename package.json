@@ -9,7 +9,8 @@
     "lint": "next lint",
     "setup": "node setup.js",
     "generate-favicon": "node scripts/create-favicon.js",
-    "cleanup-db": "node scripts/cleanup-duplicates.mjs"
+    "cleanup-db": "node scripts/cleanup-duplicates.mjs",
+    "verify-supabase": "node verify-supabase.js"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.3",

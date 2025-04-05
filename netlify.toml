@@ -1,5 +1,5 @@
 [build]
-  command = "npm ci && NODE_OPTIONS=--max_old_space_size=4096 npm run build"
+  command = "npm ci && npm run verify-supabase && NODE_OPTIONS=--max_old_space_size=4096 npm run build"
   publish = ".next"
 
 [build.environment]
@@ -7,6 +7,8 @@
   NPM_FLAGS = "--legacy-peer-deps --no-optional"
   NEXT_TELEMETRY_DISABLED = "1"
   NETLIFY_USE_YARN = "false"
+  NEXT_PUBLIC_SUPABASE_URL = "https://gphdrsfbypnckxbdjjap.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwaGRyc2ZieXBuY2t4YmRqamFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MDAwMjIsImV4cCI6MjA1OTE3NjAyMn0.skYsz1EJGdRwo5RW6HLljpy-D2KcQmBPJHYXb7MeyJw"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
