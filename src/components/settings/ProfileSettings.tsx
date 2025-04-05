@@ -13,6 +13,7 @@ import { Loader2, User, Save, Briefcase, Building, Phone, CheckCircle } from 'lu
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Separator } from '@/components/ui/separator';
+import { ProfileCompletionIndicator } from '@/components/ProfileCompletionIndicator';
 
 export default function ProfileSettings() {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ export default function ProfileSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [updatedFields, setUpdatedFields] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [profileExists, setProfileExists] = useState(false);
   const [profile, setProfile] = useState<Partial<UserProfile>>({
     full_name: '',
     age: null,
@@ -29,6 +31,13 @@ export default function ProfileSettings() {
     organization_name: '',
     mobile_number: null,
   });
+
+  // Check if profile is empty or incomplete
+  const isProfileIncomplete = () => {
+    return !profile.full_name || 
+           (!profile.age && !profile.gender && !profile.profession && 
+            !profile.organization_name && !profile.mobile_number);
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -46,6 +55,10 @@ export default function ProfileSettings() {
         
         if (userProfile) {
           console.log('Profile loaded successfully:', userProfile);
+          
+          // Set profile exists flag
+          setProfileExists(true);
+          
           setProfile({
             full_name: userProfile.full_name,
             age: userProfile.age,
@@ -54,10 +67,34 @@ export default function ProfileSettings() {
             organization_name: userProfile.organization_name || '',
             mobile_number: userProfile.mobile_number || null,
           });
+          
+          // Check if profile is incomplete and show notification
+          const incomplete = !userProfile.full_name || 
+                            (!userProfile.age && !userProfile.gender && 
+                             !userProfile.profession && !userProfile.organization_name);
+                             
+          if (incomplete) {
+            setTimeout(() => {
+              toast({
+                title: "Complete Your Profile",
+                description: "Please take a moment to update your profile information.",
+                variant: "default",
+              });
+            }, 1000); // Delay to avoid showing toast during loading
+          }
         } else {
           console.log('No profile found, using default empty profile');
           // If no profile exists yet, we'll use the default empty profile
-          // The save operation will create a new profile when needed
+          setProfileExists(false);
+          
+          // Show notification to update profile
+          setTimeout(() => {
+            toast({
+              title: "Profile Not Found",
+              description: "Please set up your profile information.",
+              variant: "default",
+            });
+          }, 1000); // Delay to avoid showing toast during loading
         }
       } catch (error) {
         console.error('Error loading user profile:', error);
@@ -264,14 +301,23 @@ export default function ProfileSettings() {
       
       if (verified) {
         toast({
-          title: "Success",
-          description: "Your profile has been updated successfully",
+          title: !profileExists ? "Profile Created" : "Profile Updated",
+          description: !profileExists 
+            ? "Your profile has been created successfully! Thank you for providing your information." 
+            : "Your profile has been updated successfully",
         });
+        
+        // Update profileExists status if it was just created
+        if (!profileExists) {
+          setProfileExists(true);
+        }
       } else {
         console.warn('Profile verification failed - data may not have saved correctly');
         toast({
           title: "Warning",
-          description: "Your profile was saved but verification failed. Please check your information.",
+          description: !profileExists
+            ? "Your profile was created but verification failed. Please check your information."
+            : "Your profile was updated but verification failed. Please check your information.",
           variant: "warning",
         });
       }
@@ -299,6 +345,30 @@ export default function ProfileSettings() {
           Update your personal information
         </CardDescription>
       </CardHeader>
+      
+      {!isLoading && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 px-6 py-3 border-b border-amber-100 dark:border-amber-800">
+          {isProfileIncomplete() ? (
+            <div className="space-y-2">
+              <p className="text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                Your profile is incomplete. Please provide the required information.
+              </p>
+              <ProfileCompletionIndicator profile={profile} />
+            </div>
+          ) : (
+            <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" />
+              Your profile is complete! You can still update your information if needed.
+            </p>
+          )}
+        </div>
+      )}
+      
       <CardContent className="pt-6">
         {isLoading ? (
           <div className="flex justify-center p-4">
@@ -310,14 +380,19 @@ export default function ProfileSettings() {
               <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Personal Information</h3>
               
               <div className="space-y-1.5">
-                <Label htmlFor="full_name">Full Name</Label>
+                <Label htmlFor="full_name" className="flex items-center">
+                  Full Name
+                  <span className="text-red-500 ml-1">*</span>
+                  <span className="text-xs text-slate-400 ml-1">(required)</span>
+                </Label>
                 <Input
                   id="full_name"
                   value={profile.full_name || ''}
                   onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                   placeholder="Enter your full name"
                   className={`${updatedFields.includes('full_name') ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                    ${errors.full_name ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}`}
+                    ${errors.full_name ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
+                    ${!profile.full_name ? 'border-amber-300' : ''}`}
                 />
                 {errors.full_name && (
                   <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errors.full_name}</p>
@@ -477,13 +552,18 @@ export default function ProfileSettings() {
       <CardFooter className="bg-slate-50 dark:bg-slate-900 rounded-b-lg border-t border-slate-100 dark:border-slate-800 py-4">
         <Button
           onClick={handleSave}
-          className="w-full sm:w-auto ml-auto"
+          className={`w-full sm:w-auto ml-auto ${!profileExists ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
           disabled={isLoading || isSaving}
         >
           {isSaving ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving...
+            </>
+          ) : !profileExists ? (
+            <>
+              <User className="mr-2 h-4 w-4" />
+              Create Profile
             </>
           ) : (
             <>
