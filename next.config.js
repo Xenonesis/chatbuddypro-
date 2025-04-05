@@ -10,11 +10,23 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   webpack: (config, { isServer }) => {
-    // Fix for url module resolution issue
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'next/dist/compiled/url': require.resolve('url/'),
-    };
+    // Add polyfills and resolve modules
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: require.resolve('path-browserify'),
+        stream: require.resolve('stream-browserify'),
+        crypto: require.resolve('crypto-browserify'),
+        url: require.resolve('url/'),
+      };
+
+      // Fix for url module resolution issue
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'next/dist/compiled/url': require.resolve('url/'),
+      };
+    }
     
     return config;
   },

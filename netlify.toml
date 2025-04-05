@@ -1,14 +1,15 @@
 [build]
-  command = "npm install && NODE_OPTIONS=--max_old_space_size=4096 npm run build"
+  command = "npm ci && NODE_OPTIONS=--max_old_space_size=4096 npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "16"
-  NPM_FLAGS = "--legacy-peer-deps"
+  NPM_FLAGS = "--legacy-peer-deps --no-optional"
   NEXT_TELEMETRY_DISABLED = "1"
+  NETLIFY_USE_YARN = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [functions]
-  included_files = ["node_modules/next/dist/compiled/**"] 
+  included_files = ["node_modules/next/dist/compiled/**", "node_modules/url/**", "node_modules/path-browserify/**", "node_modules/crypto-browserify/**", "node_modules/stream-browserify/**"] 
