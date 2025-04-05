@@ -11,6 +11,12 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Ensure Netlify can process the build correctly
+  output: 'standalone',
+  // Disable image optimization for Netlify compatibility
+  images: {
+    unoptimized: true,
+  },
   webpack: (config, { isServer }) => {
     // Handle react-markdown requiring fs
     if (!isServer) {
@@ -49,6 +55,8 @@ const nextConfig = {
     
     return config;
   },
+  // For Netlify deployment
+  trailingSlash: true,
 }
 
 module.exports = nextConfig; 

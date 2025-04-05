@@ -1,5 +1,5 @@
 [build]
-  command = "npm ci && npm run verify-supabase && NODE_OPTIONS=--max_old_space_size=4096 npm run build"
+  command = "npm ci && npm run verify-supabase && NODE_OPTIONS=--max_old_space_size=4096 NEXT_TELEMETRY_DISABLED=1 npm run build"
   publish = ".next"
 
 [build.environment]
@@ -12,6 +12,11 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+  [plugins.inputs]
+    config_path = "netlify-plugin-nextjs.js"
 
 [functions]
-  included_files = ["node_modules/next/dist/compiled/**", "node_modules/url/**", "node_modules/path-browserify/**", "node_modules/crypto-browserify/**", "node_modules/stream-browserify/**", "node_modules/next/**", "node_modules/react/**", "node_modules/react-dom/**", "node_modules/next-themes/**"] 
+  included_files = ["node_modules/**/*", "next.config.js", ".env.local"]
+
+[build.processing]
+  skip_processing = true 
