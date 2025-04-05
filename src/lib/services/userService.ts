@@ -910,43 +910,97 @@ export const userService = {
         return false;
       }
       
-      // Get current preferences first
+      console.log('Settings data to save:', JSON.stringify(settings, null, 2));
+      
+      // Get current preferences first to check if they exist
       const userPrefs = await this.getUserPreferences(userId);
       
-      // Prepare the preferences object
-      let preferences = {};
-      if (userPrefs && userPrefs.preferences) {
-        // Keep existing preferences
-        preferences = { ...userPrefs.preferences };
-      }
-      
-      // Add settings to preferences
-      preferences = {
-        ...preferences,
-        settings: settings
-      };
-      
-      // Save to database
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert({
+      // If we found existing preferences, update them
+      if (userPrefs && userPrefs.id) {
+        console.log(`Updating existing preferences with ID ${userPrefs.id}`);
+        
+        // Create a preferences object merging existing with new settings
+        let updatedPreferences = {};
+        
+        // Handle existing preferences based on its type
+        if (userPrefs.preferences) {
+          if (typeof userPrefs.preferences === 'string') {
+            try {
+              updatedPreferences = JSON.parse(userPrefs.preferences);
+            } catch (e) {
+              console.error('Failed to parse preferences string:', e);
+              updatedPreferences = {};
+            }
+          } else {
+            updatedPreferences = {...userPrefs.preferences};
+          }
+        }
+        
+        // Merge with new settings
+        updatedPreferences = {
+          ...updatedPreferences,
+          settings
+        };
+        
+        console.log('Updating preferences with:', { id: userPrefs.id, preferences: updatedPreferences });
+        
+        // Use direct update with explicit ID and user_id
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .update({
+            preferences: updatedPreferences,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userPrefs.id)
+          .select();
+        
+        if (error) {
+          console.error('Error updating user settings:', {
+            code: error.code,
+            message: error.message,
+            details: error.details || 'No details'
+          });
+          return false;
+        }
+        
+        console.log('Successfully updated user settings:', data);
+        return true;
+      } 
+      // Otherwise create new preferences
+      else {
+        console.log('No existing preferences found, creating new record');
+        
+        const newRecord = {
+          id: uuidv4(),
           user_id: userId,
-          preferences: preferences,
+          preferences: { settings },
+          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
-      
-      if (error) {
-        console.error('Error saving user settings:', error);
-        return false;
+        };
+        
+        console.log('Creating new preferences:', newRecord);
+        
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .insert(newRecord)
+          .select();
+        
+        if (error) {
+          console.error('Error creating user settings:', {
+            code: error.code,
+            message: error.message,
+            details: error.details || 'No details'
+          });
+          return false;
+        }
+        
+        console.log('Successfully created user settings:', data);
+        return true;
       }
-      
-      console.log('Successfully saved user settings to database');
-      return true;
     } catch (error) {
-      console.error('Error in saveUserSettings:', 
-        error instanceof Error ? error.message : String(error));
+      console.error('Exception in saveUserSettings:', 
+        error instanceof Error ? error.message : String(error),
+        error instanceof Error && error.stack ? error.stack : '');
       return false;
     }
   },
