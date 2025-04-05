@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { userService } from '@/lib/services/userService';
 import { UserProfile } from '@/lib/supabase';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, User, Save, Briefcase, Building, Phone, CheckCircle } from 'lucide-react';
+import { Loader2, User, Save, Briefcase, Building, Phone, CheckCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Separator } from '@/components/ui/separator';
@@ -19,10 +19,12 @@ export default function ProfileSettings() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [updatedFields, setUpdatedFields] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [profileExists, setProfileExists] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [profile, setProfile] = useState<Partial<UserProfile>>({
     full_name: '',
     age: null,
@@ -39,66 +41,83 @@ export default function ProfileSettings() {
             !profile.organization_name && !profile.mobile_number);
   };
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
+  // Function to fetch user profile data from the database
+  const fetchProfileData = useCallback(async (showToast = false) => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
-      try {
-        console.log('Loading profile for user:', user.id);
-        setIsLoading(true);
+    try {
+      setIsLoading(true);
+      if (showToast) {
+        setIsRefreshing(true);
+      }
+      
+      console.log('Fetching real-time profile data for user:', user.id);
+      
+      // Create/get user profile through userService
+      const userProfile = await userService.getUserProfile(user.id);
+      
+      if (userProfile) {
+        console.log('Profile loaded successfully:', userProfile);
         
-        // Create/get user profile through userService
-        const userProfile = await userService.getUserProfile(user.id);
+        // Set profile exists flag
+        setProfileExists(true);
         
-        if (userProfile) {
-          console.log('Profile loaded successfully:', userProfile);
-          
-          // Set profile exists flag
-          setProfileExists(true);
-          
-          // Ensure we handle null values properly
-          setProfile({
-            full_name: userProfile.full_name || '',
-            age: userProfile.age !== undefined ? userProfile.age : null,
-            gender: userProfile.gender || null,
-            profession: userProfile.profession || '',
-            organization_name: userProfile.organization_name || '',
-            mobile_number: userProfile.mobile_number !== undefined ? userProfile.mobile_number : null,
+        // Ensure we handle null values properly
+        setProfile({
+          full_name: userProfile.full_name || '',
+          age: userProfile.age !== undefined ? userProfile.age : null,
+          gender: userProfile.gender || null,
+          profession: userProfile.profession || '',
+          organization_name: userProfile.organization_name || '',
+          mobile_number: userProfile.mobile_number !== undefined ? userProfile.mobile_number : null,
+        });
+        
+        // Update last synced timestamp
+        setLastSynced(new Date());
+        
+        // Show notification for manual refresh
+        if (showToast) {
+          toast({
+            title: "Profile Updated",
+            description: "Your profile information has been refreshed from the database.",
+            variant: "default",
           });
-          
-          // Check if profile is incomplete and show notification
-          const incomplete = !userProfile.full_name || 
-                            (!userProfile.age && !userProfile.gender && 
-                             !userProfile.profession && !userProfile.organization_name);
-                             
-          if (incomplete) {
-            setTimeout(() => {
-              toast({
-                title: "Complete Your Profile",
-                description: "Please take a moment to update your profile information.",
-                variant: "default",
-              });
-            }, 1000); // Delay to avoid showing toast during loading
-          }
-        } else {
-          console.log('No profile found, using default empty profile');
-          // If no profile exists yet, we'll use the default empty profile
-          setProfileExists(false);
-          
-          // Reset profile to empty state
-          setProfile({
-            full_name: '',
-            age: null,
-            gender: null,
-            profession: '',
-            organization_name: '',
-            mobile_number: null,
-          });
-          
-          // Show notification to update profile
+        }
+        
+        // Check if profile is incomplete and show notification
+        const incomplete = !userProfile.full_name || 
+                          (!userProfile.age && !userProfile.gender && 
+                           !userProfile.profession && !userProfile.organization_name);
+                           
+        if (incomplete && !showToast) {
+          setTimeout(() => {
+            toast({
+              title: "Complete Your Profile",
+              description: "Please take a moment to update your profile information.",
+              variant: "default",
+            });
+          }, 1000); // Delay to avoid showing toast during loading
+        }
+      } else {
+        console.log('No profile found, using default empty profile');
+        // If no profile exists yet, we'll use the default empty profile
+        setProfileExists(false);
+        
+        // Reset profile to empty state
+        setProfile({
+          full_name: '',
+          age: null,
+          gender: null,
+          profession: '',
+          organization_name: '',
+          mobile_number: null,
+        });
+        
+        // Show notification to update profile
+        if (!showToast) {
           setTimeout(() => {
             toast({
               title: "Profile Not Found",
@@ -107,24 +126,87 @@ export default function ProfileSettings() {
             });
           }, 1000); // Delay to avoid showing toast during loading
         }
-      } catch (error) {
-        console.error('Error loading user profile:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load profile information. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    if (user) {
-      loadProfile();
-    } else {
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load profile information. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [user, toast]);
+
+  // Manually refresh profile data from database
+  const handleRefreshProfile = () => {
+    fetchProfileData(true);
+  };
+
+  // Set up Supabase real-time subscription for profile updates
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('Setting up real-time subscription for profile updates');
+    
+    // Subscribe to changes on the user_profiles table for this specific user
+    const subscription = supabase
+      .channel('profile-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'user_profiles',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Real-time profile update received:', payload);
+          
+          // If this is an update event and we have new data, update the local state
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const newData = payload.new as UserProfile;
+            
+            // Update the profile data immediately without a full fetch
+            setProfile({
+              full_name: newData.full_name || '',
+              age: newData.age !== undefined ? newData.age : null,
+              gender: newData.gender || null,
+              profession: newData.profession || '',
+              organization_name: newData.organization_name || '',
+              mobile_number: newData.mobile_number !== undefined ? newData.mobile_number : null,
+            });
+            
+            // Update last synced timestamp
+            setLastSynced(new Date());
+            
+            // Show a notification about the update
+            toast({
+              title: 'Profile Updated',
+              description: 'Your profile information has been updated in real-time.',
+              variant: 'default'
+            });
+          } else {
+            // For other events like INSERT or DELETE, do a full fetch
+            fetchProfileData();
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('Cleaning up real-time subscription');
+      subscription.unsubscribe();
+    };
+  }, [user, fetchProfileData, toast]);
+
+  // Load profile data on component mount
+  useEffect(() => {
+    fetchProfileData();
+  }, [fetchProfileData]);
 
   // Function to verify data was correctly saved to the database
   const verifyProfileSave = async () => {
@@ -346,15 +428,62 @@ export default function ProfileSettings() {
     }
   };
 
+  // Format the last synced time
+  const formatLastSynced = () => {
+    if (!lastSynced) return 'Never';
+    
+    // For times within the last minute
+    const seconds = Math.floor((new Date().getTime() - lastSynced.getTime()) / 1000);
+    if (seconds < 60) {
+      return `${seconds} ${seconds === 1 ? 'second' : 'seconds'} ago`;
+    }
+    
+    // For times within the last hour
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) {
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    }
+    
+    // For times within the last day
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    }
+    
+    // For older times, show the date
+    return lastSynced.toLocaleString();
+  };
+
   return (
     <Card className="w-full shadow-md border-slate-200 dark:border-slate-800">
       <CardHeader className="bg-slate-50 dark:bg-slate-900 rounded-t-lg border-b border-slate-100 dark:border-slate-800">
-        <CardTitle className="text-xl flex items-center gap-2">
-          <User className="h-5 w-5" />
-          Profile Settings
-        </CardTitle>
-        <CardDescription>
-          Update your personal information
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Profile Settings
+          </CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefreshProfile}
+            disabled={isRefreshing || isLoading}
+            className="flex items-center gap-2"
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Refresh
+          </Button>
+        </div>
+        <CardDescription className="flex justify-between">
+          <span>Update your personal information</span>
+          {lastSynced && (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              Last synced: {formatLastSynced()}
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       

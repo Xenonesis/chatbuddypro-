@@ -30,6 +30,13 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
   - 🧠 Multiple chat modes (Technical, Creative, Quick, etc.)
   - 🎤 Voice input support with speech recognition
 
+- **User Profile & Settings**:
+  - 👤 Real-time profile data synchronization with Supabase
+  - 🔄 Auto-refresh profile information from database
+  - 🔔 Update notifications when profile changes are detected
+  - 📊 Profile completion indicator
+  - 🔐 Secure user authentication
+
 - **Developer Experience**:
   - 🛠️ Fully typed with TypeScript
   - 📦 Built with modern React and Next.js
@@ -38,6 +45,7 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ## 🆕 Recent Updates
 
+- **Real-time Profile Data**: Added real-time database synchronization for user profiles with auto-update functionality
 - **Production Build Fixes**: Added TypeScript declaration file for react-speech-recognition, resolved ESLint warnings for production build
 - **Speech Recognition**: Added voice input support with browser's speech recognition API
 - **Build & Hydration Fixes**: Resolved 500 internal server errors by fixing type assertions in utils.ts, correcting Navbar component hydration, and ensuring proper component imports
