@@ -427,10 +427,24 @@ export const userService = {
       // Get current preferences
       const preferences = await this.getUserPreferences(userId);
       
+      // Encrypt the API key
+      const encryptedKey = await encryptApiKey(apiKey, userId);
+      
+      // Store in localStorage for immediate access on this device
+      try {
+        if (typeof window !== 'undefined') {
+          const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
+          localStorage.setItem(localStorageKey, encryptedKey);
+          console.log(`Stored API key in local storage with key: ${localStorageKey}`);
+        }
+      } catch (localStorageError) {
+        console.warn('Could not store API key in localStorage:', localStorageError);
+        // Continue with database storage even if local storage fails
+      }
+      
       if (!preferences) {
         // Create new preferences with this API key
         console.log('No existing preferences found, creating new preferences');
-        const encryptedKey = await encryptApiKey(apiKey, userId);
         const apiKeys = { [provider]: encryptedKey };
         
         await this.upsertUserPreferences(userId, {
@@ -443,7 +457,6 @@ export const userService = {
       // Update existing preferences
       console.log('Updating existing preferences with new API key');
       const apiKeys = preferences.api_keys || {};
-      const encryptedKey = await encryptApiKey(apiKey, userId);
       
       await this.upsertUserPreferences(userId, {
         api_keys: {
@@ -459,7 +472,7 @@ export const userService = {
     }
   },
 
-  // Retrieve and decrypt an API key
+  // Retrieve and decrypt an API key - optimized to check localStorage first
   async getApiKey(provider: string, userId: string): Promise<string | null> {
     try {
       console.debug(`Attempting to get API key for provider: ${provider}`);
@@ -469,6 +482,23 @@ export const userService = {
         return null;
       }
 
+      // First check in localStorage for faster access
+      if (typeof window !== 'undefined') {
+        try {
+          const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
+          const localApiKey = localStorage.getItem(localStorageKey);
+          
+          if (localApiKey) {
+            console.debug(`Found API key in localStorage for ${provider}`);
+            return decryptApiKey(localApiKey, userId);
+          }
+        } catch (localStorageError) {
+          console.warn('Error accessing localStorage:', localStorageError);
+          // Continue to database lookup if localStorage fails
+        }
+      }
+
+      // If not in localStorage, check database
       const userPreferences = await this.getUserPreferences(userId);
       
       if (!userPreferences) {
@@ -477,22 +507,46 @@ export const userService = {
       }
       
       try {
+        // Check in preferences.api_keys (new structure)
         const preferences = userPreferences.preferences || {};
         
-        if (!preferences.api_keys) {
-          console.warn(`No API keys found in preferences for user ${userId}`);
-          return null;
+        if (preferences.api_keys && preferences.api_keys[provider]) {
+          const apiKey = preferences.api_keys[provider];
+          console.debug(`Found API key in preferences.api_keys for ${provider}`);
+          
+          // Store in localStorage for future fast access
+          if (typeof window !== 'undefined') {
+            try {
+              const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
+              localStorage.setItem(localStorageKey, apiKey);
+            } catch (e) {
+              // Ignore localStorage errors
+            }
+          }
+          
+          return decryptApiKey(apiKey, userId);
         }
         
-        const apiKey = preferences.api_keys[provider];
-        
-        if (!apiKey) {
-          console.warn(`No API key found for provider ${provider}`);
-          return null;
+        // Check in legacy api_keys structure
+        if (userPreferences.api_keys && userPreferences.api_keys[provider]) {
+          const apiKey = userPreferences.api_keys[provider];
+          console.debug(`Found API key in legacy api_keys for ${provider}`);
+          
+          // Store in localStorage for future fast access
+          if (typeof window !== 'undefined') {
+            try {
+              const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
+              localStorage.setItem(localStorageKey, apiKey);
+            } catch (e) {
+              // Ignore localStorage errors
+            }
+          }
+          
+          return decryptApiKey(apiKey, userId);
         }
         
-        console.debug(`Successfully retrieved API key for provider: ${provider}`);
-        return decryptApiKey(apiKey);
+        console.warn(`No API key found for provider ${provider}`);
+        return null;
       } catch (prefError) {
         console.error(`Error accessing API key data: ${prefError instanceof Error ? prefError.message : String(prefError)}`);
         return null;
@@ -513,6 +567,18 @@ export const userService = {
     provider: string
   ): Promise<boolean> {
     try {
+      // Remove from localStorage first
+      if (typeof window !== 'undefined') {
+        try {
+          const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
+          localStorage.removeItem(localStorageKey);
+          console.log(`Removed API key from localStorage: ${localStorageKey}`);
+        } catch (localStorageError) {
+          console.warn('Error removing key from localStorage:', localStorageError);
+          // Continue with database deletion even if localStorage fails
+        }
+      }
+      
       const preferences = await this.getUserPreferences(userId);
       
       if (!preferences || !preferences.api_keys) {
@@ -1039,5 +1105,138 @@ export const userService = {
         error instanceof Error ? error.message : String(error));
       return [];
     }
-  }
+  },
+
+  // Check if API key is valid and accessible
+  async checkApiKeyStatus(provider: string, userId: string): Promise<{ valid: boolean, source: string }> {
+    try {
+      // First check localStorage
+      let apiKey = null;
+      let source = '';
+      
+      if (typeof window !== 'undefined') {
+        try {
+          const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
+          const encryptedKey = localStorage.getItem(localStorageKey);
+          
+          if (encryptedKey) {
+            apiKey = await decryptApiKey(encryptedKey, userId);
+            source = 'localStorage';
+          }
+        } catch (e) {
+          console.warn('Error checking localStorage for API key:', e);
+        }
+      }
+      
+      // If not found in localStorage, check database
+      if (!apiKey) {
+        const userPreferences = await this.getUserPreferences(userId);
+        
+        if (userPreferences?.preferences?.api_keys?.[provider]) {
+          apiKey = await decryptApiKey(userPreferences.preferences.api_keys[provider], userId);
+          source = 'database.preferences';
+        } else if (userPreferences?.api_keys?.[provider]) {
+          apiKey = await decryptApiKey(userPreferences.api_keys[provider], userId);
+          source = 'database.legacy';
+        }
+      }
+      
+      if (!apiKey) {
+        return { valid: false, source: 'not_found' };
+      }
+      
+      // Validate the key format (minimal validation)
+      const isValidFormat = apiKey && apiKey.length > 10;
+      
+      // For extra security, we could make a test API call here if needed
+      
+      return { 
+        valid: isValidFormat, 
+        source 
+      };
+    } catch (error) {
+      console.error('Error checking API key status:', error);
+      return { valid: false, source: 'error' };
+    }
+  },
+
+  // Synchronize API keys between localStorage and database
+  async syncApiKeys(userId: string): Promise<boolean> {
+    try {
+      if (!userId) {
+        console.error('Cannot sync API keys: userId is missing');
+        return false;
+      }
+      
+      console.debug('Synchronizing API keys for user', userId);
+      
+      // Get API keys from database
+      const userPreferences = await this.getUserPreferences(userId);
+      if (!userPreferences) {
+        console.warn('No user preferences found to sync');
+        return false;
+      }
+      
+      // Get database API keys from both locations
+      const newFormatKeys = userPreferences.preferences?.api_keys || {};
+      const legacyFormatKeys = userPreferences.api_keys || {};
+      
+      // Combine database keys
+      const dbApiKeys = { ...legacyFormatKeys, ...newFormatKeys };
+      const providers = Object.keys(dbApiKeys);
+      
+      // No keys to sync
+      if (providers.length === 0) {
+        console.debug('No API keys found in database to sync');
+        return true;
+      }
+      
+      if (typeof window === 'undefined') {
+        console.debug('Not in browser environment, skipping localStorage sync');
+        return true;
+      }
+      
+      // Sync each provider's API key to localStorage
+      for (const provider of providers) {
+        const encryptedKey = dbApiKeys[provider];
+        if (encryptedKey) {
+          const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
+          localStorage.setItem(localStorageKey, encryptedKey);
+          console.debug(`Synced ${provider} API key to localStorage`);
+        }
+      }
+      
+      // Check localStorage for keys not in database
+      const localStorageKeys = Object.keys(localStorage).filter(
+        key => key.startsWith(`chatbuddy_api_key_`) && key.endsWith(`_${userId}`)
+      );
+      
+      for (const key of localStorageKeys) {
+        // Extract provider from key format "chatbuddy_api_key_PROVIDER_USERID"
+        const parts = key.split('_');
+        if (parts.length >= 4) {
+          const provider = parts.slice(3, parts.length - 1).join('_'); // Handle providers with underscores
+          const encryptedKey = localStorage.getItem(key);
+          
+          // If we have a key in localStorage that's not in db, update database
+          if (encryptedKey && !dbApiKeys[provider]) {
+            console.debug(`Found API key in localStorage for ${provider} not in database, syncing to database`);
+            
+            // Update database with this key
+            await this.upsertUserPreferences(userId, {
+              api_keys: {
+                ...dbApiKeys,
+                [provider]: encryptedKey
+              }
+            });
+          }
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error synchronizing API keys:', error);
+      return false;
+    }
+  },
 }; 

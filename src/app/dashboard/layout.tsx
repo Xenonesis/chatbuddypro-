@@ -4,6 +4,8 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import useApiKeySync from '@/components/hooks/useApiKeySync';
+import Navbar from '@/components/Navbar';
 
 export default function DashboardLayout({
   children,
@@ -12,8 +14,12 @@ export default function DashboardLayout({
 }) {
   const { user, isAuthReady } = useAuth();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-
+  const [loading, setLoading] = useState(true);
+  
+  // Use the API key sync hook
+  useApiKeySync();
+  
+  // Check authentication
   useEffect(() => {
     if (!isAuthReady) return;
 
@@ -21,20 +27,24 @@ export default function DashboardLayout({
       console.log('Not authenticated, redirecting to login');
       router.push('/auth/login');
     } else {
-      setIsLoading(false);
+      setLoading(false);
     }
   }, [isAuthReady, user, router]);
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-lg text-slate-600 dark:text-slate-300">Loading Dashboard...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  return (
+    <div className="bg-background min-h-screen">
+      <Navbar />
+      <div className="container mx-auto p-4 pt-24">
+        {children}
+      </div>
+    </div>
+  );
 } 

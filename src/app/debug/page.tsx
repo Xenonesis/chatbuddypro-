@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { CreateTestChat } from '@/components/debug/CreateTestChat';
 import { Database, Lock, RefreshCw, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import { ApiKeyDiagnostics } from '@/components/debug/ApiKeyDiagnostics';
 
 export default function DebugPage() {
   const { user } = useAuth();
@@ -134,6 +135,15 @@ export default function DebugPage() {
             </CardHeader>
             <CardContent>
               <CreateTestChat onChatCreated={handleChatCreated} />
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>API Diagnostics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ApiKeyDiagnostics />
             </CardContent>
           </Card>
         </div>
