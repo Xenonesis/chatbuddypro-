@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useApiKeySync from '@/components/hooks/useApiKeySync';
-import { Navbar } from '@/components/Navbar';
 
 export default function DashboardLayout({
   children,
@@ -41,7 +40,6 @@ export default function DashboardLayout({
 
   return (
     <div className="bg-background min-h-screen">
-      <Navbar />
       <div className="container mx-auto p-4 pt-24">
         {children}
       </div>
