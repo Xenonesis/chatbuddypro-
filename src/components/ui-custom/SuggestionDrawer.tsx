@@ -9,8 +9,8 @@ import { extractSuggestionsFromText, getGeneralSuggestions } from '@/lib/suggest
 import { useModelSettings } from '@/lib/context/ModelSettingsContext';
 
 interface SuggestionDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 // Define suggestion categories
@@ -30,7 +30,7 @@ interface Suggestion {
   category: SuggestionCategory;
 }
 
-export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
+export function SuggestionDrawer({ open, onOpenChange }: SuggestionDrawerProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,9 +41,12 @@ export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   
+  // Function to close the drawer
+  const handleClose = () => onOpenChange(false);
+  
   // Load suggestions when drawer opens
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       setLoading(true);
       setSearchQuery('');
       
@@ -98,7 +101,7 @@ export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
       setFilteredSuggestions(shuffled);
       setLoading(false);
     }
-  }, [isOpen]);
+  }, [open]);
   
   // Filter suggestions based on tab and search query
   useEffect(() => {
@@ -127,18 +130,18 @@ export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
     setSelectedSuggestion(suggestion);
     // Add a small delay before closing to provide visual feedback
     setTimeout(() => {
-      onClose();
+      handleClose();
     }, 150);
   };
   
   // Handle keyboard navigation
   useEffect(() => {
-    if (!isOpen) return;
+    if (!open) return;
     
     const handleKeyDown = (e: KeyboardEvent) => {
       // Close on escape
       if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       }
       
       // Focus search input on '/'
@@ -150,15 +153,15 @@ export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [open]);
   
   // Handle clicks outside the drawer
   useEffect(() => {
-    if (!isOpen) return;
+    if (!open) return;
     
     const handleClickOutside = (e: MouseEvent) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-        onClose();
+        handleClose();
       }
     };
     
@@ -171,7 +174,7 @@ export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
       clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen, onClose]);
+  }, [open]);
   
   // Copy selected suggestion to clipboard
   useEffect(() => {
@@ -185,13 +188,13 @@ export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
     }
   }, [selectedSuggestion]);
 
-  if (!isOpen) return null;
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-200 flex items-start justify-center">
       <div 
         ref={drawerRef}
-        className={`bg-white dark:bg-slate-900 shadow-lg max-h-[85vh] overflow-hidden w-full max-w-xl mx-auto mt-16 sm:mt-20 rounded-lg border border-slate-200 dark:border-slate-700 transition-all duration-300 opacity-0 translate-y-4 ${isOpen ? 'opacity-100 translate-y-0' : ''}`}
+        className={`bg-white dark:bg-slate-900 shadow-lg max-h-[85vh] overflow-hidden w-full max-w-xl mx-auto mt-16 sm:mt-20 rounded-lg border border-slate-200 dark:border-slate-700 transition-all duration-300 opacity-0 translate-y-4 ${open ? 'opacity-100 translate-y-0' : ''}`}
         style={{ animationDelay: '10ms' }}
       >
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
@@ -206,7 +209,7 @@ export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={onClose}
+              onClick={handleClose}
               className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <X className="h-5 w-5" />
@@ -284,7 +287,7 @@ export function SuggestionDrawer({ isOpen, onClose }: SuggestionDrawerProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={onClose}
+            onClick={handleClose}
             className="h-7 text-xs"
           >
             Close

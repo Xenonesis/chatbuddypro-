@@ -4,14 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useModelSettings, ModelSettings, AIProvider, ChatMode } from '@/lib/context/ModelSettingsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Save, CheckCircle, Sliders } from 'lucide-react';
 import ProviderSettings from '@/components/settings/ProviderSettings';
 import ChatSettings from '@/components/settings/ChatSettings';
 import SuggestionsSettings from '@/components/settings/SuggestionsSettings';
 import VoiceInputSettings from '@/components/settings/VoiceInputSettings';
+import ProfileSettings from '@/components/settings/ProfileSettings';
 
 export default function SettingsPage() {
   const { settings, updateSettings, getDefaultSettings } = useModelSettings();
+  const { user } = useAuth();
   const [localSettings, setLocalSettings] = useState<ModelSettings>(settings);
   const [saveStatus, setSaveStatus] = useState<string>('');
   const [savedAnimation, setSavedAnimation] = useState(false);
@@ -111,6 +114,7 @@ export default function SettingsPage() {
 
         {/* Settings Tabs - Optimized for mobile */}
         <div className="space-y-4 sm:space-y-6">
+          <ProfileSettings />
           <ProviderSettings />
           <ChatSettings />
           <VoiceInputSettings />
@@ -119,7 +123,9 @@ export default function SettingsPage() {
 
         <div className="mt-6 border-t dark:border-slate-700 pt-4 text-center sticky-bottom safe-area-bottom bg-white/80 dark:bg-slate-950/80">
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-            Your settings are stored locally on your device.
+            {user ? 
+              "Your settings and API keys are securely saved to your account and will be available on any device." : 
+              "Your settings are stored locally on your device."}
           </p>
           <Button 
             onClick={handleSaveSettings} 

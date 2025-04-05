@@ -2,11 +2,375 @@
 
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from 'react';
 import { callAI, ChatMessage } from './api';
 
+/**
+ * Combines class names with Tailwind CSS using clsx and tailwind-merge
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Formats a date string using Intl.DateTimeFormat
+ */
+export function formatDate(date: Date, options: Intl.DateTimeFormatOptions = {}) {
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    ...options
+  };
+  
+  return new Intl.DateTimeFormat('en-US', defaultOptions).format(new Date(date));
+}
+
+/**
+ * Truncates text with ellipsis after a specified number of characters
+ */
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+}
+
+/**
+ * Creates a debounced function that delays invoking the provided function
+ * until after the specified wait time has elapsed since the last time it was invoked.
+ */
+export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+  return function(...args: Parameters<T>) {
+    const later = () => {
+      timeout = null;
+      func(...args);
+    };
+    
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+/**
+ * Creates animation keyframes for CSS animations
+ */
+export const animationKeyframes = {
+  fadeIn: `
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  `,
+  fadeOut: `
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `,
+  slideInUp: `
+    @keyframes slideInUp {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  `,
+  pulse: `
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+  `,
+  spin: `
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  `,
+  bounce: `
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+  `
+};
+
+/**
+ * Injects global CSS styles into the document head
+ */
+export function injectGlobalStyles(styles: string): () => void {
+  const styleElement = document.createElement('style');
+  styleElement.innerHTML = styles;
+  document.head.appendChild(styleElement);
+  
+  return () => {
+    document.head.removeChild(styleElement);
+  };
+}
+
+/**
+ * Custom hook for responsive design breakpoints
+ */
+export function useBreakpoint() {
+  const [breakpoint, setBreakpoint] = useState('');
+  
+  useEffect(() => {
+    const checkBreakpoint = () => {
+      const width = window.innerWidth;
+      
+      if (width < 480) {
+        setBreakpoint('xs');
+      } else if (width < 640) {
+        setBreakpoint('sm');
+      } else if (width < 768) {
+        setBreakpoint('md');
+      } else if (width < 1024) {
+        setBreakpoint('lg');
+      } else {
+        setBreakpoint('xl');
+      }
+    };
+    
+    // Initial check
+    checkBreakpoint();
+    
+    // Add event listener
+    const debouncedCheck = debounce(checkBreakpoint, 100);
+    window.addEventListener('resize', debouncedCheck);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', debouncedCheck);
+    };
+  }, []);
+  
+  return breakpoint;
+}
+
+/**
+ * Determines if the current device is touch-enabled
+ */
+export function useTouchDevice() {
+  const [isTouch, setIsTouch] = useState(false);
+  
+  useEffect(() => {
+    const isTouchDevice = 
+      'ontouchstart' in window || 
+      navigator.maxTouchPoints > 0 ||
+      (navigator as any).msMaxTouchPoints > 0;
+    
+    setIsTouch(isTouchDevice);
+  }, []);
+  
+  return isTouch;
+}
+
+/**
+ * Generate accessible aria attributes for common components
+ */
+export function getAriaAttributes(role: string, props: Record<string, any> = {}) {
+  const baseAttrs: Record<string, any> = { role };
+  
+  switch (role) {
+    case 'button':
+      return {
+        ...baseAttrs,
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            props.onClick?.(e);
+          }
+        },
+        ...props
+      };
+    case 'toggle':
+    case 'switch':
+      return {
+        ...baseAttrs,
+        role: 'switch',
+        'aria-checked': props.checked || false,
+        tabIndex: 0,
+        ...props
+      };
+    case 'tab':
+      return {
+        ...baseAttrs,
+        'aria-selected': props.selected || false,
+        tabIndex: props.selected ? 0 : -1,
+        ...props
+      };
+    default:
+      return { ...baseAttrs, ...props };
+  }
+}
+
+/**
+ * Generates global responsive styles for the application
+ */
+export const getResponsiveStyles = () => `
+  /* Improved focus styles for accessibility */
+  :focus-visible {
+    outline: 2px solid #3b82f6 !important;
+    outline-offset: 2px !important;
+  }
+  
+  /* Touch target enhancements for mobile */
+  @media (hover: none) {
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    button:not(.touch-exempt),
+    a:not(.touch-exempt) {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+  
+  /* Animation utility classes */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  .animate-fade-out {
+    animation: fadeOut 0.3s ease-in-out;
+  }
+  
+  .animate-slide-in-up {
+    animation: slideInUp 0.3s ease-out;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 2s infinite ease-in-out;
+  }
+  
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+  
+  .animate-bounce {
+    animation: bounce 1s infinite ease-in-out;
+  }
+  
+  /* Extra small screen utilities */
+  @media (max-width: 480px) {
+    .xs\\:hidden {
+      display: none;
+    }
+    
+    .xs\\:block {
+      display: block;
+    }
+    
+    .xs\\:flex {
+      display: flex;
+    }
+    
+    .xs\\:grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+    
+    .xs\\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    .xs\\:grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    
+    .xs\\:text-xs {
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+    
+    .xs\\:p-2 {
+      padding: 0.5rem;
+    }
+    
+    .xs\\:gap-1 {
+      gap: 0.25rem;
+    }
+  }
+`;
+
+/**
+ * Returns appropriate loading and success states for async actions
+ */
+export function useAsyncState() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const runAsync = async (fn: () => Promise<any>) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await fn();
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return { isLoading, isSuccess, error, runAsync };
+}
+
+/**
+ * Hook to ensure responsiveness and enhance UI for both mobile and desktop
+ */
+export function useEnhancedUI() {
+  const breakpoint = useBreakpoint();
+  const isTouch = useTouchDevice();
+  
+  useEffect(() => {
+    // Combine all animation keyframes
+    const keyframesStyles = Object.values(animationKeyframes).join('\n');
+    
+    // Inject global styles
+    const cleanupFn = injectGlobalStyles(keyframesStyles + getResponsiveStyles());
+    
+    return cleanupFn;
+  }, []);
+  
+  // Return useful UI enhancement utilities
+  return {
+    breakpoint,
+    isTouch,
+    isMobile: ['xs', 'sm'].includes(breakpoint),
+    isTablet: breakpoint === 'md',
+    isDesktop: ['lg', 'xl'].includes(breakpoint),
+  };
+}
+
+/**
+ * Helper for smooth scrolling to elements
+ */
+export function scrollToElement(elementId: string, offset = 0) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  const top = element.getBoundingClientRect().top + window.pageYOffset + offset;
+  
+  window.scrollTo({
+    top,
+    behavior: 'smooth'
+  });
+}
+
+/**
+ * Format file size in human readable format
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 // ClientOnly component to only render content on the client side
@@ -762,4 +1126,44 @@ IMPORTANT: Your response must be valid JSON that can be parsed directly.`;
   // This should not be reached due to the returns in the try/catch blocks,
   // but is added as a fallback just in case
   return fallbackSuggestions;
-}; 
+};
+
+/**
+ * Get background color class for a provider
+ */
+export function getProviderBackgroundColor(provider: string): string {
+  switch (provider) {
+    case 'openai':
+      return 'bg-green-600 dark:bg-green-700';
+    case 'gemini':
+      return 'bg-blue-600 dark:bg-blue-700';
+    case 'claude':
+      return 'bg-purple-600 dark:bg-purple-700';
+    case 'mistral':
+      return 'bg-cyan-600 dark:bg-cyan-700';
+    case 'llama':
+      return 'bg-amber-600 dark:bg-amber-700';
+    default:
+      return 'bg-slate-600 dark:bg-slate-700';
+  }
+}
+
+/**
+ * Get display name for a provider
+ */
+export function getProviderDisplayName(provider: string): string {
+  switch (provider) {
+    case 'openai':
+      return 'OpenAI';
+    case 'gemini':
+      return 'Gemini';
+    case 'claude':
+      return 'Claude';
+    case 'mistral':
+      return 'Mistral';
+    case 'llama':
+      return 'Llama';
+    default:
+      return 'Unknown';
+  }
+} 

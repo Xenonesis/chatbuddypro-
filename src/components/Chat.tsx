@@ -44,7 +44,7 @@ import {
 import Link from 'next/link';
 import { callAI, ChatMessage } from '@/lib/api';
 import { useModelSettings, AIProvider, ChatMode } from '@/lib/context/ModelSettingsContext';
-import { containsCodeBlock, isCodingQuestion, saveChatHistory, ChatHistoryItem } from '@/lib/utils';
+import { containsCodeBlock, isCodingQuestion, saveChatHistory, ChatHistoryItem, getProviderBackgroundColor, getProviderDisplayName } from '@/lib/utils';
 import ApiDiagnostics from "@/components/ApiDiagnostics";
 import { FormattedMessage } from '@/components/ui-custom/FormattedMessage';
 import { SmartSuggestions } from '@/components/ui-custom/SmartSuggestions';
@@ -53,6 +53,8 @@ import remarkGfm from 'remark-gfm';
 import CodeBlock from '@/components/ui-custom/CodeBlock';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { chatService } from '@/lib/services/chatService';
 
 type Message = {
   id: string;
@@ -63,9 +65,16 @@ type Message = {
   responseTime?: number;
 };
 
-export default function Chat() {
+type ChatProps = {
+  initialMessages?: Message[];
+  initialTitle?: string;
+  initialModel?: string;
+  chatId?: string | null;
+};
+
+export default function Chat({ initialMessages = [], initialTitle = '', initialModel = '', chatId: initialChatId = null }: ChatProps) {
   const { settings, currentProvider, setCurrentProvider, setChatMode, toggleShowThinking, updateSettings } = useModelSettings();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showProviderMenu, setShowProviderMenu] = useState(false);
@@ -89,6 +98,28 @@ export default function Chat() {
   const [isScrolling, setIsScrolling] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const [title, setTitle] = useState<string>(initialTitle);
+  const [selectedModel, setSelectedModel] = useState<string>(initialModel);
+  const [chatId, setChatId] = useState<string | null>(initialChatId);
+  
+  // Set initial model if provided
+  useEffect(() => {
+    if (initialModel && initialModel !== '') {
+      // Find the provider for this model and set it
+      Object.entries(settings).forEach(([providerKey, providerSettings]) => {
+        if (providerKey !== 'defaultProvider' && 
+            providerKey !== 'chatMode' && 
+            providerKey !== 'showThinking' &&
+            typeof providerSettings === 'object' &&
+            'models' in providerSettings &&
+            Array.isArray(providerSettings.models) &&
+            providerSettings.models.includes(initialModel)) {
+          setCurrentProvider(providerKey as AIProvider);
+        }
+      });
+    }
+  }, [initialModel, settings, setCurrentProvider]);
   
   const { voiceInputSettings } = settings;
   
@@ -276,6 +307,52 @@ export default function Chat() {
         setMessages((prev) => [...prev, errorMessage]);
         return;
       }
+
+      // Create a new chat in the database if this is the first message and user is logged in
+      if (messages.length === 0 && user) {
+        try {
+          // Get the current model name
+          const modelName = settings[currentProvider].selectedModel;
+          
+          // Create a chat with the first message as the title and save the model name
+          const chat = await chatService.createChat(
+            user.id, 
+            userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : ''),
+            modelName,
+            user.email || undefined,
+            user.user_metadata?.full_name || undefined
+          );
+          
+          if (chat) {
+            console.log('Created new chat:', chat);
+            setChatId(chat.id);
+            
+            // Save the first message to the chat
+            await chatService.addMessage(
+              chat.id,
+              user.id,
+              'user',
+              userMessage
+            );
+          }
+        } catch (error) {
+          console.error('Error creating chat:', error);
+          // Continue with the chat even if saving to DB fails
+        }
+      } else if (chatId && user) {
+        // Save the message to an existing chat
+        try {
+          await chatService.addMessage(
+            chatId,
+            user.id,
+            'user',
+            userMessage
+          );
+        } catch (error) {
+          console.error('Error saving message:', error);
+          // Continue with the chat even if saving to DB fails
+        }
+      }
       
       // Detect if this is a coding question
       const isCodeQuestion = isCodingQuestion(userMessage);
@@ -375,6 +452,25 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       setMessages((prev) => [...prev, assistantMessage]);
       setMessageHasBeenSent(true);
       setTimeout(() => setTypingAnimationComplete(true), 500);
+      
+      // Save the assistant's response to the database if user is logged in
+      if (chatId && user) {
+        try {
+          await chatService.addMessage(
+            chatId,
+            user.id,
+            'assistant',
+            response
+          );
+          
+          // Update the chat with the current model if it changed
+          const modelName = settings[currentProvider].selectedModel;
+          await chatService.updateChat(chatId, user.id, { model: modelName });
+        } catch (error) {
+          console.error('Error saving assistant response:', error);
+          // Continue with the chat even if saving to DB fails
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       
@@ -1030,22 +1126,25 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     if (showProviderMenu) setShowProviderMenu(false);
   };
 
-  // Listen for suggestion events from the SuggestionDrawer
+  // Effect to handle suggestion events from SuggestionDrawer
   useEffect(() => {
-    const handleSuggestionEvent = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail && customEvent.detail.suggestion) {
-        setInput(customEvent.detail.suggestion);
+    const handleSuggestionEvent = (event: CustomEvent<{ suggestion: string }>) => {
+      if (event.detail && event.detail.suggestion) {
+        setInput(event.detail.suggestion);
+        // Focus the textarea
         if (textareaRef.current) {
           textareaRef.current.focus();
         }
+        // Always show the input when selecting a suggestion
+        setIsInputVisible(true);
       }
     };
     
-    window.addEventListener('suggestion:selected', handleSuggestionEvent);
+    // Listen for the custom event
+    window.addEventListener('suggestion:selected', handleSuggestionEvent as EventListener);
     
     return () => {
-      window.removeEventListener('suggestion:selected', handleSuggestionEvent);
+      window.removeEventListener('suggestion:selected', handleSuggestionEvent as EventListener);
     };
   }, []);
 
@@ -1289,13 +1388,87 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       >
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-4 sm:p-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 dark:from-blue-600 dark:to-indigo-800 flex items-center justify-center mb-5 shadow-md animate-pulse">
-              <MessageSquare className="h-10 w-10 text-white" />
+            {/* Enhanced circular animation */}
+            <div className="relative">
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-400/20 to-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-800 flex items-center justify-center mb-5 shadow-lg relative z-10">
+                <MessageSquare className="h-10 w-10 text-white animate-pulse" />
+              </div>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">Start a conversation</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
-              Choose your AI model using the icons above and start typing to begin chatting.
+            
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-200 mb-3">Start a conversation</h2>
+            
+            <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xs sm:max-w-md mb-6">
+              Select your AI model and start your conversation with ChatBuddy.
             </p>
+            
+            {/* Quick model selection for mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 w-full max-w-xs sm:max-w-md">
+              {['openai', 'gemini', 'claude', 'mistral'].map((provider: string) => (
+                <button
+                  key={provider}
+                  onClick={() => setCurrentProvider(provider as AIProvider)}
+                  className={cn(
+                    "py-3 px-2 rounded-lg flex flex-col items-center justify-center transition-all",
+                    "border border-slate-200 dark:border-slate-700",
+                    "hover:bg-slate-100 dark:hover:bg-slate-800",
+                    currentProvider === provider ? 
+                      "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-400 dark:ring-blue-600" : 
+                      "bg-white dark:bg-slate-800/50"
+                  )}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center mb-1",
+                    getProviderBackgroundColor(provider as AIProvider)
+                  )}>
+                    {provider === 'openai' && <Sparkles className="h-4 w-4 text-white" />}
+                    {provider === 'gemini' && <Star className="h-4 w-4 text-white" />}
+                    {provider === 'claude' && <Cpu className="h-4 w-4 text-white" />}
+                    {provider === 'mistral' && <Wand2 className="h-4 w-4 text-white" />}
+                  </div>
+                  <span className="text-xs font-medium">{getProviderDisplayName(provider as AIProvider)}</span>
+                </button>
+              ))}
+            </div>
+            
+            {/* Getting started button */}
+            <button
+              onClick={() => {
+                // Focus the input field to start typing
+                if (textareaRef.current) {
+                  textareaRef.current.focus();
+                }
+              }}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-full font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+            >
+              <MessageSquare className="h-5 w-5" />
+              <span>Start typing</span>
+            </button>
+            
+            {/* Helper suggestion chips */}
+            <div className="mt-8 w-full max-w-xs sm:max-w-md">
+              <p className="text-xs text-slate-500 dark:text-slate-500 mb-3">Try asking:</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {[
+                  "Explain quantum computing",
+                  "Write a short poem",
+                  "Help with my resume"
+                ].map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setInput(suggestion);
+                      if (textareaRef.current) {
+                        textareaRef.current.focus();
+                      }
+                    }}
+                    className="text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 py-1.5 px-3 rounded-full text-slate-700 dark:text-slate-300 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="py-4">
@@ -1319,20 +1492,20 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       {/* Input Area - Fixed to bottom with transition */}
       <div 
         ref={inputAreaRef}
-        className={`fixed bottom-0 left-0 right-0 chat-input-fixed border-t dark:border-slate-700/50 p-0 bg-gradient-to-r from-gray-50 to-white dark:from-slate-900 dark:to-slate-950 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] transition-all duration-300 ease-in-out ${
+        className={`fixed bottom-0 left-0 right-0 chat-input-fixed border-t dark:border-slate-700/50 p-0 bg-gradient-to-r from-gray-50 to-white dark:from-slate-900 dark:to-slate-950 shadow-lg transition-all duration-300 ease-in-out ${
           isInputVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
         } max-w-screen-2xl mx-auto`}
         style={{ 
           zIndex: 20,
         }}
       >
-        {/* Add a pill-shaped handle at the top of the input area for visual affordance */}
-        <div className="w-full flex justify-center">
-          <div className="w-12 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mt-1 mb-0.5"></div>
+        {/* Enhanced visual handle for better touch target */}
+        <div className="w-full flex justify-center cursor-pointer touch-manipulation" onClick={() => setIsInputVisible(true)}>
+          <div className="w-24 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full mt-2 mb-1 hover:bg-slate-400 dark:hover:bg-slate-500 transition-colors"></div>
         </div>
         
-        <div className="p-2 sm:p-3">
-          <div className="flex items-start gap-2">
+        <div className="p-3 sm:p-4">
+          <div className="relative flex items-start">
             <Textarea
               ref={textareaRef}
               placeholder="Type a message..."
@@ -1340,23 +1513,42 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onFocus={() => setIsInputVisible(true)}
-              className="min-h-[2.5rem] sm:min-h-[3.5rem] max-h-[12rem] resize-none rounded-2xl border border-slate-200 dark:border-slate-700 dark:bg-slate-800/80 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:focus:ring-blue-400/50 dark:focus:border-blue-400 transition-all duration-200 backdrop-blur-sm pr-20"
+              className="min-h-[2.75rem] sm:min-h-[3.75rem] max-h-[16rem] sm:max-h-[20rem] w-full resize-none rounded-2xl border-1.5 px-4 pt-3 pb-2 shadow-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800/80 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 dark:focus:ring-blue-400/50 dark:focus:border-blue-400 transition-all duration-200 backdrop-blur-sm pr-24 text-base sm:text-lg placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:transition-opacity focus:placeholder:opacity-50"
+              style={{
+                caretColor: '#3B82F6',
+                fontFamily: 'var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                lineHeight: '1.5'
+              }}
             />
-            <div className="absolute right-4 bottom-4 sm:right-5 sm:bottom-5 flex items-center gap-2">
+            
+            {/* Character counter overlay */}
+            {input.length > 0 && (
+              <div className={`absolute right-[4.5rem] sm:right-20 bottom-[0.4rem] px-1.5 py-0.5 rounded-full transition-all text-xs ${
+                input.length > 4000 ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30' : 'text-slate-400 dark:text-slate-500'
+              }`}>
+                <span className="flex items-center gap-1">
+                  {input.length > 4000 && <Flame className="h-3 w-3" />}
+                  {input.length}/{4000}
+                </span>
+              </div>
+            )}
+            
+            <div className="absolute right-3 sm:right-4 bottom-3 sm:bottom-3 flex items-center gap-2">
               {!isListening && settings.voiceInputSettings.enabled && browserSupportsSpeechRecognition && microphoneAvailable && 
                !isTyping && !isLoading && (
                 <Button
                   size="icon"
                   onClick={handleVoiceInputToggle}
-                  className="h-8 w-8 rounded-full flex items-center justify-center transition-colors bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300"
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center transition-colors bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 shadow-sm"
                   title="Start voice input"
                 >
-                  <Mic className="h-4 w-4" />
+                  <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               )}
               
-              {!isListening && settings.voiceInputSettings.enabled && isListening && (
-                <div className="mt-2 flex items-center px-3 py-2 text-sm text-green-600 dark:text-green-400 animate-pulse bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-md">
+              {/* Add back the listening state indicator */}
+              {isListening && settings.voiceInputSettings.enabled && (
+                <div className="absolute top-[-3rem] left-0 right-0 flex items-center px-3 py-2 text-sm text-green-600 dark:text-green-400 animate-pulse bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-lg shadow-md">
                   <Mic className="h-4 w-4 mr-2" />
                   <span className="font-medium">Listening... Speak now</span>
                   <Button
@@ -1372,10 +1564,10 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
                 size="icon"
                 disabled={isLoading || !input.trim()}
                 onClick={handleSend}
-                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none"
+                className="h-9 w-9 sm:h-10 sm:w-10 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:pointer-events-none shadow-md hover:shadow-lg transition-all active:scale-95"
                 title="Send message"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendIcon className="h-4 w-4" />}
+                {isLoading ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <SendIcon className="h-4 w-4 sm:h-5 sm:w-5" />}
               </Button>
             </div>
           </div>
@@ -1420,22 +1612,18 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             </div>
           )}
           
-          <div className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-slate-400 flex justify-between items-center">
-            <div>
-              Press <kbd className="px-1 sm:px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600">Enter</kbd> to send, <kbd className="px-1 sm:px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600">Shift+Enter</kbd> for new line
+          <div className="mt-2 sm:mt-3 px-1 flex justify-between items-center">
+            <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <div className="hidden xs:flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 text-xs">Enter</kbd>
+                <span>to send</span>
+              </div>
+              <div className="hidden xs:flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 text-xs">Shift+Enter</kbd>
+                <span>for new line</span>
+              </div>
             </div>
-          </div>
-          
-          {/* Character count and model info */}
-          <div className="flex justify-between items-center mt-1.5 px-1.5 text-xs text-slate-400 dark:text-slate-500">
-            <div>
-              {input.length > 0 && (
-                <span className={`flex items-center gap-1 ${input.length > 4000 ? 'text-amber-500 dark:text-amber-400' : ''}`}>
-                  {input.length > 4000 && <Flame className="h-3 w-3" />}
-                  <span>{input.length} / 4000</span>
-                </span>
-              )}
-            </div>
+            
             <div className="flex items-center gap-1.5">
               <div className={`w-5 h-5 rounded-full flex items-center justify-center ${getProviderGradient(currentProvider)} dark:${getProviderGradient(currentProvider, true)}`}>
                 {getProviderIcon(currentProvider)}
@@ -1587,6 +1775,30 @@ const styles = `
   animation: bounceIn 0.5s ease-out forwards;
 }
 
+@keyframes pulseInput {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3); }
+  70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.focus-visible:focus {
+  animation: pulseInput 2s infinite;
+}
+
+/* Enhance textarea styling */
+textarea::placeholder {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+textarea:focus::placeholder {
+  opacity: 0.4;
+}
+
+textarea {
+  transition: all 0.2s ease;
+}
+
 /* Prevent iOS Safari address bar from affecting the fixed position */
 @supports (-webkit-touch-callout: none) {
   .chat-input-fixed {
@@ -1616,6 +1828,15 @@ const styles = `
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Add specific styles for textarea on different device sizes */
+@media (max-width: 640px) {
+  textarea {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    padding-top: 12px !important;
+    padding-bottom: 8px !important;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .chat-scroll::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.05);
@@ -1627,6 +1848,17 @@ const styles = `
   
   .chat-scroll::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Add xs breakpoint for very small mobile screens */
+@media (min-width: 440px) {
+  .xs\\:flex {
+    display: flex;
+  }
+  
+  .xs\\:hidden {
+    display: none;
   }
 }
 `;
