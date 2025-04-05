@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import useApiKeySync from '@/components/hooks/useApiKeySync';
-import Navbar from '@/components/Navbar';
+import { Navbar } from '@/components/Navbar';
 
 export default function DashboardLayout({
   children,

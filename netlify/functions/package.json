@@ -5,5 +5,12 @@
   "main": "index.js",
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4"
-  }
-} 
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
