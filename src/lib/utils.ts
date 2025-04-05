@@ -4,6 +4,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useState, useEffect } from 'react';
 import { callAI, ChatMessage } from './api';
+import { extractSuggestionsFromText, getGeneralSuggestions, generateFollowUpQuestion } from './suggestions';
 
 /**
  * Combines class names with Tailwind CSS using clsx and tailwind-merge
@@ -1166,4 +1167,7 @@ export function getProviderDisplayName(provider: string): string {
     default:
       return 'Unknown';
   }
-} 
+}
+
+// Re-export suggestion functions from suggestions.ts
+export { extractSuggestionsFromText, getGeneralSuggestions, generateFollowUpQuestion }; 

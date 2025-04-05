@@ -5,7 +5,7 @@ import { X, Sparkles, MessageCircle, Search, Brain, Book, Code, Lightbulb, Zap }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { extractSuggestionsFromText, getGeneralSuggestions } from '@/lib/utils';
+import { extractSuggestionsFromText, getGeneralSuggestions } from '@/lib/suggestions';
 import { useModelSettings } from '@/lib/context/ModelSettingsContext';
 
 interface SuggestionDrawerProps {

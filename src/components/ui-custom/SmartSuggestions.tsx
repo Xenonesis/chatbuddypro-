@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Sparkles, MessageCircle, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
-  extractSuggestionsFromText, 
-  getGeneralSuggestions, 
+  extractSuggestionsFromText,
+  getGeneralSuggestions
+} from '@/lib/suggestions';
+import {
   generateFollowUpQuestions,
   generateAISuggestions,
   ChatHistoryItem 
