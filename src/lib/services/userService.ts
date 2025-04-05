@@ -271,27 +271,64 @@ export const userService = {
     try {
       console.log('Fetching profile for user ID:', userId);
       
+      if (!userId) {
+        console.error('getUserProfile called with no userId');
+        return null;
+      }
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('user_id', userId as any)
-        .single();
-
+        .eq('user_id', userId)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no rows found
+      
+      // Log detailed response for debugging
+      console.log('Profile query response:', { data, error });
+      
       if (error) {
-        // If the error is that no rows were returned, we should create a new profile
-        if (error.code === 'PGRST116') {
-          console.log('No profile found, creating a new one');
-          return this.createInitialProfile(userId);
+        // If there's an error other than "no rows returned", log it
+        if (error.code !== 'PGSQL_TGRM_NO_QUERY_PATTERNS' && error.code !== 'PGRST116') {
+          console.error('Error details:', error.code, error.message, error.details);
+          console.error('Error fetching profile:', error);
+        } else {
+          console.log('No existing profile found, will create new profile');
         }
         
-        console.error('Error details:', error.code, error.message, error.details);
-        throw error;
+        // Create new profile if none exists or there was a "not found" error
+        return this.createInitialProfile(userId);
       }
-
+      
+      if (!data) {
+        console.log('No profile found, creating a new one');
+        return this.createInitialProfile(userId);
+      }
+      
+      console.log('Successfully retrieved profile:', data);
       return data as UserProfile;
     } catch (error) {
       console.error('Error in getUserProfile:', error);
-      return null;
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      // Try one more time with a more direct approach
+      try {
+        console.log('Attempting fallback profile retrieval');
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', userId);
+          
+        if (data && data.length > 0) {
+          console.log('Fallback retrieval successful');
+          return data[0] as UserProfile;
+        }
+        
+        // Still no profile, create one
+        console.log('No profile found in fallback, creating a new one');
+        return this.createInitialProfile(userId);
+      } catch (fallbackError) {
+        console.error('Error in fallback getUserProfile:', fallbackError);
+        return null;
+      }
     }
   },
 
