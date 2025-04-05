@@ -1,5 +1,5 @@
 [build]
-  command = "NETLIFY=true npm ci && npm run verify-supabase && NODE_OPTIONS='--max_old_space_size=4096' NEXT_TELEMETRY_DISABLED=1 npm run build"
+  command = "NETLIFY=true npm ci && npm run verify-supabase && (cd netlify/functions && npm install --production) && NODE_OPTIONS='--max_old_space_size=4096' NEXT_TELEMETRY_DISABLED=1 npm run build"
   publish = "out"
 
 [build.environment]
@@ -16,7 +16,19 @@
   skip_processing = true
 
 [functions]
-  included_files = ["node_modules/**/*", "next.config.js", ".env.local"]
+  # Only include the specific dependencies needed for functions
+  included_files = [
+    "node_modules/@supabase/supabase-js/**",
+    "node_modules/@supabase/functions-js/**",
+    "node_modules/@supabase/postgrest-js/**",
+    "node_modules/@supabase/storage-js/**",
+    "node_modules/@supabase/realtime-js/**",
+    "node_modules/@supabase/gotrue-js/**",
+    "next.config.js",
+    ".env.local"
+  ]
+  # Limit the size of the function bundle
+  node_bundler = "esbuild"
 
 # Special handling for auth routes
 [[redirects]]

@@ -1,0 +1,9 @@
+{
+  "name": "chatbuddy-functions",
+  "version": "1.0.0",
+  "description": "Netlify functions for ChatBuddy",
+  "main": "index.js",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4"
+  }
+} 
