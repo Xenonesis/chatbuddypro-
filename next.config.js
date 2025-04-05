@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const webpack = require('webpack');
+
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
@@ -10,8 +12,17 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   webpack: (config, { isServer }) => {
-    // Add polyfills and resolve modules
+    // Handle react-markdown requiring fs
     if (!isServer) {
+      // react-markdown sees process.platform so we need to set it
+      config.plugins.push(
+        new webpack.DefinePlugin({
+          'process.platform': JSON.stringify(''),
+          'process.env.NODE_DEBUG': JSON.stringify(''),
+        })
+      );
+
+      // Mock fs module for browser environment
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -24,7 +35,7 @@ const nextConfig = {
         os: false,
         zlib: false,
         assert: false,
-        buffer: false,
+        buffer: require.resolve('buffer/'),
         util: false,
       };
 
