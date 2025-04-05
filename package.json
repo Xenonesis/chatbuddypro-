@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && ([ -d out ] || next export)",
     "start": "next start",
     "lint": "next lint",
     "setup": "node setup.js",
@@ -64,7 +64,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@netlify/plugin-nextjs": "^5.10.3",
+    "@netlify/plugin-nextjs": "5.10.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -1,5 +1,5 @@
 // Custom image loader for Next.js Images component
-export default function customLoader({ src, width, quality }) {
+module.exports = function customLoader({ src, width, quality }) {
   // For relative URLs, just return the URL with width and quality params
   if (src.startsWith('/')) {
     return `${src}?w=${width}&q=${quality || 75}`;

@@ -11,11 +11,18 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Ensure Netlify can process the build correctly
-  output: 'standalone',
+  // Modify the output strategy for better Netlify compatibility
+  output: process.env.NETLIFY ? 'export' : 'standalone',
   // Disable image optimization for Netlify compatibility
   images: {
     unoptimized: true,
+    domains: ['gphdrsfbypnckxbdjjap.supabase.co'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
   webpack: (config, { isServer }) => {
     // Handle react-markdown requiring fs
