@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { MessageSquare, Settings, MoonIcon, SunIcon, Sparkles, Menu, X, User, LogOut, LogIn, UserPlus, Bell } from 'lucide-react';
+import { MessageSquare, Settings, MoonIcon, SunIcon, Sparkles, Menu, X, User, LogOut, LogIn, UserPlus, Bell, Calendar, CheckCircle, AlertCircle, LayoutDashboard, Shield } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { BrandLogo } from "@/components/ui-custom/BrandLogo";
@@ -21,11 +21,60 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from '@/components/ui/badge';
 import { useModelSettings } from '@/lib/context/ModelSettingsContext';
+import { format } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // App config for environment labels
 const appConfig = {
-  showEnvLabel: process.env.NODE_ENV === 'development'
+  showEnvLabel: false
 };
+
+// Recent updates data
+const recentUpdates = [
+  {
+    id: 1,
+    date: new Date(2023, 7, 1), // August 1, 2023
+    title: "Improved Authentication Flow",
+    description: "Enhanced security with better token management and session persistence.",
+    type: "security"
+  },
+  {
+    id: 2,
+    date: new Date(2023, 8, 15), // September 15, 2023
+    title: "Added Support for Claude 3",
+    description: "Now you can chat with Anthropic's Claude 3 models directly from ChatBuddy.",
+    type: "feature"
+  },
+  {
+    id: 3,
+    date: new Date(2023, 9, 5), // October 5, 2023
+    title: "UI Redesign",
+    description: "Refreshed user interface with improved dark mode and accessibility.",
+    type: "design"
+  },
+  {
+    id: 4,
+    date: new Date(2023, 10, 20), // November 20, 2023
+    title: "Chat History Enhancements",
+    description: "Better organization and search for your conversation history.",
+    type: "feature"
+  },
+  {
+    id: 5,
+    date: new Date(), // Today
+    title: "Bug Fixes and Performance Improvements",
+    description: "Fixed database connection issues and improved overall app responsiveness.",
+    type: "bugfix"
+  }
+];
 
 // Throttle function to optimize scroll event handler
 function throttle<T extends (...args: any[]) => any>(func: T, delay: number): (...args: Parameters<T>) => void {
@@ -54,10 +103,12 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
-  // New states for notifications and animation
   const [hasNewNotification, setHasNewNotification] = useState(true);
-  const [showNewFeature, setShowNewFeature] = useState(true);
+  const [showNewFeature, setShowNewFeature] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationsRead, setNotificationsRead] = useState(false);
   const pathname = usePathname();
+  const notificationsRef = useRef<HTMLDivElement>(null);
   
   // Handle scroll effect for navbar with throttle for performance
   useEffect(() => {
@@ -81,6 +132,20 @@ export function Navbar() {
   // Fix for hydration mismatch - wait for client-side mounting
   useEffect(() => {
     setMounted(true);
+  }, []);
+  
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
   
   // Inject animation styles
@@ -136,7 +201,8 @@ export function Navbar() {
 
   const handleNotificationClick = () => {
     setHasNewNotification(false);
-    setShowNewFeature(!showNewFeature);
+    setNotificationsRead(true);
+    setShowNotifications(!showNotifications);
   };
 
   const handleToggleSuggestions = () => {
@@ -146,6 +212,21 @@ export function Navbar() {
   const isActiveLink = (path: string) => {
     if (path === '/chat' && pathname === '/') return true;
     return pathname === path || pathname?.startsWith(`${path}/`);
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'security':
+        return <Shield className="h-4 w-4 text-blue-500" />;
+      case 'feature':
+        return <Sparkles className="h-4 w-4 text-amber-500" />;
+      case 'design':
+        return <LayoutDashboard className="h-4 w-4 text-purple-500" />;
+      case 'bugfix':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+    }
   };
 
   return (
@@ -222,31 +303,68 @@ export function Navbar() {
             </TooltipProvider>
           )}
 
-          {/* New Feature Notification */}
+          {/* Notifications Dropdown */}
           {mounted && (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
+            <div ref={notificationsRef}>
+              <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
+                <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="relative h-8 w-8 sm:h-9 sm:w-9"
                     onClick={handleNotificationClick}
+                    aria-label="Notifications"
                   >
                     <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {hasNewNotification && (
+                    {hasNewNotification && !notificationsRead && (
                       <Badge 
                         variant="destructive" 
                         className="absolute -top-1 -right-1 h-3 w-3 sm:h-4 sm:w-4 p-0 flex items-center justify-center animate-pulse-slow"
                       />
                     )}
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Notifications</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-80" align="end">
+                  <DropdownMenuLabel className="flex justify-between items-center">
+                    <span>Recent Updates</span>
+                    <Badge variant="outline" className="ml-auto">
+                      {recentUpdates.length}
+                    </Badge>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <div className="max-h-[300px] overflow-y-auto">
+                    <DropdownMenuGroup>
+                      {recentUpdates.map((update) => (
+                        <DropdownMenuItem key={update.id} className="flex flex-col items-start p-3 cursor-default">
+                          <div className="flex w-full">
+                            <div className="mr-2 mt-0.5">
+                              {getNotificationIcon(update.type)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium">{update.title}</div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                {update.description}
+                              </p>
+                              <div className="flex items-center text-xs text-gray-400 mt-1.5">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {format(update.date, 'MMM d, yyyy')}
+                              </div>
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuGroup>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="justify-center text-xs text-muted-foreground"
+                    onClick={() => setHasNewNotification(false)}
+                  >
+                    Mark all as read
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
 
           {/* Theme toggle - Only render dynamic content after mounting to prevent hydration mismatch */}

@@ -549,102 +549,136 @@ export const userService = {
 
   // Retrieve and decrypt an API key - optimized with multi-level caching
   async getApiKey(provider: string, userId: string): Promise<string | null> {
+    console.log(`Getting API key for provider ${provider} and user ${userId.substring(0, 8)}...`);
+    
     try {
-      if (!userId || !provider) {
-        console.error('Cannot get API key: userId or provider is missing');
-        return null;
+      // First check memory cache
+      const cacheKey = `${userId}:${provider}`;
+      const cachedEntry = apiKeyCache[cacheKey];
+      
+      // If we have a cached value that hasn't expired, use it
+      if (cachedEntry && (Date.now() - cachedEntry.timestamp < CACHE_EXPIRY)) {
+        console.log(`Using cached API key for ${provider}`);
+        return cachedEntry.key;
       }
       
-      const cacheKey = `${provider}_${userId}`;
-      const now = Date.now();
+      // Start by trying to get user preferences from database
+      const userPrefs = await this.getUserPreferences(userId);
       
-      // 1. Check in-memory cache first (fastest)
-      if (apiKeyCache[cacheKey] && (now - apiKeyCache[cacheKey].timestamp) < CACHE_EXPIRY) {
-        console.debug(`Using in-memory cached API key for ${provider}`);
-        return apiKeyCache[cacheKey].key;
-      }
-      
-      // 2. Check localStorage next (second fastest)
-      if (typeof window !== 'undefined') {
-        try {
-          const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
-          const localApiKey = localStorage.getItem(localStorageKey);
-          
-          if (localApiKey) {
-            console.debug(`Found API key in localStorage for ${provider}`);
-            const decryptedKey = decryptApiKey(localApiKey, userId);
+      // If we found user preferences in the database
+      if (userPrefs && 
+          userPrefs.preferences && 
+          typeof userPrefs.preferences === 'object' && 
+          userPrefs.preferences.api_keys) {
+        
+        console.log(`Found preferences with API keys for ${userId.substring(0, 8)}`);
+        
+        // Try to find the specific provider's key
+        const preferenceKeys = userPrefs.preferences.api_keys;
+        const encryptedKey = preferenceKeys[provider];
+        
+        if (encryptedKey) {
+          try {
+            console.log(`Found encrypted key for ${provider}, decrypting...`);
+            const decryptedKey = await decryptApiKey(encryptedKey, userId);
             
-            // Update in-memory cache
-            apiKeyCache[cacheKey] = { 
-              key: decryptedKey, 
-              timestamp: now 
+            // Store in memory cache
+            apiKeyCache[cacheKey] = {
+              key: decryptedKey,
+              timestamp: Date.now()
             };
             
             return decryptedKey;
-          }
-        } catch (localStorageError) {
-          console.warn('Error accessing localStorage:', localStorageError);
-          // Continue to database lookup if localStorage fails
-        }
-      }
-
-      // 3. If not in caches, check database (slowest)
-      console.debug(`Cache miss for ${provider} API key, checking database`);
-      const userPreferences = await this.getUserPreferences(userId);
-      
-      if (!userPreferences) {
-        console.warn(`No user preferences found for user ${userId}`);
-        return null;
-      }
-      
-      try {
-        let apiKey = null;
-        
-        // Check in preferences.api_keys (new structure)
-        const preferences = userPreferences.preferences || {};
-        
-        if (preferences.api_keys && preferences.api_keys[provider]) {
-          apiKey = preferences.api_keys[provider];
-          console.debug(`Found API key in preferences.api_keys for ${provider}`);
-        }
-        // Check in legacy api_keys structure
-        else if (userPreferences.api_keys && userPreferences.api_keys[provider]) {
-          apiKey = userPreferences.api_keys[provider];
-          console.debug(`Found API key in legacy api_keys for ${provider}`);
-        }
-        
-        if (apiKey) {
-          const decryptedKey = decryptApiKey(apiKey, userId);
-          
-          // Update caches
-          apiKeyCache[cacheKey] = { 
-            key: decryptedKey, 
-            timestamp: now 
-          };
-          
-          // Store in localStorage for future fast access
-          if (typeof window !== 'undefined') {
-            try {
-              const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
-              localStorage.setItem(localStorageKey, apiKey);
-            } catch (e) {
-              // Ignore localStorage errors, we still have memory cache
-              console.warn('Failed to cache API key in localStorage:', e);
+          } catch (decryptError) {
+            console.error(`Error decrypting API key for ${provider}:`, decryptError);
+            
+            // If decryption fails, check if we have a local storage key as fallback
+            console.log(`Trying localStorage fallback for ${provider}...`);
+            if (typeof window !== 'undefined') {
+              const localKey = localStorage.getItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`);
+              if (localKey) {
+                console.log(`Found localStorage key for ${provider}, updating database...`);
+                
+                // If we found a local key, update the database for next time
+                this.storeApiKey(userId, provider, localKey)
+                  .then(success => {
+                    if (success) {
+                      console.log(`Successfully saved local ${provider} key to database`);
+                    } else {
+                      console.error(`Failed to save local ${provider} key to database`);
+                    }
+                  })
+                  .catch(err => {
+                    console.error(`Error while saving local ${provider} key to database:`, err);
+                  });
+                
+                // Cache and return the local key
+                apiKeyCache[cacheKey] = {
+                  key: localKey,
+                  timestamp: Date.now()
+                };
+                
+                return localKey;
+              }
             }
           }
-          
-          return decryptedKey;
+        } else {
+          console.log(`No ${provider} key found in user preferences`);
         }
-        
-        console.warn(`No API key found for provider ${provider}`);
-        return null;
-      } catch (prefError) {
-        console.error(`Error accessing API key data:`, prefError);
-        return null;
+      } else {
+        console.log(`No user preferences found for ${userId.substring(0, 8)}`);
       }
+      
+      // If not found in database or decryption failed, try localStorage
+      if (typeof window !== 'undefined') {
+        console.log(`Checking localStorage for ${provider} key...`);
+        const localKey = localStorage.getItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`);
+        
+        if (localKey) {
+          console.log(`Found ${provider} key in localStorage`);
+          
+          // If the user is authenticated, try to store the key in the database for future use
+          if (userId) {
+            console.log(`Attempting to store localStorage ${provider} key to database...`);
+            this.storeApiKey(userId, provider, localKey)
+              .then(success => {
+                if (success) {
+                  console.log(`Successfully saved ${provider} key from localStorage to database`);
+                }
+              })
+              .catch(err => {
+                console.error(`Error saving ${provider} key from localStorage to database:`, err);
+              });
+          }
+          
+          // Cache the key
+          apiKeyCache[cacheKey] = {
+            key: localKey,
+            timestamp: Date.now()
+          };
+          
+          return localKey;
+        }
+      }
+      
+      console.log(`No API key found for ${provider}`);
+      return null;
     } catch (error) {
-      console.error(`Exception in getApiKey for provider ${provider}:`, error);
-      // Return null instead of throwing to prevent UI crashes
+      console.error(`Error retrieving API key for ${provider}:`, error);
+      
+      // Last resort fallback - try localStorage directly
+      if (typeof window !== 'undefined') {
+        try {
+          const emergencyKey = localStorage.getItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`);
+          if (emergencyKey) {
+            console.log(`Emergency fallback: using localStorage key for ${provider}`);
+            return emergencyKey;
+          }
+        } catch (storageError) {
+          console.error(`Failed to access localStorage fallback for ${provider}:`, storageError);
+        }
+      }
+      
       return null;
     }
   },

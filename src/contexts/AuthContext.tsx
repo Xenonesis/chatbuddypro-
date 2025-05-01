@@ -246,34 +246,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (typeof window !== 'undefined') {
         try {
           localStorage.removeItem('sb-gphdrsfbypnckxbdjjap-auth-token');
+          
+          // Clear all localStorage items related to Supabase
+          const storageKeys = Object.keys(localStorage);
+          for (const key of storageKeys) {
+            if (key.startsWith('sb-')) {
+              localStorage.removeItem(key);
+            }
+          }
+          
           sessionStorage.clear();
+          
+          // Clear any auth cookies
+          document.cookie.split(';').forEach(cookie => {
+            const [name] = cookie.trim().split('=');
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+          });
         } catch (err) {
-          console.error('Error clearing storage on sign out:', err);
+          console.error('Error clearing browser storage during signout:', err);
         }
       }
       
+      // Then call the actual signOut method
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error('Signout error:', error);
-        handleAuthError(error);
+        console.error('Error during supabase.auth.signOut():', error);
         
-        // Even if there's an error, reset the local state
+        // Even if there's an error, we should reset the client side auth state
         setUser(null);
         setSession(null);
         
-        throw error;
+        // Force reset auth state by reloading the page in extreme cases
+        if (error.message?.includes('refresh token')) {
+          console.log('Detected refresh token issue during signout, forcing page reload');
+          window.location.href = '/auth/login';
+        }
+      } else {
+        console.log('Supabase signOut successful');
+        setUser(null);
+        setSession(null);
       }
-      
-      console.log('Signout successful');
     } catch (error) {
-      console.error('Unexpected signout error:', error);
+      console.error('Unexpected error during signOut:', error);
       
-      // Force reset auth state even on error
+      // Still reset client-side auth state even on error
       setUser(null);
       setSession(null);
-      
-      throw error;
     }
   };
 

@@ -3,7 +3,7 @@
 A modern, full-featured chatbot interface that connects to multiple AI providers, featuring beautiful syntax highlighting for code blocks, response time tracking, and regeneration capabilities.
 
 ![ChatBuddy App](https://img.shields.io/badge/ChatBuddy-Next.js-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-green)
+![Version](https://img.shields.io/badge/version-1.1.0-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
 ## ✨ Features
@@ -45,6 +45,8 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ## 🆕 Recent Updates
 
+- **GitHub Integration (v1.1.0)**: Added GitHub repository integration, making it easier to track versions and collaborate
+- **Notification System Improvements (v1.1.0)**: Enhanced notification system for better user experience
 - **UI Improvements (v1.0.0)**: Fixed chat history container styling and improved dashboard layout consistency
 - **Real-time Profile Data**: Added real-time database synchronization for user profiles with auto-update functionality
 - **Production Build Fixes**: Added TypeScript declaration file for react-speech-recognition, resolved ESLint warnings for production build
