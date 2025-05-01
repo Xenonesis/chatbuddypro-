@@ -45,6 +45,7 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ## 🆕 Recent Updates
 
+- **UI Improvements (v1.0.0)**: Fixed chat history container styling and improved dashboard layout consistency
 - **Real-time Profile Data**: Added real-time database synchronization for user profiles with auto-update functionality
 - **Production Build Fixes**: Added TypeScript declaration file for react-speech-recognition, resolved ESLint warnings for production build
 - **Speech Recognition**: Added voice input support with browser's speech recognition API
