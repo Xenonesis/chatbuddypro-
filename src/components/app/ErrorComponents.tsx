@@ -1,7 +1,7 @@
 'use client';
 
 import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Simple loading indicator component
 export function LoadingIndicator() {
@@ -14,6 +14,35 @@ export function LoadingIndicator() {
 
 // Error fallback component
 export function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  const [isHydrationError, setIsHydrationError] = useState(false);
+  
+  useEffect(() => {
+    // Check if this is a hydration error
+    if (
+      error.message.includes('Hydration failed') ||
+      error.message.includes('Text content did not match') ||
+      error.message.includes('Expected server HTML to contain')
+    ) {
+      setIsHydrationError(true);
+      // Auto-retry for hydration errors after a short delay
+      const timer = setTimeout(() => {
+        resetErrorBoundary();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, resetErrorBoundary]);
+  
+  // For hydration errors, show a less alarming message
+  if (isHydrationError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-4 text-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+        <p className="text-muted-foreground">Synchronizing display...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center p-4 text-center min-h-[300px]">
       <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
@@ -43,7 +72,15 @@ export function ErrorBoundary({ children, fallback }: { children: React.ReactNod
       }
       onReset={() => {
         // Reset the state of your app here
-        window.location.reload();
+        // For hydration errors, we don't want to do a full reload
+        // as it might cause an infinite loop
+        if (!window.location.hash.includes('#hydration-retry')) {
+          window.location.hash = '#hydration-retry';
+          // Soft reset - just force a re-render
+        } else {
+          // Hard reset if soft reset didn't work
+          window.location.reload();
+        }
       }}
     >
       {children}

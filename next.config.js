@@ -155,7 +155,7 @@ const nextConfig = {
   },
   
   // For Netlify deployment
-  trailingSlash: true,
+  trailingSlash: false,
   
   // Add compression
   compress: true,

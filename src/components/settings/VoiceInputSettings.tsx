@@ -1,514 +1,258 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useModelSettings } from '@/lib/context/ModelSettingsContext';
-import { 
-  Mic, MicOff, Check, AlertCircle
-} from 'lucide-react';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Mic, Volume2, Save, Loader, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { useModelSettings } from '@/lib/context/ModelSettingsContext';
+import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
 export default function VoiceInputSettings() {
-  const { settings, toggleVoiceInput, toggleContinuousListening } = useModelSettings();
-  const { voiceInputSettings } = settings;
-
-  const [testResult, setTestResult] = useState<string | null>(null);
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [audioLevel, setAudioLevel] = useState<number>(0);
-  const audioContext = useRef<AudioContext | null>(null);
-  const analyser = useRef<AnalyserNode | null>(null);
-  const microphone = useRef<MediaStreamAudioSourceNode | null>(null);
-  const audioDataArray = useRef<Uint8Array | null>(null);
-  const animationFrameId = useRef<number | null>(null);
-  
-  // Check browser support for speech recognition
-  const [browserSupport, setBrowserSupport] = useState<boolean>(true);
-  const [microphoneStatus, setMicrophoneStatus] = useState<'unavailable' | 'ready' | 'active' | 'denied'>('ready');
-  
-  const [liveTranscript, setLiveTranscript] = useState<string>('');
-  
-  // Use the voice input hook for testing
-  const { 
-    isListening, 
-    toggleListening, 
-    stopListening,
-    transcript, 
-    interimTranscript,
-    browserSupportsSpeechRecognition, 
-    microphoneAvailable,
-    micPermissionDenied,
-    noSpeechDetected
-  } = useVoiceInput({
-    onTranscriptChange: (text) => {
-      // Update live transcript in real-time
-      console.log("Transcript changed:", text);
-      setLiveTranscript(text || '');
-      
-      if (text) {
-        // Only update final result when we have a decent-length transcript
-        // or when we've been idle for a while
-        if (text.length > 10) {
-          setTestResult(text);
-          setTestStatus('success');
-        }
-      }
-    }
+  const { settings, updateSettings } = useModelSettings();
+  const { toast } = useToast();
+  const [localSettings, setLocalSettings] = useState({
+    voiceInput: settings.voiceInputSettings?.enabled || false,
+    continuousListening: settings.voiceInputSettings?.continuousListening || false
   });
-  
-  // Debug transcripts
-  useEffect(() => {
-    console.log("Live transcript updated:", liveTranscript);
-  }, [liveTranscript]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
+  const [isTesting, setIsTesting] = useState(false);
 
-  // Effect to update test result when transcript changes
+  // Check for microphone permissions
   useEffect(() => {
-    if (transcript && isListening) {
-      setTestResult(transcript);
-      if (transcript.length > 3) {
-        setTestStatus('success');
+    async function checkMicrophonePermission() {
+      try {
+        if (navigator.permissions) {
+          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          setMicPermission(permissionStatus.state as 'granted' | 'denied' | 'prompt');
+          
+          permissionStatus.onchange = () => {
+            setMicPermission(permissionStatus.state as 'granted' | 'denied' | 'prompt');
+          };
+        }
+      } catch (error) {
+        console.error('Error checking microphone permissions:', error);
+        setMicPermission('unknown');
       }
     }
-  }, [transcript, isListening]);
-  
-  // Handle audio visualization
-  const startAudioVisualization = async () => {
-    try {
-      // Check if AudioContext is supported
-      if (!window.AudioContext && !(window as any).webkitAudioContext) {
-        console.warn('AudioContext not supported in this browser');
-        setMicrophoneStatus('unavailable');
-        return;
-      }
-      
-      if (!audioContext.current) {
-        try {
-          audioContext.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        } catch (err) {
-          console.error('Failed to create AudioContext:', err);
-          setMicrophoneStatus('unavailable');
-          return;
+    
+    checkMicrophonePermission();
+  }, []);
+
+  // Detect changes to settings
+  useEffect(() => {
+    setHasChanges(
+      localSettings.voiceInput !== (settings.voiceInputSettings?.enabled || false) ||
+      localSettings.continuousListening !== (settings.voiceInputSettings?.continuousListening || false)
+    );
+  }, [localSettings, settings]);
+
+  // Save settings
+  const handleSaveSettings = useCallback(() => {
+    setIsSaving(true);
+    
+    setTimeout(() => {
+      updateSettings({
+        ...settings,
+        voiceInputSettings: {
+          enabled: localSettings.voiceInput,
+          continuousListening: localSettings.continuousListening
         }
-      }
+      });
       
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.warn('getUserMedia not supported in this browser');
-        setMicrophoneStatus('unavailable');
-        return;
-      }
+      setIsSaving(false);
+      setHasChanges(false);
       
-      // Get user media
+      toast({
+        title: "Voice settings saved",
+        description: "Your voice input preferences have been updated.",
+      });
+    }, 500);
+  }, [localSettings, settings, updateSettings, toast]);
+
+  // Test microphone
+  const handleTestMicrophone = useCallback(async () => {
+    setIsTesting(true);
+    
+    try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Make sure we have tracks in the stream
-      if (!stream || !stream.getAudioTracks().length) {
-        console.warn('No audio tracks found in media stream');
-        setMicrophoneStatus('unavailable');
-        return;
-      }
+      // Show success message
+      toast({
+        title: "Microphone works!",
+        description: "Your microphone is properly connected and accessible.",
+        variant: "default",
+      });
       
-      setMicrophoneStatus('active');
+      // Stop all audio tracks
+      stream.getTracks().forEach(track => track.stop());
       
-      // Set up audio analyzer
-      if (audioContext.current) {
-        try {
-          analyser.current = audioContext.current.createAnalyser();
-          analyser.current.fftSize = 256;
-          
-          microphone.current = audioContext.current.createMediaStreamSource(stream);
-          microphone.current.connect(analyser.current);
-          
-          const bufferLength = analyser.current.frequencyBinCount;
-          audioDataArray.current = new Uint8Array(bufferLength);
-          
-          // Start visualization loop
-          visualizeAudio();
-          
-          // For debugging - set a baseline audio level even if no sound
-          // This helps verify the visualization is working
-          setAudioLevel(5);
-        } catch (err) {
-          console.error('Error setting up audio analyzer:', err);
-          setMicrophoneStatus('unavailable');
-        }
-      }
+      // Update permission state if needed
+      setMicPermission('granted');
     } catch (error) {
-      console.error('Error accessing microphone:', error);
-      if (error instanceof DOMException && error.name === 'NotAllowedError') {
-        setMicrophoneStatus('denied');
-      } else {
-        setMicrophoneStatus('unavailable');
-      }
-    }
-  };
-  
-  const stopAudioVisualization = () => {
-    if (animationFrameId.current) {
-      cancelAnimationFrame(animationFrameId.current);
-      animationFrameId.current = null;
-    }
-    
-    // Disconnect and clean up audio nodes
-    if (microphone.current) {
-      microphone.current.disconnect();
-      microphone.current = null;
-    }
-    
-    // Close audio context
-    if (audioContext.current) {
-      if (audioContext.current.state !== 'closed') {
-        audioContext.current.close().catch(err => {
-          console.error('Error closing AudioContext:', err);
-        });
-      }
-      audioContext.current = null;
-    }
-    
-    setMicrophoneStatus('ready');
-    setAudioLevel(0);
-  };
-  
-  const visualizeAudio = () => {
-    if (!analyser.current || !audioDataArray.current) return;
-    
-    try {
-      analyser.current.getByteFrequencyData(audioDataArray.current);
+      console.error('Microphone test failed:', error);
       
-      // Calculate average volume level (0-100)
-      const average = Array.from(audioDataArray.current).reduce((sum, value) => sum + value, 0) / 
-                      audioDataArray.current.length;
+      toast({
+        title: "Microphone test failed",
+        description: "Please check your browser permissions and try again.",
+        variant: "destructive",
+      });
       
-      // Scale to 0-100 for easier use with a minimum of 5 for better visualization
-      const scaledAverage = Math.min(100, Math.max(5, average * 2.0));
-      setAudioLevel(scaledAverage);
-      
-      // Continue the visualization loop
-      animationFrameId.current = requestAnimationFrame(visualizeAudio);
-    } catch (err) {
-      console.error('Error in audio visualization:', err);
-      // Don't stop completely, try again
-      animationFrameId.current = requestAnimationFrame(visualizeAudio);
+      // Update permission state if needed
+      setMicPermission('denied');
+    } finally {
+      setIsTesting(false);
     }
-  };
-  
-  useEffect(() => {
-    // Simple check for browser support
-    setBrowserSupport(
-      'webkitSpeechRecognition' in window || 
-      'SpeechRecognition' in window
-    );
-    
-    return () => {
-      // Clean up audio visualization when component unmounts
-      stopAudioVisualization();
-    };
-  }, []);
-  
-  // Start/stop audio visualization when listening state changes
-  useEffect(() => {
-    if (isListening) {
-      startAudioVisualization();
-    } else {
-      stopAudioVisualization();
-      
-      // If we have a test result, keep showing success state
-      if (testStatus !== 'success') {
-        setTestStatus('idle');
-      }
-    }
-  }, [isListening]);
-
-  const handleTestMicrophone = async () => {
-    if (testStatus === 'testing') {
-      stopListening();
-      stopAudioVisualization();
-      setTestStatus('idle');
-      setLiveTranscript('');
-      return;
-    }
-    
-    setTestStatus('testing');
-    setTestResult(null);
-    setLiveTranscript('');
-    
-    try {
-      // First try to initialize audio visualization separately
-      // This allows us to visualize microphone even if speech recognition fails
-      await startAudioVisualization();
-      
-      // Then try to activate speech recognition
-      await toggleListening();
-      
-      // Set a timeout to automatically stop the test after 10 seconds if no speech detected
-      setTimeout(() => {
-        if (isListening && !testResult) {
-          stopListening();
-          stopAudioVisualization();
-          setTestStatus('error');
-          setTestResult('No speech detected. Please try again or check your microphone.');
-        }
-      }, 10000);
-    } catch (error) {
-      console.error('Error testing microphone:', error);
-      setTestStatus('error');
-      
-      // More specific error messages
-      if (error instanceof DOMException && error.name === 'NotAllowedError') {
-        setTestResult('Microphone access denied. Please allow microphone access in your browser settings.');
-      } else if (!browserSupportsSpeechRecognition) {
-        setTestResult('Speech recognition not supported in this browser. Please try Chrome, Edge, or Safari.');
-      } else {
-        setTestResult('An error occurred while testing your microphone. Please try again.');
-      }
-      
-      // Stop audio visualization if there was an error
-      stopAudioVisualization();
-    }
-  };
+  }, [toast]);
 
   return (
-    <Card className="border dark:border-slate-700">
-      <CardHeader className="pb-2 sm:pb-4">
-        <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-          <Mic className="h-5 w-5 text-red-500" />
-          Voice Input Settings
-        </CardTitle>
-        <CardDescription>
-          Configure voice recognition and speech-to-text options
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Enable/Disable Voice Input */}
-        <div className="flex items-center justify-between">
-          <div>
-            <Label className="text-sm font-medium" htmlFor="voice-input-toggle">
-              Voice Input
-            </Label>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-              Use your microphone to dictate messages
-            </p>
-          </div>
-          <Switch
-            id="voice-input-toggle"
-            checked={voiceInputSettings.enabled}
-            onCheckedChange={toggleVoiceInput}
-            disabled={!browserSupport}
-          />
-        </div>
+    <div className="w-full space-y-6 animate-fadeIn">
+      <Card className="overflow-hidden border-primary/10">
+        <CardHeader className="relative pb-2">
+          <div className="absolute inset-0 h-12 bg-gradient-to-r from-primary/10 to-primary/5"></div>
+          <CardTitle className="flex items-center gap-2 pt-4 z-10 relative">
+            <Mic className="h-5 w-5 text-primary" />
+            Voice Input Settings
+          </CardTitle>
+          <CardDescription className="z-10 relative">
+            Configure voice input options for hands-free chatting
+          </CardDescription>
+        </CardHeader>
         
-        {/* Test microphone section with visual feedback */}
-        {voiceInputSettings.enabled && browserSupport && (
-          <div className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
-            <h4 className="text-sm font-medium mb-2 flex items-center">
-              Test Your Microphone
-              {microphoneStatus === 'denied' && (
-                <span className="ml-2 text-xs text-red-500 flex items-center">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  Microphone access denied
-                </span>
+        <CardContent className="space-y-6">
+          {/* Permission Status */}
+          {micPermission !== 'unknown' && (
+            <div className={cn(
+              "flex items-center px-4 py-3 rounded-lg border",
+              micPermission === 'granted' 
+                ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800/30 dark:text-green-400"
+                : micPermission === 'denied'
+                  ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800/30 dark:text-red-400"
+                  : "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800/30 dark:text-amber-400"
+            )}>
+              {micPermission === 'granted' ? (
+                <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+              ) : micPermission === 'denied' ? (
+                <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+              ) : (
+                <Info className="h-4 w-4 mr-2 flex-shrink-0" />
               )}
-              {microphoneStatus === 'unavailable' && (
-                <span className="ml-2 text-xs text-amber-500 flex items-center">
-                  <MicOff className="h-3 w-3 mr-1" />
-                  Microphone unavailable
-                </span>
-              )}
-            </h4>
-            
-            <div className="flex flex-col gap-3">
-              {/* Microphone level visualizer */}
-              <div className="relative h-8 bg-slate-100 dark:bg-slate-800 rounded-md overflow-hidden">
-                <div 
-                  className={cn(
-                    "absolute h-full transition-all duration-100 rounded-md",
-                    testStatus === 'error' ? "bg-red-500" : // Red for not working
-                    testStatus === 'success' ? "bg-green-500" : // Green for working
-                    audioLevel > 70 ? "bg-green-500" : 
-                    audioLevel > 40 ? "bg-blue-500" : 
-                    audioLevel > 10 ? "bg-slate-400" : 
-                    "bg-slate-300 dark:bg-slate-700"
-                  )}
-                  style={{ 
-                    width: `${testStatus === 'error' ? 100 : testStatus === 'success' ? 100 : Math.max(audioLevel, isListening ? 5 : 0)}%`,
-                    opacity: testStatus === 'error' || testStatus === 'success' ? 0.7 : 1
-                  }}
-                />
-                
-                {/* Simplified animation that should work in more browsers */}
-                {isListening && testStatus === 'testing' && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="flex gap-1 items-center">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div 
-                          key={i}
-                          className="w-0.5 h-4 bg-white dark:bg-slate-200 rounded-full animate-pulse"
-                          style={{ 
-                            animationDelay: `${i * 0.1}s`,
-                            animationDuration: `${0.8 + (i % 3) * 0.2}s`
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div className="absolute inset-0 flex items-center px-3">
-                  {testStatus === 'testing' && (
-                    <p className="text-xs font-medium z-10 text-slate-700 dark:text-white">
-                      {audioLevel > 5 ? 'Microphone active - speak now' : 'Waiting for audio...'}
-                    </p>
-                  )}
-                  {testStatus === 'error' && (
-                    <p className="text-xs font-medium z-10 text-white">
-                      <MicOff className="h-3 w-3 inline-block mr-1" />
-                      Microphone not working
-                    </p>
-                  )}
-                  {testStatus === 'success' && (
-                    <p className="text-xs font-medium z-10 text-white">
-                      <Check className="h-3 w-3 inline-block mr-1" />
-                      Microphone working properly
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              {/* Live transcript display - add color status indicators */}
-              {isListening && testStatus === 'testing' && (
-                <div className={cn(
-                  "mt-1 mb-1 p-2 bg-slate-50 dark:bg-slate-900 border rounded-md relative",
-                  liveTranscript ? "border-green-200 dark:border-green-700" : "border-slate-200 dark:border-slate-700" 
-                )}>
-                  <p className={cn(
-                    "text-xs absolute top-1 left-2",
-                    liveTranscript ? "text-green-500" : "text-slate-400"
-                  )}>
-                    {liveTranscript ? (
-                      <>
-                        <Check className="h-3 w-3 inline-block mr-1" />
-                        Speech detected:
-                      </>
-                    ) : (
-                      'Speaking:'
-                    )}
-                  </p>
-                  <p className="text-sm pt-4 pb-1 min-h-[40px] break-words">
-                    {liveTranscript ? (
-                      <span className="font-medium">{liveTranscript}</span>
-                    ) : (
-                      <span className="text-slate-400 italic">Waiting for speech...</span>
-                    )}
-                    <span className="inline-block ml-1 animate-pulse">▋</span>
-                  </p>
-                </div>
-              )}
-              
-              {/* Status message section - Update styling for clearer status indication */}
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  {testStatus === 'success' && testResult && (
-                    <div className="flex items-center text-xs text-green-600 dark:text-green-400 font-medium">
-                      <Check className="h-3.5 w-3.5 mr-1.5" />
-                      <span>Microphone working: "<span className="font-medium">{testResult}</span>"</span>
-                    </div>
-                  )}
-                  {testStatus === 'error' && testResult && (
-                    <div className="flex items-center text-xs text-red-600 dark:text-red-400 font-medium">
-                      <MicOff className="h-3.5 w-3.5 mr-1.5" />
-                      <span>{testResult}</span>
-                    </div>
-                  )}
-                  {testStatus === 'idle' && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Click the button to test if your microphone works
-                    </p>
-                  )}
-                </div>
-                <Button 
-                  size="sm"
-                  disabled={!browserSupport || microphoneStatus === 'denied'}
-                  onClick={handleTestMicrophone}
-                  className={cn(
-                    "ml-2",
-                    testStatus === 'testing' ? "bg-red-500 hover:bg-red-600" : 
-                    testStatus === 'success' ? "bg-green-500 hover:bg-green-600" :
-                    testStatus === 'error' ? "bg-red-500 hover:bg-red-600" : ""
-                  )}
-                >
-                  {testStatus === 'testing' ? (
-                    <>
-                      <MicOff className="h-3.5 w-3.5 mr-1.5" />
-                      Stop Test
-                    </>
-                  ) : testStatus === 'success' ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 mr-1.5" />
-                      Test Again
-                    </>
-                  ) : testStatus === 'error' ? (
-                    <>
-                      <Mic className="h-3.5 w-3.5 mr-1.5" />
-                      Try Again
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="h-3.5 w-3.5 mr-1.5" />
-                      Test Microphone
-                    </>
-                  )}
-                </Button>
-              </div>
-              
-              {testStatus === 'success' && testResult && (
-                <div className="text-xs text-green-600 dark:text-green-400 italic">
-                  Your microphone is working! If the text isn't accurate, try speaking more clearly.
-                </div>
-              )}
+              <p className="text-sm">
+                {micPermission === 'granted'
+                  ? "Microphone access is granted. Voice input is ready to use."
+                  : micPermission === 'denied'
+                    ? "Microphone access is blocked. Please enable it in your browser settings."
+                    : "You'll need to allow microphone access when prompted."
+                }
+              </p>
             </div>
+          )}
+          
+          {/* Voice Input Toggle */}
+          <div className="flex justify-between items-center bg-muted/30 rounded-lg p-4">
+            <div className="space-y-1">
+              <Label htmlFor="voice-input-toggle" className="flex items-center font-medium">
+                <Volume2 className="h-4 w-4 mr-2 text-blue-500" />
+                Voice Input
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Use your microphone to dictate messages
+              </p>
+            </div>
+            <Switch 
+              id="voice-input-toggle" 
+              checked={localSettings.voiceInput} 
+              onCheckedChange={(checked) => setLocalSettings(prev => ({ ...prev, voiceInput: checked }))}
+              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-500 data-[state=checked]:to-blue-600"
+            />
           </div>
-        )}
-        
-        {!browserSupport && (
-          <div className="p-2 bg-amber-50 border border-amber-200 dark:bg-amber-950 dark:border-amber-900 rounded-md">
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              Your browser doesn't support speech recognition. Please try Chrome, Edge, or Safari.
-            </p>
+          
+          {/* Test Microphone Button */}
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestMicrophone}
+              disabled={isTesting}
+              className="flex items-center gap-1.5"
+            >
+              {isTesting ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4" />
+                  Test Your Microphone
+                </>
+              )}
+            </Button>
           </div>
-        )}
+          
+          <Separator className="my-4 bg-primary/10" />
+          
+          {/* Continuous Listening */}
+          {localSettings.voiceInput && (
+            <div className="flex justify-between items-center bg-muted/30 rounded-lg p-4">
+              <div className="space-y-1">
+                <Label htmlFor="continuous-listening-toggle" className="flex items-center font-medium">
+                  Continuous Listening
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Keep listening after sending a message
+                </p>
+              </div>
+              <Switch 
+                id="continuous-listening-toggle" 
+                checked={localSettings.continuousListening} 
+                onCheckedChange={(checked) => setLocalSettings(prev => ({ ...prev, continuousListening: checked }))}
+                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-500 data-[state=checked]:to-blue-600"
+              />
+            </div>
+          )}
+          
+          {/* Voice Tips */}
+          {localSettings.voiceInput && (
+            <div className="rounded-lg border-2 border-dashed border-blue-200 dark:border-blue-800/40 p-4 bg-blue-50/40 dark:bg-blue-900/10">
+              <h4 className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-2 flex items-center">
+                <Info className="h-3.5 w-3.5 mr-1.5" />
+                Tips for best results
+              </h4>
+              <ul className="text-xs text-blue-600 dark:text-blue-300 space-y-1 list-disc pl-5">
+                <li>Speak clearly and at a moderate pace</li>
+                <li>Use "new paragraph" to create line breaks</li>
+                <li>Say "send" or "submit" to send your message</li>
+                <li>Say "stop listening" to temporarily pause</li>
+                <li>Keep background noise to a minimum</li>
+              </ul>
+            </div>
+          )}
+        </CardContent>
         
-        {/* Continuous Listening Toggle */}
-        <div className="flex items-center justify-between pt-2">
-          <div>
-            <Label className="text-sm font-medium" htmlFor="continuous-listening-toggle">
-              Continuous Listening
-            </Label>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-              Keep listening until manually stopped
-            </p>
-          </div>
-          <Switch
-            id="continuous-listening-toggle"
-            checked={voiceInputSettings.continuous}
-            onCheckedChange={toggleContinuousListening}
-            disabled={!voiceInputSettings.enabled || !browserSupport}
-          />
-        </div>
-        
-        {/* Tips */}
-        <div className="pt-2 px-3 py-3 bg-blue-50 border border-blue-200 dark:bg-blue-950 dark:border-blue-900 rounded-md mt-4">
-          <h4 className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-1">Tips for best results:</h4>
-          <ul className="text-xs text-blue-700 dark:text-blue-400 list-disc list-inside space-y-1">
-            <li>Speak clearly and at a moderate pace</li>
-            <li>Minimize background noise</li>
-            <li>Say "period" or "comma" for punctuation</li>
-            <li>Say "new line" to start a new paragraph</li>
-            <li>Speak closer to your microphone if possible</li>
-            <li>If recognition stops frequently, try shorter phrases</li>
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
+        <CardFooter className="border-t bg-muted/20 px-6 py-4 justify-end">
+          <Button 
+            onClick={handleSaveSettings}
+            disabled={!hasChanges || isSaving}
+            className="flex items-center gap-1.5"
+          >
+            {isSaving ? (
+              <>
+                <Loader className="h-4 w-4 animate-spin mr-1" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-1" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }

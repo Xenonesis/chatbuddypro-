@@ -110,6 +110,9 @@ export function Navbar() {
   const pathname = usePathname();
   const notificationsRef = useRef<HTMLDivElement>(null);
   
+  // Check if we're on the home page
+  const isHomePage = pathname === '/';
+
   // Handle scroll effect for navbar with throttle for performance
   useEffect(() => {
     const handleScroll = throttle(() => {
@@ -254,36 +257,38 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Nav Links - Only visible on md and larger screens */}
-        <div className="hidden md:flex items-center justify-center">
-          <div className="flex items-center gap-1">
-            {navLinks.map(({ href, label, icon }) => (
-              <Link key={href} href={href}>
-                <Button 
-                  variant={isActiveLink(href) ? "default" : "ghost"} 
-                  size="sm" 
-                  className={cn(
-                    "flex items-center gap-1.5 transition-all relative",
-                    isActiveLink(href) 
-                      ? "bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20" 
-                      : "hover:bg-slate-100 dark:hover:bg-slate-800"
-                  )}
-                >
-                  {icon}
-                  <span>{label}</span>
-                  {isActiveLink(href) && (
-                    <div className="absolute -bottom-[13px] left-0 right-0 mx-auto w-1.5 h-1.5 rounded-full bg-primary" />
-                  )}
-                </Button>
-              </Link>
-            ))}
+        {/* Nav Links - Only visible when logged in */}
+        {user && !isHomePage && (
+          <div className="hidden md:flex items-center justify-center">
+            <div className="flex items-center gap-1">
+              {navLinks.map(({ href, label, icon }) => (
+                <Link key={href} href={href}>
+                  <Button 
+                    variant={isActiveLink(href) ? "default" : "ghost"} 
+                    size="sm" 
+                    className={cn(
+                      "flex items-center gap-1.5 transition-all relative",
+                      isActiveLink(href) 
+                        ? "bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20" 
+                        : "hover:bg-slate-100 dark:hover:bg-slate-800"
+                    )}
+                  >
+                    {icon}
+                    <span>{label}</span>
+                    {isActiveLink(href) && (
+                      <div className="absolute -bottom-[13px] left-0 right-0 mx-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                    )}
+                  </Button>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actions area */}
         <div className="flex items-center gap-0 xs:gap-1 sm:gap-2 flex-shrink-0">
-          {/* Suggestions button - Now using settings from context */}
-          {settings.suggestionsSettings.enabled && (
+          {/* Suggestions button - Only when logged in */}
+          {user && !isHomePage && settings.suggestionsSettings.enabled && (
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -303,8 +308,8 @@ export function Navbar() {
             </TooltipProvider>
           )}
 
-          {/* Notifications Dropdown */}
-          {mounted && (
+          {/* Notifications Dropdown - Only when logged in */}
+          {user && !isHomePage && mounted && (
             <div ref={notificationsRef}>
               <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
                 <DropdownMenuTrigger asChild>
@@ -367,7 +372,7 @@ export function Navbar() {
             </div>
           )}
 
-          {/* Theme toggle - Only render dynamic content after mounting to prevent hydration mismatch */}
+          {/* Theme toggle - Always visible */}
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -395,125 +400,191 @@ export function Navbar() {
             </Tooltip>
           </TooltipProvider>
 
-          {/* Mobile menu for smaller screens */}
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="sm:hidden h-8 w-8">
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-64 sm:w-72">
-              <SheetHeader className="pb-4 border-b">
-                <SheetTitle>Menu</SheetTitle>
-              </SheetHeader>
-              
-              <div className="py-4 space-y-3">
-                {/* Mobile Nav Links */}
-                {navLinks.map(({ href, label, icon }) => (
-                  <Link 
-                    key={href} 
-                    href={href} 
-                    className="w-full block" 
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <Button 
-                      variant={isActiveLink(href) ? "default" : "ghost"} 
-                      size="sm" 
-                      className={cn(
-                        "w-full justify-start",
-                        isActiveLink(href) && "bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20"
-                      )}
+          {/* Mobile menu for smaller screens - Only when logged in */}
+          {user && !isHomePage && (
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="sm:hidden h-8 w-8">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-64 sm:w-72">
+                <SheetHeader className="pb-4 border-b">
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                
+                <div className="py-4 space-y-3">
+                  {/* Mobile Nav Links */}
+                  {navLinks.map(({ href, label, icon }) => (
+                    <Link 
+                      key={href} 
+                      href={href} 
+                      className="w-full block" 
+                      onClick={() => setMobileMenuOpen(false)}
                     >
-                      <span className="mr-1.5">{icon}</span>
-                      {label}
-                      {isActiveLink(href) && (
-                        <Badge variant="outline" className="ml-auto text-xs bg-primary/20 border-primary/30">
-                          Current
-                        </Badge>
-                      )}
-                    </Button>
-                  </Link>
-                ))}
-                
-                {/* Mobile Suggestions */}
-                {settings.suggestionsSettings.enabled && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      handleToggleSuggestions();
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    <Sparkles className="h-4 w-4 mr-1.5 text-amber-500" /> Suggestions
-                  </Button>
-                )}
-                
-                {/* Mobile Theme Toggle - Only use Switch after mounted */}
-                {mounted && (
-                  <div className="flex items-center justify-between px-1 py-1.5">
-                    <span className="text-sm flex items-center">
-                      <MoonIcon className="h-4 w-4 mr-1.5" /> Dark Mode
-                    </span>
-                    <Switch 
-                      checked={resolvedTheme === 'dark'} 
-                      onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} 
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Auth section in mobile menu */}
-              <div className="pt-4 border-t">
-                {user ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 mr-2">
-                        <User className="h-4 w-4" />
-                      </div>
-                      <div className="text-sm overflow-hidden">
-                        <div className="font-medium truncate">{user.email}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Signed in</div>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="w-full justify-start text-red-600 dark:text-red-400"
+                      <Button 
+                        variant={isActiveLink(href) ? "default" : "ghost"} 
+                        size="sm" 
+                        className={cn(
+                          "w-full justify-start",
+                          isActiveLink(href) && "bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20"
+                        )}
+                      >
+                        <span className="mr-1.5">{icon}</span>
+                        {label}
+                        {isActiveLink(href) && (
+                          <Badge variant="outline" className="ml-auto text-xs bg-primary/20 border-primary/30">
+                            Current
+                          </Badge>
+                        )}
+                      </Button>
+                    </Link>
+                  ))}
+                  
+                  {/* Mobile Suggestions */}
+                  {settings.suggestionsSettings.enabled && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
                       onClick={() => {
-                        signOut();
+                        handleToggleSuggestions();
                         setMobileMenuOpen(false);
                       }}
                     >
-                      <LogOut className="h-4 w-4 mr-1.5" /> Sign Out
+                      <Sparkles className="h-4 w-4 mr-1.5 text-amber-500" /> Suggestions
                     </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Link href="/auth/login" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="default" size="sm" className="w-full">
-                        <LogIn className="h-4 w-4 mr-1.5" /> Sign In
+                  )}
+                  
+                  {/* Mobile Theme Toggle - Only use Switch after mounted */}
+                  {mounted && (
+                    <div className="flex items-center justify-between px-1 py-1.5">
+                      <span className="text-sm flex items-center">
+                        <MoonIcon className="h-4 w-4 mr-1.5" /> Dark Mode
+                      </span>
+                      <Switch 
+                        checked={resolvedTheme === 'dark'} 
+                        onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} 
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Auth section in mobile menu */}
+                <div className="pt-4 border-t">
+                  {user ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 mr-2">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div className="text-sm overflow-hidden">
+                          <div className="font-medium truncate">{user.email}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">Signed in</div>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full justify-start text-red-600 dark:text-red-400"
+                        onClick={() => {
+                          signOut();
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <LogOut className="h-4 w-4 mr-1.5" /> Sign Out
                       </Button>
-                    </Link>
-                    <Link href="/auth/signup" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" size="sm" className="w-full">
-                        <UserPlus className="h-4 w-4 mr-1.5" /> Sign Up
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Link href="/auth/login" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="default" size="sm" className="w-full">
+                          <LogIn className="h-4 w-4 mr-1.5" /> Sign In
+                        </Button>
+                      </Link>
+                      <Link href="/auth/signup" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="outline" size="sm" className="w-full">
+                          <UserPlus className="h-4 w-4 mr-1.5" /> Sign Up
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
           
-          {/* User menu */}
-          <UserMenu />
+          {/* User menu or Sign In/Sign Up buttons */}
+          {user ? (
+            !isHomePage && <UserMenu />
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/auth/login">
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="inline-flex items-center transition-all duration-200 hover:shadow-md"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="transition-all duration-200 hover:bg-primary/10 hover:border-primary"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Sign Up
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
       
-      {/* New Feature Banner - Conditionally rendered */}
-      {showNewFeature && mounted && (
+      {/* Mobile menu trigger - Only when not logged in on mobile */}
+      {!user && (
+        <div className="fixed bottom-8 right-8 sm:hidden z-50">
+          <Button 
+            variant="default" 
+            size="icon"
+            className="h-12 w-12 rounded-full shadow-lg"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetContent side="bottom" className="w-full rounded-t-2xl">
+              <div className="py-4 space-y-3">
+                <div className="flex items-center justify-between px-1 py-1.5">
+                  <span className="text-sm flex items-center">
+                    <MoonIcon className="h-4 w-4 mr-1.5" /> Dark Mode
+                  </span>
+                  <Switch 
+                    checked={resolvedTheme === 'dark'} 
+                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} 
+                  />
+                </div>
+                <Link href="/auth/login" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="default" size="sm" className="w-full">
+                    <LogIn className="h-4 w-4 mr-1.5" /> Sign In
+                  </Button>
+                </Link>
+                <Link href="/auth/signup" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" size="sm" className="w-full">
+                    <UserPlus className="h-4 w-4 mr-1.5" /> Sign Up
+                  </Button>
+                </Link>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
+      
+      {/* New Feature Banner - Only when logged in */}
+      {user && !isHomePage && showNewFeature && mounted && (
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 text-center text-sm font-medium animate-fade-in">
           New feature available: Try our improved AI model selection! 
           <Button 
@@ -527,8 +598,8 @@ export function Navbar() {
         </div>
       )}
       
-      {/* Add the SuggestionDrawer component */}
-      {mounted && <SuggestionDrawer open={showSuggestionsDrawer} onOpenChange={setShowSuggestionsDrawer} />}
+      {/* Add the SuggestionDrawer component - Only when logged in */}
+      {user && mounted && <SuggestionDrawer open={showSuggestionsDrawer} onOpenChange={setShowSuggestionsDrawer} />}
     </header>
   );
 } 

@@ -3,7 +3,8 @@ import { Sparkles, MessageCircle, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   extractSuggestionsFromText,
-  getGeneralSuggestions
+  getGeneralSuggestions,
+  processSuggestionPrompt
 } from '@/lib/suggestions';
 import {
   generateFollowUpQuestions,
@@ -35,11 +36,36 @@ export function SmartSuggestions({ latestMessage, onSuggestionClick, messages = 
       try {
         let newSuggestions: string[] = [];
         
-        // First try to extract suggestions directly from the latest message
-        const extractedSuggestions = extractSuggestionsFromText(latestMessage);
+        // Look for user prompts that explicitly request suggestions
+        const userMessages = messages.filter(m => m.role === 'user');
+        if (userMessages.length > 0) {
+          // Check the most recent user messages for suggestion prompts (check last 3 messages)
+          const recentUserMessages = userMessages.slice(-3);
+          
+          for (const userMsg of recentUserMessages) {
+            // Process user message for suggestion prompts
+            const promptSuggestions = processSuggestionPrompt(userMsg.content);
+            if (promptSuggestions.length > 0) {
+              // Found explicit suggestion guidance in user prompt
+              newSuggestions = promptSuggestions;
+              console.log('Generated suggestions based on user prompt:', newSuggestions);
+              break;
+            }
+          }
+        }
         
-        // If AI-powered suggestions are enabled, use the current provider's API
-        if (settings.suggestionsSettings.useAI && messages.length > 0) {
+        // If we didn't find suggestion guidance in user prompts,
+        // extract suggestions from the latest assistant message
+        if (newSuggestions.length === 0) {
+          const extractedSuggestions = extractSuggestionsFromText(latestMessage);
+          if (extractedSuggestions.length > 0) {
+            newSuggestions = extractedSuggestions;
+            console.log('Extracted suggestions from assistant response:', extractedSuggestions);
+          }
+        }
+        
+        // If AI-powered suggestions are enabled and we still don't have suggestions, use the current provider's API
+        if (newSuggestions.length === 0 && settings.suggestionsSettings.useAI && messages.length > 0) {
           try {
             // Convert messages to the expected ChatHistoryItem format
             const chatHistory: ChatHistoryItem[] = messages.map((msg, index) => ({
@@ -70,6 +96,7 @@ export function SmartSuggestions({ latestMessage, onSuggestionClick, messages = 
               if (combinedSuggestions.length > 0) {
                 // If AI generated suggestions, use those (limit to 5)
                 newSuggestions = combinedSuggestions.slice(0, 5);
+                console.log('Generated AI-powered suggestions:', newSuggestions);
               }
             } else {
               console.log('No API key available for the current provider, falling back to basic suggestions');
@@ -79,17 +106,12 @@ export function SmartSuggestions({ latestMessage, onSuggestionClick, messages = 
           }
         }
         
-        // If we have extracted suggestions from the text and no AI suggestions,
-        // or if AI suggestions failed, use the extracted ones
-        if (newSuggestions.length === 0 && extractedSuggestions.length > 0) {
-          newSuggestions = extractedSuggestions.slice(0, 5);
-        } 
-        
         // If we still don't have enough suggestions, generate follow-up questions
         if (newSuggestions.length === 0 && latestMessage) {
           const followUpQuestions = generateFollowUpQuestions(latestMessage);
           if (followUpQuestions.length > 0) {
             newSuggestions = [...newSuggestions, ...followUpQuestions.slice(0, 3)];
+            console.log('Generated follow-up questions:', followUpQuestions);
           }
         }
         
@@ -97,6 +119,7 @@ export function SmartSuggestions({ latestMessage, onSuggestionClick, messages = 
         if (newSuggestions.length < 3) {
           const generalSuggestions = getGeneralSuggestions();
           newSuggestions = [...newSuggestions, ...generalSuggestions].slice(0, 5);
+          console.log('Added general suggestions to reach minimum count');
         }
         
         setSuggestions(newSuggestions);

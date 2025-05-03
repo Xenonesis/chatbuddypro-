@@ -118,14 +118,6 @@ export default function DebugPage() {
                   )}
                 </div>
               )}
-              <Button 
-                className="w-full mt-4" 
-                onClick={checkDatabaseConnection}
-                disabled={loading}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Test Connection
-              </Button>
             </CardContent>
           </Card>
 

@@ -1170,4 +1170,53 @@ export function getProviderDisplayName(provider: string): string {
 }
 
 // Re-export suggestion functions from suggestions.ts
-export { extractSuggestionsFromText, getGeneralSuggestions, generateFollowUpQuestion }; 
+export { extractSuggestionsFromText, getGeneralSuggestions, generateFollowUpQuestion };
+
+// Supabase connection test utility
+export const testSupabaseConnection = async (): Promise<{
+  success: boolean;
+  statusCode?: number;
+  error?: string;
+  latency?: number;
+}> => {
+  if (typeof window === 'undefined') {
+    return { success: false, error: 'Cannot test connection in server context' };
+  }
+
+  try {
+    const startTime = performance.now();
+    
+    // Basic health check - try to fetch a small amount of data
+    const response = await fetch('https://gphdrsfbypnckxbdjjap.supabase.co/rest/v1/health', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      },
+    });
+    
+    const endTime = performance.now();
+    const latency = Math.round(endTime - startTime);
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        statusCode: response.status,
+        error: `Supabase returned status: ${response.status}`,
+        latency
+      };
+    }
+    
+    return {
+      success: true,
+      statusCode: response.status,
+      latency
+    };
+  } catch (error) {
+    console.error('Connection test error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown connection error'
+    };
+  }
+}; 

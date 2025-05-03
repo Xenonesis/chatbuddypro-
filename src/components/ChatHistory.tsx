@@ -34,25 +34,15 @@ export default function ChatHistory() {
   }, [user]);
 
   const testDatabaseConnection = async () => {
-    setDebugInfo('Testing database connection...');
+    // Internal function, no longer exposed to UI
     try {
       const status = await userService.validateConnection();
       setConnectionStatus(status);
-      
-      if (status.success) {
-        setDebugInfo('Database connection successful! Tables accessible.');
-      } else {
-        setDebugInfo(`Connection error: ${status.error}`);
-      }
-      
       console.log('Connection test result:', status);
-      setShowConnectionTest(true);
       return status.success;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      setDebugInfo(`Error testing connection: ${errorMsg}`);
-      setConnectionStatus({success: false, error: errorMsg});
-      setShowConnectionTest(true);
+      console.error(`Error testing connection: ${errorMsg}`);
       return false;
     }
   };
@@ -215,14 +205,6 @@ export default function ChatHistory() {
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Reload Chats
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={testDatabaseConnection}
-                >
-                  <Database className="h-4 w-4 mr-2" />
-                  Test Connection
                 </Button>
               </div>
             </div>

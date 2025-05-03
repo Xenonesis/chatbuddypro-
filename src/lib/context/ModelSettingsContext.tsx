@@ -22,48 +22,36 @@ export type ModelSettings = {
   openai: {
     enabled: boolean;
     apiKey: string;
-    models: string[];
-    selectedModel: string;
     maxTokens: number;
     temperature: number;
   };
   gemini: {
     enabled: boolean;
     apiKey: string;
-    models: string[];
-    selectedModel: string;
     maxTokens: number;
     temperature: number;
   };
   mistral: {
     enabled: boolean;
     apiKey: string;
-    models: string[];
-    selectedModel: string;
     maxTokens: number;
     temperature: number;
   };
   claude: {
     enabled: boolean;
     apiKey: string;
-    models: string[];
-    selectedModel: string;
     maxTokens: number;
     temperature: number;
   };
   llama: {
     enabled: boolean;
     apiKey: string;
-    models: string[];
-    selectedModel: string;
     maxTokens: number;
     temperature: number;
   };
   deepseek: {
     enabled: boolean;
     apiKey: string;
-    models: string[];
-    selectedModel: string;
     maxTokens: number;
     temperature: number;
   };
@@ -97,55 +85,36 @@ const defaultSettings: ModelSettings = {
   openai: {
     enabled: true,
     apiKey: '',
-    models: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'],
-    selectedModel: 'gpt-3.5-turbo',
     maxTokens: 500,
     temperature: 0.7
   },
   gemini: {
     enabled: true,
     apiKey: '',
-    models: [
-      'gemini-pro', 
-      'gemini-pro-vision', 
-      'gemini-1.5-pro', 
-      'gemini-1.5-flash',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite'
-    ],
-    selectedModel: 'gemini-pro',
     maxTokens: 500,
     temperature: 0.7
   },
   mistral: {
     enabled: true,
     apiKey: '',
-    models: ['mistral-tiny', 'mistral-small', 'mistral-medium'],
-    selectedModel: 'mistral-small',
     maxTokens: 500,
     temperature: 0.7
   },
   claude: {
     enabled: true,
     apiKey: '',
-    models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
-    selectedModel: 'claude-3-5-sonnet-20240620',
     maxTokens: 500,
     temperature: 0.7
   },
   llama: {
     enabled: true,
     apiKey: '',
-    models: ['llama-3-8b-instruct', 'llama-3-70b-instruct', 'llama-3-8b', 'llama-3-70b'],
-    selectedModel: 'llama-3-8b-instruct',
     maxTokens: 500,
     temperature: 0.7
   },
   deepseek: {
     enabled: true,
     apiKey: '',
-    models: ['deepseek-coder', 'deepseek-chat', 'deepseek-llm'],
-    selectedModel: 'deepseek-chat',
     maxTokens: 500,
     temperature: 0.7
   },
@@ -204,6 +173,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   const [hasLoadedKeysFromSupabase, setHasLoadedKeysFromSupabase] = useState(false);
   const [showAddApiKeyForm, setShowAddApiKeyForm] = useState(false);
   const { user, isAuthReady } = useAuth();
+  const [loadingKeys, setLoadingKeys] = useState(false);
 
   useEffect(() => {
     // Load settings from localStorage on client side
@@ -213,401 +183,379 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
         try {
           const parsedSettings = JSON.parse(savedSettings);
           
-          // Ensure model names are in the correct format
-          if (parsedSettings.gemini) {
-            // Update to simplified model names for better API compatibility
-            if (parsedSettings.gemini.selectedModel === 'gemini-1.0-pro') {
-              parsedSettings.gemini.selectedModel = 'gemini-pro';
-            }
-            if (parsedSettings.gemini.models) {
-              parsedSettings.gemini.models = parsedSettings.gemini.models.map(
-                (model: string) => model === 'gemini-1.0-pro' ? 'gemini-pro' : 
-                                   model === 'gemini-1.0-pro-vision' ? 'gemini-pro-vision' : model
-              );
-            }
-          }
-          
-          // Ensure we have a chatMode even if it's missing from saved settings
-          const mergedSettings = {
-            ...defaultSettings,
-            ...parsedSettings,
-            chatMode: parsedSettings.chatMode || defaultSettings.chatMode,
-            showThinking: parsedSettings.showThinking !== undefined 
-              ? parsedSettings.showThinking 
-              : defaultSettings.showThinking,
-            // Initialize the new providers from default settings if they don't exist
-            claude: parsedSettings.claude || defaultSettings.claude,
-            llama: parsedSettings.llama || defaultSettings.llama,
-            deepseek: parsedSettings.deepseek || defaultSettings.deepseek
+          // Create a clean version of settings without models and selectedModel
+          const cleanSettings: ModelSettings = {
+            ...defaultSettings
           };
           
-          // Make sure gemini models are correct
-          if (mergedSettings.gemini) {
-            mergedSettings.gemini.models = defaultSettings.gemini.models;
-            // Use the simplified model format
-            if (mergedSettings.gemini.selectedModel.includes('gemini-1.0')) {
-              if (mergedSettings.gemini.selectedModel.includes('vision')) {
-                mergedSettings.gemini.selectedModel = 'gemini-pro-vision';
-              } else {
-                mergedSettings.gemini.selectedModel = 'gemini-pro';
-              }
+          // For each provider, copy over the relevant properties
+          Object.keys(PROVIDER_INFO).forEach(provider => {
+            const providerKey = provider as AIProvider;
+            if (parsedSettings[providerKey]) {
+              cleanSettings[providerKey] = {
+                enabled: parsedSettings[providerKey].enabled ?? defaultSettings[providerKey].enabled,
+                apiKey: parsedSettings[providerKey].apiKey ?? '',
+                maxTokens: parsedSettings[providerKey].maxTokens ?? defaultSettings[providerKey].maxTokens,
+                temperature: parsedSettings[providerKey].temperature ?? defaultSettings[providerKey].temperature
+              };
             }
+          });
+          
+          // Copy other settings
+          if (parsedSettings.defaultProvider) {
+            cleanSettings.defaultProvider = parsedSettings.defaultProvider;
           }
           
-          setSettings(mergedSettings);
-          setCurrentProvider(mergedSettings.defaultProvider);
+          if (parsedSettings.chatMode) {
+            cleanSettings.chatMode = parsedSettings.chatMode;
+          }
           
-          // Update localStorage with corrected settings
-          localStorage.setItem('aiSettings', JSON.stringify(mergedSettings));
+          if (parsedSettings.showThinking !== undefined) {
+            cleanSettings.showThinking = parsedSettings.showThinking;
+          }
+          
+          if (parsedSettings.suggestionsSettings) {
+            cleanSettings.suggestionsSettings = {
+              ...defaultSettings.suggestionsSettings,
+              ...parsedSettings.suggestionsSettings
+            };
+          }
+          
+          if (parsedSettings.voiceInputSettings) {
+            cleanSettings.voiceInputSettings = {
+              ...defaultSettings.voiceInputSettings,
+              ...parsedSettings.voiceInputSettings
+            };
+          }
+          
+          setSettings(cleanSettings);
+          
+          // Update localStorage with the cleaned settings
+          localStorage.setItem('aiSettings', JSON.stringify(cleanSettings));
+          
+          // If there's a default provider set, update the current provider
+          if (cleanSettings.defaultProvider) {
+            setCurrentProvider(cleanSettings.defaultProvider);
+          }
         } catch (error) {
-          console.error('Error loading settings:', error);
+          console.error('Error parsing saved settings:', error);
+          // In case of error, fall back to default settings
+          setSettings(defaultSettings);
         }
       }
-
-      // Load API keys from localStorage if not logged in
-      if (!user) {
-        const openaiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY');
-        const geminiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY');
-        const mistralKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY');
-        const claudeKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY');
-        const llamaKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY');
-        const deepseekKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY');
       
-        if (openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey) {
-          setSettings(prevSettings => ({
-            ...prevSettings,
-            openai: { ...prevSettings.openai, apiKey: openaiKey || '' },
-            gemini: { ...prevSettings.gemini, apiKey: geminiKey || '' },
-            mistral: { ...prevSettings.mistral, apiKey: mistralKey || '' },
-            claude: { ...prevSettings.claude, apiKey: claudeKey || '' },
-            llama: { ...prevSettings.llama, apiKey: llamaKey || '' },
-            deepseek: { ...prevSettings.deepseek, apiKey: deepseekKey || '' },
-          }));
-        }
+      // Load API keys from localStorage if they exist
+      const openaiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY');
+      const geminiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY');
+      const mistralKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY');
+      const claudeKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY');
+      const llamaKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY');
+      const deepseekKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY');
+    
+      if (openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey) {
+        setSettings(prevSettings => ({
+          ...prevSettings,
+          openai: { ...prevSettings.openai, apiKey: openaiKey || '' },
+          gemini: { ...prevSettings.gemini, apiKey: geminiKey || '' },
+          mistral: { ...prevSettings.mistral, apiKey: mistralKey || '' },
+          claude: { ...prevSettings.claude, apiKey: claudeKey || '' },
+          llama: { ...prevSettings.llama, apiKey: llamaKey || '' },
+          deepseek: { ...prevSettings.deepseek, apiKey: deepseekKey || '' },
+        }));
       }
     }
   }, []);
 
-  // Load API keys from Supabase
+  // Add this effect to load API keys when the user state is ready
   useEffect(() => {
-    const loadAPIKeysFromSupabase = async () => {
-      if (!user || !isAuthReady) return;
-      
-      try {
-        console.log('Loading API keys from Supabase...');
-        const loadedKeys: Record<string, string> = {};
-        let anyKeysLoaded = false;
-        
-        // First try to load using the user preferences table - which should have 
-        // fixed the duplicate records issue
-        for (const provider of Object.keys(PROVIDER_INFO)) {
-          try {
-            console.log(`Loading ${provider} API key...`);
-            
-            try {
-              // Get the API key with name
-              let keyInfo = null;
-              try {
-                keyInfo = await userService.getApiKeyByName(provider, 'default', user.id);
-              } catch (nameKeyError) {
-                console.error(`Error in getApiKeyByName for ${provider}:`, 
-                  nameKeyError instanceof Error ? nameKeyError.message : String(nameKeyError));
-                keyInfo = null;
-              }
-              
-              if (keyInfo && keyInfo.key) {
-                loadedKeys[provider] = keyInfo.key;
-                localStorage.setItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`, keyInfo.key);
-                anyKeysLoaded = true;
-                console.log(`Loaded ${provider} API key with name: ${keyInfo.name}`)
-                continue;
-              }
-              
-              // Fall back to the old method if named key isn't found
-              try {
-                const apiKey = await userService.getApiKey(provider, user.id);
-                if (apiKey) {
-                  loadedKeys[provider] = apiKey;
-                  localStorage.setItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`, apiKey);
-                  anyKeysLoaded = true;
-                  console.log(`Loaded ${provider} API key (without name)`)
-                  
-                  // Try to migrate the key to named format if it was found
-                  try {
-                    await userService.storeApiKeyWithName(user.id, provider, apiKey, 'default');
-                    console.log(`Migrated ${provider} API key to named format`);
-                  } catch (migrationError) {
-                    console.warn(`Failed to migrate ${provider} API key to named format:`, 
-                      migrationError instanceof Error ? migrationError.message : String(migrationError));
-                  }
-                  
-                  continue;
-                }
-              } catch (apiKeyError) {
-                console.error(`Error getting regular API key for ${provider}:`, 
-                  apiKeyError instanceof Error ? apiKeyError.message : String(apiKeyError));
-              }
-              
-              // Fallback: Check localStorage for previously saved key
-              const localStorageKey = localStorage.getItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`);
-              if (localStorageKey) {
-                loadedKeys[provider] = localStorageKey;
-                console.log(`Using existing localStorage key for ${provider}`);
-                
-                // Try to save it to Supabase for future use
-                try {
-                  await userService.storeApiKeyWithName(user.id, provider, localStorageKey, 'default');
-                  console.log(`Saved localStorage ${provider} key to Supabase`);
-                } catch (saveError) {
-                  console.warn(`Failed to save localStorage ${provider} key to Supabase:`, 
-                    saveError instanceof Error ? saveError.message : String(saveError));
-                }
-                
-                anyKeysLoaded = true;
-              } else {
-                console.log(`No ${provider} API key found in localStorage`);
-              }
-            } catch (providerError) {
-              console.error(`Overall error loading ${provider} API key:`, providerError);
-            }
-          } catch (outerError) {
-            console.error(`Critical error handling provider ${provider}:`, outerError);
-          }
-        }
-        
-        setApiKeys(loadedKeys);
-        setHasLoadedKeysFromSupabase(true);
-        
-        // If we couldn't load any keys, show UI to add them
-        if (!anyKeysLoaded) {
-          setShowAddApiKeyForm(true);
-        }
-
-        // Load other user settings from database
-        try {
-          console.log('Loading user settings from database...');
-          const userPreferences = await userService.getUserPreferences(user.id);
-          
-          if (userPreferences && userPreferences.preferences && userPreferences.preferences.settings) {
-            const savedSettings = userPreferences.preferences.settings;
-            
-            // Merge the saved settings with current settings
-            const mergedSettings = {
-              ...settings,
-              ...savedSettings,
-              // Ensure providers are not overwritten
-              openai: { ...settings.openai },
-              gemini: { ...settings.gemini },
-              mistral: { ...settings.mistral },
-              claude: { ...settings.claude },
-              llama: { ...settings.llama },
-              deepseek: { ...settings.deepseek }
-            };
-            
-            // Update API keys in merged settings
-            for (const [provider, apiKey] of Object.entries(loadedKeys)) {
-              if (apiKey && mergedSettings[provider]) {
-                mergedSettings[provider].apiKey = apiKey;
-              }
-            }
-            
-            console.log('Loaded user settings from database');
-            setSettings(mergedSettings);
-          }
-        } catch (settingsError) {
-          console.error('Error loading user settings:', settingsError);
-        }
-      } catch (error) {
-        try {
-          console.error('Error loading API keys from Supabase:', 
-            error instanceof Error ? error.message : String(error));
-          
-          // Additional debugging info
-          if (error instanceof Error && error.stack) {
-            console.error('Error stack:', error.stack);
-          }
-          
-          // Log user info for debugging (without sensitive data)
-          console.error('User context during error:', {
-            hasUser: !!user,
-            userId: user ? user.id : null,
-            authReady: isAuthReady
-          });
-        } catch (loggingError) {
-          console.error('Failed to log API key loading error');
-        }
-      }
-    };
-    
-    if (isAuthReady) {
+    if (user && isAuthReady) {
       loadAPIKeysFromSupabase();
-    } else {
-      console.log('Waiting for auth to be ready before loading API keys');
     }
   }, [user, isAuthReady]);
 
-  const updateSettings = async (newSettings: ModelSettings) => {
+  // Load API keys from Supabase
+  const loadAPIKeysFromSupabase = async () => {
+    if (!user?.id) {
+      console.log('Cannot load API keys: No user ID available');
+      return;
+    }
+
     try {
-      // Update local state and localStorage first
-      setSettings(newSettings);
-      localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      setLoadingKeys(true);
+      // Get user ID from state (already validated)
+      const userId = user.id;
+      console.log('Loading API keys from Supabase for user:', userId.substring(0, 8) + '...');
       
-      // Update current provider if the default has changed
-      if (newSettings.defaultProvider !== settings.defaultProvider) {
-        setCurrentProvider(newSettings.defaultProvider);
+      // Try to access user preferences
+      const preferences = await userService.getUserPreferences(userId);
+      if (!preferences) {
+        console.log('No preferences found, creating default preferences');
+        await userService.createDefaultPreferences(userId);
+        setLoadingKeys(false);
+        setHasLoadedKeysFromSupabase(true);
+        return;
       }
       
-      // Save API keys to localStorage for compatibility
-      localStorage.setItem('NEXT_PUBLIC_OPENAI_API_KEY', newSettings.openai.apiKey);
-      localStorage.setItem('NEXT_PUBLIC_GEMINI_API_KEY', newSettings.gemini.apiKey);
-      localStorage.setItem('NEXT_PUBLIC_MISTRAL_API_KEY', newSettings.mistral.apiKey);
-      localStorage.setItem('NEXT_PUBLIC_CLAUDE_API_KEY', newSettings.claude.apiKey);
-      localStorage.setItem('NEXT_PUBLIC_LLAMA_API_KEY', newSettings.llama.apiKey);
-      localStorage.setItem('NEXT_PUBLIC_DEEPSEEK_API_KEY', newSettings.deepseek.apiKey);
-      
-      // If user is logged in, save to Supabase
-      if (user) {
-        // Define the provider names
-        const providerNames: Record<AIProvider, string> = {
-          'openai': 'OpenAI',
-          'gemini': 'Google Gemini',
-          'mistral': 'Mistral AI',
-          'claude': 'Anthropic Claude',
-          'llama': 'Meta Llama',
-          'deepseek': 'DeepSeek'
-        };
+      // Check new ai_providers structure first
+      if (preferences.ai_providers) {
+        console.log('Found ai_providers structure in preferences');
         
-        // Save API keys to Supabase with provider name as the key name
-        const providers: [AIProvider, string, string][] = [
-          ['openai', newSettings.openai.apiKey, providerNames.openai],
-          ['gemini', newSettings.gemini.apiKey, providerNames.gemini],
-          ['mistral', newSettings.mistral.apiKey, providerNames.mistral],
-          ['claude', newSettings.claude.apiKey, providerNames.claude],
-          ['llama', newSettings.llama.apiKey, providerNames.llama],
-          ['deepseek', newSettings.deepseek.apiKey, providerNames.deepseek]
-        ];
+        const newApiKeys: Record<string, string> = {};
+        const newSettings = { ...settings };
         
-        // Store each API key that has a value with its name
-        for (const [provider, apiKey, providerName] of providers) {
-          if (apiKey) {
-            await userService.storeApiKeyWithName(user.id, provider, apiKey, providerName);
-            // Also store in the older format for backward compatibility
-            await userService.storeApiKey(user.id, provider, apiKey);
-          }
-        }
-        
-        // Create a clean version of settings without API keys for direct storage
-        const settingsForStorage = {
-          defaultProvider: newSettings.defaultProvider,
-          chatMode: newSettings.chatMode,
-          showThinking: newSettings.showThinking,
-          suggestionsSettings: newSettings.suggestionsSettings,
-          voiceInputSettings: newSettings.voiceInputSettings
-        };
-        
-        // Try to save settings using the direct Supabase approach instead of userService
-        try {
-          // Get existing preferences to check if we need to update or insert
-          const { data: existingPrefs, error: fetchError } = await supabase
-            .from('user_preferences')
-            .select('id, preferences')
-            .eq('user_id', user.id)
-            .order('updated_at', { ascending: false })
-            .limit(1);
-            
-          if (fetchError) {
-            console.error('Error fetching preferences:', fetchError);
-            throw fetchError;
-          }
-          
-          // Prepare new preferences object
-          let updatedPreferences = {};
-          
-          // If we have existing preferences, use them
-          if (existingPrefs && existingPrefs.length > 0) {
-            // Handle different data formats
-            if (existingPrefs[0].preferences) {
-              if (typeof existingPrefs[0].preferences === 'string') {
-                try {
-                  updatedPreferences = JSON.parse(existingPrefs[0].preferences);
-                } catch (e) {
-                  console.error('Failed to parse preferences string:', e);
+        // Process each provider
+        Object.entries(preferences.ai_providers).forEach(([provider, providerInfo]) => {
+          const validProvider = provider as AIProvider;
+          if (validProvider && providerInfo && providerInfo.enabled && providerInfo.api_keys) {
+            // Get the default key or first available key
+            const apiKey = providerInfo.api_keys['default'] || 
+                         Object.values(providerInfo.api_keys)[0];
+                         
+            if (apiKey) {
+              console.log(`Found API key for ${provider} in ai_providers`);
+              newApiKeys[provider] = apiKey;
+              
+              // Also update the settings
+              if (newSettings[validProvider]) {
+                newSettings[validProvider].enabled = true;
+                newSettings[validProvider].apiKey = apiKey;
+                
+                // Also store in localStorage for immediate use
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`, apiKey);
                 }
-              } else {
-                updatedPreferences = { ...existingPrefs[0].preferences };
               }
             }
-            
-            // Add settings to existing preferences
-            updatedPreferences = {
-              ...updatedPreferences,
-              settings: settingsForStorage
-            };
-            
-            // Update the existing record
-            const { error: updateError } = await supabase
-              .from('user_preferences')
-              .update({
-                preferences: updatedPreferences,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', existingPrefs[0].id);
-              
-            if (updateError) {
-              console.error('Error updating preferences:', updateError);
-              throw updateError;
-            }
-            
-            console.log('Successfully updated settings in database');
-          } else {
-            // Create new preferences record
-            const { error: insertError } = await supabase
-              .from('user_preferences')
-              .insert({
-                id: crypto.randomUUID(),
-                user_id: user.id,
-                preferences: { settings: settingsForStorage },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              });
-              
-            if (insertError) {
-              console.error('Error creating preferences:', insertError);
-              throw insertError;
-            }
-            
-            console.log('Successfully created settings in database');
           }
-        } catch (directDbError) {
-          console.error('Error with direct database operations:', directDbError);
+        });
+        
+        // Update state with keys found
+        if (Object.keys(newApiKeys).length > 0) {
+          setApiKeys(newApiKeys);
+          setSettings(newSettings);
+          console.log('Updated settings with API keys from ai_providers');
+        }
+      }
+      // Fall back to legacy api_keys structure if no keys found in ai_providers
+      else if (preferences.api_keys && Object.keys(preferences.api_keys).length > 0) {
+        console.log('Found legacy api_keys structure in preferences');
+        
+        // Extract API keys in the format we expect
+        const apiKeysFromDB = { ...preferences.api_keys };
+        
+        // Update state with these keys
+        const newSettings = { ...settings };
+        
+        // For each provider in our settings, check if we have a key
+        Object.keys(PROVIDER_INFO).forEach(provider => {
+          const typedProvider = provider as AIProvider;
+          const apiKey = apiKeysFromDB[provider];
           
-          // Fall back to userService as a last resort
-          const saveResult = await userService.saveUserSettings(user.id, settingsForStorage);
-          if (!saveResult) {
-            console.error('Both direct and service methods failed to save settings');
-          } else {
-            console.log('Settings saved via userService fallback');
+          if (apiKey && typedProvider && newSettings[typedProvider]) {
+            console.log(`Found API key for ${provider} in legacy structure`);
+            newSettings[typedProvider].enabled = true;
+            newSettings[typedProvider].apiKey = apiKey;
+            
+            // Also store in localStorage for immediate use
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`, apiKey);
+            }
           }
+        });
+        
+        setApiKeys(apiKeysFromDB);
+        setSettings(newSettings);
+        console.log('Updated settings with API keys from legacy structure');
+      } else {
+        console.log('No API keys found in user preferences');
+      }
+      
+      // Get providers with API keys in the database
+      const providersWithApiKeys = Object.keys(apiKeys || {}) as AIProvider[];
+      console.log('Providers with API keys in database:', providersWithApiKeys);
+      
+      // Check if there's a defaultProvider in preferences and apply it
+      if (preferences.preferences && preferences.preferences.settings && 
+          preferences.preferences.settings.defaultProvider) {
+            
+        const defaultProviderFromPrefs = preferences.preferences.settings.defaultProvider as AIProvider;
+        console.log(`Found defaultProvider in preferences: ${defaultProviderFromPrefs}`);
+        
+        // Verify the provider is valid and has an API key in the database
+        if (providersWithApiKeys.includes(defaultProviderFromPrefs)) {
+          // Valid provider with API key, set as current
+          setCurrentProvider(defaultProviderFromPrefs);
+          setSettings(current => ({
+            ...current,
+            defaultProvider: defaultProviderFromPrefs
+          }));
+          console.log(`Updated defaultProvider to: ${defaultProviderFromPrefs}`);
+        } else {
+          console.log(`Default provider ${defaultProviderFromPrefs} does not have an API key in the database`);
+          
+          // Set default provider to the first available provider with an API key
+          if (providersWithApiKeys.length > 0) {
+            const newDefaultProvider = providersWithApiKeys[0];
+            setCurrentProvider(newDefaultProvider);
+            setSettings(current => ({
+              ...current,
+              defaultProvider: newDefaultProvider
+            }));
+            console.log(`Setting default provider to ${newDefaultProvider} instead, as it has an API key in the database`);
+          }
+        }
+      } else {
+        // No default provider in preferences, set to first provider with API key
+        if (providersWithApiKeys.length > 0) {
+          const newDefaultProvider = providersWithApiKeys[0];
+          setCurrentProvider(newDefaultProvider);
+          setSettings(current => ({
+            ...current,
+            defaultProvider: newDefaultProvider
+          }));
+          console.log(`No default provider in preferences, setting to ${newDefaultProvider} as it has an API key in the database`);
         }
       }
     } catch (error) {
-      console.error('Error updating settings:', error);
+      console.error('Error loading API keys from Supabase:', error);
+    } finally {
+      setLoadingKeys(false);
+      setHasLoadedKeysFromSupabase(true);
+    }
+  };
+
+  const updateSettings = async (newSettings: ModelSettings) => {
+    // Get providers with valid API keys in the database
+    const providersWithApiKeys = Object.keys(apiKeys || {}) as AIProvider[];
+    
+    // Validate default provider has an API key in the database
+    if (newSettings.defaultProvider !== settings.defaultProvider) {
+      if (!providersWithApiKeys.includes(newSettings.defaultProvider)) {
+        console.log(`Default provider ${newSettings.defaultProvider} does not have an API key in the database`);
+        
+        // Keep the current default provider if it has an API key
+        if (providersWithApiKeys.includes(settings.defaultProvider)) {
+          newSettings.defaultProvider = settings.defaultProvider;
+          console.log(`Keeping current default provider ${settings.defaultProvider}`);
+        }
+        // Otherwise set to the first provider with an API key
+        else if (providersWithApiKeys.length > 0) {
+          newSettings.defaultProvider = providersWithApiKeys[0];
+          console.log(`Setting default provider to ${providersWithApiKeys[0]} as it has an API key in the database`);
+        }
+      }
+    }
+    
+    // Update settings in state
+    setSettings(newSettings);
+    
+    // If the default provider has changed and it's enabled with an API key, update currentProvider
+    if (newSettings.defaultProvider !== settings.defaultProvider &&
+        newSettings[newSettings.defaultProvider]?.enabled &&
+        providersWithApiKeys.includes(newSettings.defaultProvider)) {
+      console.log(`Default provider changed to ${newSettings.defaultProvider}, updating current provider`);
+      setCurrentProvider(newSettings.defaultProvider);
+    }
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      console.log(`Saving settings to localStorage with defaultProvider: ${newSettings.defaultProvider}`);
+      localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+    }
+    
+    // TODO: Migrate this to work with the new ai_providers structure
+
+    // Save API keys to Supabase for each provider if changed
+    if (user && user.id) {
+      // Create a queue of API key update operations
+      const apiKeyUpdatePromises: Promise<boolean>[] = [];
+      
+      // For each provider, check if the API key changed
+      Object.keys(PROVIDER_INFO).forEach(providerKey => {
+        const provider = providerKey as AIProvider;
+        const oldApiKey = settings[provider].apiKey;
+        const newApiKey = newSettings[provider].apiKey;
+        
+        // Only update if the key changed and the new key is valid
+        if (newApiKey !== oldApiKey && newApiKey) {
+          console.log(`API key for ${provider} has changed, updating in Supabase...`);
+          
+          // Store the API key with a name (default) for better organization
+          apiKeyUpdatePromises.push(
+            userService.storeApiKey(user.id, provider, newApiKey, 'default')
+          );
+        }
+      });
+      
+      // Execute all API key updates in parallel
+      if (apiKeyUpdatePromises.length > 0) {
+        try {
+          const results = await Promise.all(apiKeyUpdatePromises);
+          const allSuccessful = results.every(result => result === true);
+          
+          if (allSuccessful) {
+            console.log('All API key updates completed successfully');
+              } else {
+            console.warn('Some API key updates failed:', results);
+          }
+        } catch (error) {
+          console.error('Error updating API keys:', error);
+        }
+      }
+      
+      // Update other settings in the database
+      try {
+        // Remove API keys from the settings object to avoid duplication
+        const settingsWithoutApiKeys = { ...newSettings };
+        Object.keys(PROVIDER_INFO).forEach(provider => {
+          settingsWithoutApiKeys[provider as AIProvider].apiKey = '';
+        });
+        
+        // Save settings to database
+        await userService.saveUserSettings(user.id, { settings: settingsWithoutApiKeys });
+        console.log('Settings saved to database');
+      } catch (error) {
+        console.error('Error saving settings to database:', error);
+      }
+          } else {
+      console.log('User not logged in, settings will only be saved locally');
     }
   };
 
   const getApiKey = (provider: AIProvider): string => {
-    const apiKey = settings[provider].apiKey;
-    
-    // Validate API keys
-    if (provider === 'gemini' && apiKey && !apiKey.startsWith('AIza')) {
-      console.warn('Invalid Gemini API key format, should start with AIza');
-      return ''; // Return empty string to trigger fallbacks
+    // For mistral, apply more permissive validation
+    if (provider === 'mistral') {
+      // Don't block mistral keys based on length
+      return settings[provider].apiKey || '';
     }
     
-    // Mistral API keys are typically long strings
-    if (provider === 'mistral' && apiKey && apiKey.length < 30) {
-      console.warn('Mistral API key appears to be invalid (too short)');
-      return ''; // Return empty string to trigger fallbacks
+    // Perform basic validation on the API key
+    const apiKey = settings[provider].apiKey || '';
+    
+    // Different providers have different key formats, apply some basic validation
+    switch (provider) {
+      case 'openai':
+        // OpenAI API keys are typically long strings starting with 'sk-'
+        if (apiKey && (!apiKey.startsWith('sk-') || apiKey.length < 20)) {
+          console.warn('OpenAI API key appears to be invalid (incorrect format)');
+          return '';
+        }
+        break;
+      case 'gemini':
+        // Gemini API keys are typically long strings
+        if (apiKey && apiKey.length < 20) {
+          console.warn('Gemini API key appears to be invalid (too short)');
+          return '';
+        }
+        break;
+      case 'claude':
+        // Claude API keys are typically long strings
+        if (apiKey && apiKey.length < 20) {
+          console.warn('Claude API key appears to be invalid (too short)');
+          return '';
+        }
+        break;
+      // Remove the mistral validation which was too strict
     }
     
     return apiKey;

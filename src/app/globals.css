@@ -15,7 +15,7 @@
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215.4 25% 36%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
@@ -39,6 +39,22 @@
     --technical-gradient-to: 215 20% 45%;
     --learning-gradient-from: 146 68% 55%;
     --learning-gradient-to: 150 80% 65%;
+
+    /* Light mode specific shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    
+    /* Enhanced glass effect for light mode */
+    --glass-light: rgba(255, 255, 255, 0.7);
+    --glass-border-light: rgba(255, 255, 255, 0.5);
+    
+    /* Light mode specific gradients */
+    --gradient-blue-light: linear-gradient(135deg, #3b82f6, #60a5fa);
+    --gradient-indigo-light: linear-gradient(135deg, #4f46e5, #818cf8);
+    --gradient-purple-light: linear-gradient(135deg, #7c3aed, #a78bfa);
   }
 
   .dark {
@@ -61,6 +77,22 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+
+    /* Enhanced Dark mode shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+
+    /* Enhanced Dark mode glass effect */
+    --glass-dark: rgba(15, 23, 42, 0.7);
+    --glass-border-dark: rgba(30, 41, 59, 0.5);
+
+    /* Enhanced Dark mode gradients */
+    --gradient-blue-dark: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    --gradient-indigo-dark: linear-gradient(135deg, #4338ca, #6366f1);
+    --gradient-purple-dark: linear-gradient(135deg, #6d28d9, #8b5cf6);
 
     /* Enhanced Dark mode gradient adjustments */
     --thoughtful-gradient-from: 220 90% 50%;
@@ -86,15 +118,15 @@
   }
   
   ::-webkit-scrollbar-track {
-    @apply bg-slate-100;
+    @apply bg-slate-200;
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full;
+    @apply bg-slate-400 rounded-full;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-400;
+    @apply bg-slate-500;
   }
   
   .dark ::-webkit-scrollbar-track {
@@ -205,6 +237,55 @@
   .gradient-button:hover::before {
     opacity: 1;
   }
+
+  /* Enhanced dark mode card styles */
+  .card-dark {
+    @apply bg-slate-900/50 border-slate-800/50;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .card-dark:hover {
+    @apply bg-slate-900/70 border-slate-700/50;
+  }
+
+  /* Enhanced dark mode button styles */
+  .button-dark {
+    @apply bg-slate-800 text-white border-slate-700;
+    background-image: linear-gradient(to bottom right, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1));
+  }
+
+  .button-dark:hover {
+    @apply bg-slate-700 border-slate-600;
+    background-image: linear-gradient(to bottom right, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.2));
+  }
+
+  /* Enhanced dark mode input styles */
+  .input-dark {
+    @apply bg-slate-900/50 border-slate-800 text-white;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .input-dark:focus {
+    @apply border-blue-500/50 ring-2 ring-blue-500/20;
+  }
+
+  /* Enhanced dark mode glass effect */
+  .glass-dark {
+    background: var(--glass-dark);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border-dark);
+  }
+
+  /* Enhanced dark mode text gradients */
+  .gradient-text-dark {
+    background: var(--gradient-blue-dark);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
 
 @layer utilities {
@@ -264,6 +345,52 @@
   
   .no-scrollbar::-webkit-scrollbar {
     display: none;  /* Chrome, Safari, Opera */
+  }
+
+  /* Fix for Safari compatibility with backdrop-filter */
+  .glass-light {
+    background: var(--glass-light);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border-light);
+  }
+
+  .glass-dark {
+    background: var(--glass-dark);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border-dark);
+  }
+
+  /* Ensure all backdrop-filter uses have webkit prefix */
+  .backdrop-blur-sm {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  .backdrop-blur-md {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .backdrop-blur-lg {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+
+  .backdrop-blur-2xl {
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+
+  .backdrop-blur-3xl {
+    -webkit-backdrop-filter: blur(36px);
+    backdrop-filter: blur(36px);
   }
 }
 
@@ -533,6 +660,73 @@ html {
   a:active {
     transform: scale(0.98) !important;
     transition: transform 0.1s ease-in-out !important;
+  }
+
+  /* Better spacing and typography for mobile */
+  h1, h2, h3, h4, h5, h6 {
+    word-break: break-word;
+  }
+  
+  h1 {
+    font-size: clamp(1.75rem, 5vw, 2.25rem) !important;
+    line-height: 1.2 !important;
+  }
+  
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 1.875rem) !important;
+    line-height: 1.2 !important;
+  }
+  
+  /* Improved mobile card styles */
+  .card {
+    padding: 1rem !important;
+  }
+  
+  /* Better mobile layout for feature section */
+  .feature-grid {
+    gap: 1rem !important;
+  }
+  
+  /* Enhance mobile buttons */
+  .button-stack {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  
+  .button-stack > * {
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Fix spacing issues on mobile */
+  .py-20 {
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+  
+  .py-16 {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  
+  /* Fix glass effects on mobile - reduce blur for better performance */
+  .glass-light, .glass-dark {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  
+  /* Reduce animation intensity on mobile for better performance */
+  .animate-bounce {
+    animation-duration: 2s !important;
+  }
+  
+  .hover-scale:hover, .hover-lift:hover {
+    transform: none !important;
+  }
+  
+  /* Fix for grid/flex layouts */
+  .grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -848,4 +1042,186 @@ code {
     border-radius: 0.5rem;
     margin-bottom: 0.5rem !important;
   }
+}
+
+/* Add new utility classes */
+.glass-light {
+  background: var(--glass-light);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border-light);
+}
+
+.gradient-text-light {
+  background: var(--gradient-blue-light);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Enhanced card styles for light mode */
+.card-light {
+  background: var(--glass-light);
+  border: 1px solid var(--glass-border-light);
+  box-shadow: var(--shadow-md);
+}
+
+.card-light:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Improved button styles for light mode */
+.button-light {
+  background: var(--gradient-blue-light);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.button-light:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+/* Enhanced scrollbar for light mode */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+}
+
+/* Light mode specific text colors */
+.text-primary-light {
+  @apply text-slate-900;
+}
+
+.text-secondary-light {
+  @apply text-slate-700;
+}
+
+.text-muted-light {
+  @apply text-slate-600;
+}
+
+/* Enhanced focus styles for light mode */
+*:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Improved input styles for light mode */
+input, textarea, select {
+  @apply bg-white border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20;
+}
+
+/* Better link styles for light mode */
+a {
+  @apply text-blue-600 hover:text-blue-700 transition-colors;
+}
+
+/* Enhanced light mode specific animations */
+@keyframes shimmer-light {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer-light {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-light 2s infinite;
+}
+
+/* Improved responsive styles */
+@media (max-width: 640px) {
+  .glass-light {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .card-light {
+    @apply rounded-xl;
+  }
+
+  .button-light {
+    @apply text-sm py-2 px-4;
+  }
+}
+
+/* Enhanced light mode transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Improved light mode hover effects */
+@media (hover: hover) {
+  .hover-light:hover {
+    @apply bg-slate-50;
+  }
+
+  .hover-light-border:hover {
+    @apply border-slate-300;
+  }
+}
+
+/* Fix hydration issues by ensuring consistent rendering */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Preventing content shifts during hydration */
+.no-js-hide {
+  display: none;
+}
+
+.js-ready .no-js-hide {
+  display: block;
+}
+
+/* Add JS detection */
+:root {
+  --hydrated: 0;
+}
+
+.js-ready {
+  --hydrated: 1;
+}
+
+/* Improve light mode contrast further */
+.dark .text-slate-400 {
+  color: rgba(148, 163, 184, 1) !important; /* Increased from lower opacity for better contrast */
+}
+
+.text-slate-600 {
+  color: rgba(71, 85, 105, 1) !important; /* Darker for better light mode contrast */
+}
+
+/* Fix any scroll jank */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
 }

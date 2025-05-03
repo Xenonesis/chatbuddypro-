@@ -14,6 +14,12 @@ const apiKeyCache: Record<string, { key: string, timestamp: number }> = {};
 // Cache expiration time: 30 minutes
 const CACHE_EXPIRY = 30 * 60 * 1000;
 
+// AI Provider structure
+export interface AIProviderInfo {
+  enabled: boolean;
+  api_keys: Record<string, string>;
+}
+
 export const userService = {
   // Get user preferences
   async getUserPreferences(userId: string): Promise<UserPreferences | null> {
@@ -474,11 +480,12 @@ export const userService = {
     }
   },
 
-  // Store an API key
+  // Updated to use ai_providers structure
   async storeApiKey(
     userId: string,
     provider: string,
-    apiKey: string
+    apiKey: string,
+    keyName: string = 'default'
   ): Promise<boolean> {
     try {
       // Validate input parameters
@@ -498,6 +505,11 @@ export const userService = {
       }
       
       console.log(`Storing API key for provider ${provider} and user ${userId.substring(0, 8)}...`);
+      
+      // Special check for Mistral API keys - use warning but don't block
+      if (provider === 'mistral' && apiKey.length < 30) {
+        console.warn(`Warning: Mistral API key appears short (length: ${apiKey.length}). Storing anyway but it may not work.`);
+      }
       
       // Get current preferences
       const preferences = await this.getUserPreferences(userId);
@@ -520,10 +532,29 @@ export const userService = {
       if (!preferences) {
         // Create new preferences with this API key
         console.log('No existing preferences found, creating new preferences');
+        
+        // Initialize the ai_providers structure
+        const aiProviders = {
+          "openai": { "enabled": false, "api_keys": {} },
+          "gemini": { "enabled": false, "api_keys": {} },
+          "mistral": { "enabled": false, "api_keys": {} },
+          "claude": { "enabled": false, "api_keys": {} },
+          "llama": { "enabled": false, "api_keys": {} },
+          "deepseek": { "enabled": false, "api_keys": {} }
+        };
+        
+        // Update the specific provider
+        aiProviders[provider] = {
+          "enabled": true,
+          "api_keys": { [keyName]: encryptedKey }
+        };
+        
+        // For backward compatibility, also set in the old structure
         const apiKeys = { [provider]: encryptedKey };
         
         await this.upsertUserPreferences(userId, {
           api_keys: apiKeys,
+          ai_providers: aiProviders
         });
         
         return true;
@@ -531,13 +562,45 @@ export const userService = {
       
       // Update existing preferences
       console.log('Updating existing preferences with new API key');
+      
+      // For backward compatibility
       const apiKeys = preferences.api_keys || {};
+      const updatedApiKeys = {
+        ...apiKeys,
+        [provider]: encryptedKey,
+      };
+      
+      // Get current ai_providers or create default structure
+      let aiProviders = preferences.ai_providers || {
+        "openai": { "enabled": false, "api_keys": {} },
+        "gemini": { "enabled": false, "api_keys": {} },
+        "mistral": { "enabled": false, "api_keys": {} },
+        "claude": { "enabled": false, "api_keys": {} },
+        "llama": { "enabled": false, "api_keys": {} },
+        "deepseek": { "enabled": false, "api_keys": {} }
+      };
+      
+      // Make a deep copy to prevent mutation issues
+      aiProviders = JSON.parse(JSON.stringify(aiProviders));
+      
+      // Update the provider data
+      if (!aiProviders[provider]) {
+        aiProviders[provider] = { "enabled": true, "api_keys": {} };
+      } else {
+        aiProviders[provider].enabled = true;
+      }
+      
+      // Ensure api_keys object exists
+      if (!aiProviders[provider].api_keys) {
+        aiProviders[provider].api_keys = {};
+      }
+      
+      // Add the key
+      aiProviders[provider].api_keys[keyName] = encryptedKey;
       
       await this.upsertUserPreferences(userId, {
-        api_keys: {
-          ...apiKeys,
-          [provider]: encryptedKey,
-        },
+        api_keys: updatedApiKeys, // For backward compatibility
+        ai_providers: aiProviders
       });
       
       return true;
@@ -547,13 +610,13 @@ export const userService = {
     }
   },
 
-  // Retrieve and decrypt an API key - optimized with multi-level caching
-  async getApiKey(provider: string, userId: string): Promise<string | null> {
+  // Updated to use ai_providers structure
+  async getApiKey(provider: string, userId: string, keyName: string = 'default'): Promise<string | null> {
     console.log(`Getting API key for provider ${provider} and user ${userId.substring(0, 8)}...`);
     
     try {
       // First check memory cache
-      const cacheKey = `${userId}:${provider}`;
+      const cacheKey = `${userId}:${provider}:${keyName}`;
       const cachedEntry = apiKeyCache[cacheKey];
       
       // If we have a cached value that hasn't expired, use it
@@ -565,21 +628,46 @@ export const userService = {
       // Start by trying to get user preferences from database
       const userPrefs = await this.getUserPreferences(userId);
       
-      // If we found user preferences in the database
-      if (userPrefs && 
-          userPrefs.preferences && 
-          typeof userPrefs.preferences === 'object' && 
-          userPrefs.preferences.api_keys) {
+      // Try to get from ai_providers first
+      if (userPrefs && userPrefs.ai_providers) {
+        const providerInfo = userPrefs.ai_providers[provider];
         
-        console.log(`Found preferences with API keys for ${userId.substring(0, 8)}`);
+        if (providerInfo && providerInfo.enabled && providerInfo.api_keys) {
+          const encryptedKey = providerInfo.api_keys[keyName] || providerInfo.api_keys['default'];
+          
+          if (encryptedKey) {
+            try {
+              console.log(`Found encrypted key for ${provider} in ai_providers, decrypting...`);
+              const decryptedKey = await decryptApiKey(encryptedKey, userId);
+              
+              // Store in memory cache
+              apiKeyCache[cacheKey] = {
+                key: decryptedKey,
+                timestamp: Date.now()
+              };
+              
+              return decryptedKey;
+            } catch (decryptError) {
+              console.error(`Error decrypting API key for ${provider} from ai_providers:`, decryptError);
+              // Continue to fall back methods
+            }
+          }
+        }
+      }
+      
+      // Fall back to legacy api_keys if not found in ai_providers
+      if (userPrefs && 
+          userPrefs.api_keys && 
+          typeof userPrefs.api_keys === 'object') {
+        
+        console.log(`Falling back to legacy api_keys for ${userId.substring(0, 8)}`);
         
         // Try to find the specific provider's key
-        const preferenceKeys = userPrefs.preferences.api_keys;
-        const encryptedKey = preferenceKeys[provider];
+        const encryptedKey = userPrefs.api_keys[provider];
         
         if (encryptedKey) {
           try {
-            console.log(`Found encrypted key for ${provider}, decrypting...`);
+            console.log(`Found encrypted key for ${provider} in legacy structure, decrypting...`);
             const decryptedKey = await decryptApiKey(encryptedKey, userId);
             
             // Store in memory cache
@@ -588,45 +676,23 @@ export const userService = {
               timestamp: Date.now()
             };
             
+            // Migrate to new structure for future use
+            this.storeApiKey(userId, provider, decryptedKey, keyName)
+              .then(success => {
+                if (success) {
+                  console.log(`Successfully migrated ${provider} key to ai_providers structure`);
+                }
+              })
+              .catch(err => {
+                console.error(`Error migrating ${provider} key to ai_providers:`, err);
+              });
+            
             return decryptedKey;
           } catch (decryptError) {
-            console.error(`Error decrypting API key for ${provider}:`, decryptError);
-            
-            // If decryption fails, check if we have a local storage key as fallback
-            console.log(`Trying localStorage fallback for ${provider}...`);
-            if (typeof window !== 'undefined') {
-              const localKey = localStorage.getItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`);
-              if (localKey) {
-                console.log(`Found localStorage key for ${provider}, updating database...`);
-                
-                // If we found a local key, update the database for next time
-                this.storeApiKey(userId, provider, localKey)
-                  .then(success => {
-                    if (success) {
-                      console.log(`Successfully saved local ${provider} key to database`);
-                    } else {
-                      console.error(`Failed to save local ${provider} key to database`);
-                    }
-                  })
-                  .catch(err => {
-                    console.error(`Error while saving local ${provider} key to database:`, err);
-                  });
-                
-                // Cache and return the local key
-                apiKeyCache[cacheKey] = {
-                  key: localKey,
-                  timestamp: Date.now()
-                };
-                
-                return localKey;
-              }
-            }
+            console.error(`Error decrypting API key for ${provider} from legacy structure:`, decryptError);
+            // Continue to localStorage fallback
           }
-        } else {
-          console.log(`No ${provider} key found in user preferences`);
         }
-      } else {
-        console.log(`No user preferences found for ${userId.substring(0, 8)}`);
       }
       
       // If not found in database or decryption failed, try localStorage
@@ -640,7 +706,7 @@ export const userService = {
           // If the user is authenticated, try to store the key in the database for future use
           if (userId) {
             console.log(`Attempting to store localStorage ${provider} key to database...`);
-            this.storeApiKey(userId, provider, localKey)
+            this.storeApiKey(userId, provider, localKey, keyName)
               .then(success => {
                 if (success) {
                   console.log(`Successfully saved ${provider} key from localStorage to database`);
@@ -675,7 +741,7 @@ export const userService = {
             return emergencyKey;
           }
         } catch (storageError) {
-          console.error(`Failed to access localStorage fallback for ${provider}:`, storageError);
+          console.error('Error accessing localStorage in emergency fallback:', storageError);
         }
       }
       
@@ -683,56 +749,92 @@ export const userService = {
     }
   },
 
-  // Delete an API key
+  // New method to get all provider settings
+  async getProviderInfo(provider: string, userId: string): Promise<AIProviderInfo | null> {
+    try {
+      if (!userId || !provider) {
+        console.error('Cannot get provider info: Missing required parameters');
+        return null;
+      }
+      
+      // Get user preferences
+      const userPrefs = await this.getUserPreferences(userId);
+      
+      if (!userPrefs || !userPrefs.ai_providers) {
+        return null;
+      }
+      
+      // Get provider info
+      const providerInfo = userPrefs.ai_providers[provider];
+      
+      if (!providerInfo) {
+        return null;
+      }
+      
+      return providerInfo;
+    } catch (error) {
+      console.error(`Error getting provider info for ${provider}:`, error);
+      return null;
+    }
+  },
+
+  // Delete API key from new structure
   async deleteApiKey(
     userId: string,
-    provider: string
+    provider: string,
+    keyName: string = 'default'
   ): Promise<boolean> {
     try {
-      const cacheKey = `${provider}_${userId}`;
-      
-      // Remove from in-memory cache
-      if (apiKeyCache[cacheKey]) {
-        delete apiKeyCache[cacheKey];
-      }
-      
-      // Remove from localStorage
-      if (typeof window !== 'undefined') {
-        try {
-          const localStorageKey = `chatbuddy_api_key_${provider}_${userId}`;
-          localStorage.removeItem(localStorageKey);
-          console.log(`Removed API key from localStorage: ${localStorageKey}`);
-        } catch (localStorageError) {
-          console.warn('Error removing key from localStorage:', localStorageError);
-          // Continue with database deletion even if localStorage fails
-        }
-      }
-      
-      // Remove from database
-      const preferences = await this.getUserPreferences(userId);
-      
-      if (!preferences) {
+      if (!userId || !provider) {
+        console.error('Cannot delete API key: Missing required parameters');
         return false;
       }
       
-      // Handle both preference structures
-      const updated = { ...preferences };
+      console.log(`Deleting API key for provider ${provider} and user ${userId.substring(0, 8)}...`);
       
-      // Check new structure
-      if (updated.preferences?.api_keys && updated.preferences.api_keys[provider]) {
-        const apiKeys = { ...updated.preferences.api_keys };
-        delete apiKeys[provider];
-        updated.preferences.api_keys = apiKeys;
+      // Get current preferences
+      const preferences = await this.getUserPreferences(userId);
+      
+      if (!preferences) {
+        console.warn('No preferences found to delete API key from');
+        return false;
       }
       
-      // Check legacy structure
-      if (updated.api_keys && updated.api_keys[provider]) {
-        const apiKeys = { ...updated.api_keys };
-        delete apiKeys[provider];
-        updated.api_keys = apiKeys;
+      // Remove from legacy structure (for backward compatibility)
+      const apiKeys = { ...preferences.api_keys } || {};
+      delete apiKeys[provider];
+      
+      // Remove from new structure
+      let aiProviders = preferences.ai_providers || {};
+      aiProviders = JSON.parse(JSON.stringify(aiProviders)); // Deep copy
+      
+      if (aiProviders[provider] && aiProviders[provider].api_keys) {
+        delete aiProviders[provider].api_keys[keyName];
+        
+        // If no keys left, disable the provider
+        if (Object.keys(aiProviders[provider].api_keys).length === 0) {
+          aiProviders[provider].enabled = false;
+        }
       }
       
-      await this.upsertUserPreferences(userId, updated);
+      // Update preferences
+      await this.upsertUserPreferences(userId, {
+        api_keys: apiKeys,
+        ai_providers: aiProviders
+      });
+      
+      // Also clear from cache
+      Object.keys(apiKeyCache).forEach(key => {
+        if (key.startsWith(`${userId}:${provider}:${keyName}`)) {
+          delete apiKeyCache[key];
+        }
+      });
+      
+      // Remove from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`chatbuddy_api_key_${provider}_${userId}`);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error deleting API key:', error);
@@ -743,31 +845,43 @@ export const userService = {
   // Export all user data
   async exportUserData(userId: string): Promise<string> {
     try {
+      console.log(`Starting data export for user: ${userId}`);
+      
       // Get user preferences
       const preferences = await this.getUserPreferences(userId);
+      console.log(`Retrieved preferences: ${preferences ? 'success' : 'not found'}`);
       
       // Get user profile
       const profile = await this.getUserProfile(userId);
+      console.log(`Retrieved profile: ${profile ? 'success' : 'not found'}`);
 
       // Get all user chats
+      console.log('Fetching user chats...');
       const { data: chats, error: chatsError } = await supabase
         .from('chats')
         .select('*')
         .eq('user_id', userId as any);
       
       if (chatsError) {
-        throw chatsError;
+        console.error('Error fetching chats for export:', chatsError);
+        throw new Error(`Failed to fetch chats: ${chatsError.message}`);
       }
       
+      console.log(`Retrieved ${chats?.length || 0} chats`);
+      
       // Get all chat messages
+      console.log('Fetching chat messages...');
       const { data: messages, error: messagesError } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('user_id', userId as any);
       
       if (messagesError) {
-        throw messagesError;
+        console.error('Error fetching messages for export:', messagesError);
+        throw new Error(`Failed to fetch messages: ${messagesError.message}`);
       }
+      
+      console.log(`Retrieved ${messages?.length || 0} messages`);
       
       // Create export object (excluding encrypted API keys for security)
       const exportData = {
@@ -783,25 +897,40 @@ export const userService = {
             language: preferences?.language,
           },
         },
-        chats: chats.map(chat => ({
+        chats: chats ? chats.map(chat => ({
           id: chat.id,
           title: chat.title,
           created_at: chat.created_at,
           updated_at: chat.updated_at,
           model: chat.model,
-        })),
-        messages: messages.map(msg => ({
+        })) : [],
+        messages: messages ? messages.map(msg => ({
           chat_id: msg.chat_id,
           role: msg.role,
           content: msg.content,
           created_at: msg.created_at,
-        })),
+        })) : [],
       };
       
+      console.log('Data export object created successfully');
       return JSON.stringify(exportData, null, 2);
     } catch (error) {
       console.error('Error exporting user data:', error);
-      throw error;
+      
+      // Check for connection issues
+      if (error instanceof Error) {
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('network') || 
+            errorMessage.includes('connection') || 
+            errorMessage.includes('fetch')) {
+          throw new Error('Network error: Please check your internet connection and try again.');
+        }
+      }
+      
+      // Rethrow the error with additional context
+      throw error instanceof Error 
+        ? new Error(`Export failed: ${error.message}`) 
+        : new Error('Unknown error during export');
     }
   },
 
@@ -1195,6 +1324,7 @@ export const userService = {
   },
   
   // Validate database connection and table access
+  // For internal use only - not exposed in the UI
   async validateConnection(): Promise<{success: boolean, error?: string, tables?: any}> {
     try {
       console.log('Testing Supabase connection and table access...');

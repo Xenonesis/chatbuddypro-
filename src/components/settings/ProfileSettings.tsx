@@ -455,265 +455,181 @@ export default function ProfileSettings() {
   };
 
   return (
-    <Card className="w-full shadow-md border-slate-200 dark:border-slate-800">
-      <CardHeader className="bg-slate-50 dark:bg-slate-900 rounded-t-lg border-b border-slate-100 dark:border-slate-800">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <User className="h-5 w-5" />
+    <div className="w-full space-y-6 animate-fadeIn">
+      <Card className="overflow-hidden border-primary/10">
+        <CardHeader className="relative pb-2">
+          <div className="absolute inset-0 h-12 bg-gradient-to-r from-primary/10 to-primary/5"></div>
+          <CardTitle className="flex items-center gap-2 pt-4 z-10 relative">
+            <User className="h-5 w-5 text-primary" />
             Profile Settings
           </CardTitle>
+          <CardDescription className="z-10 relative">
+            Update your personal information
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Profile Status Banner */}
+          <div className="rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-amber-50/50 p-4 text-sm text-amber-800 dark:border-amber-800/30 dark:from-amber-900/20 dark:to-amber-900/10 dark:text-amber-400">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+              <span>{profileExists ? "Your profile is complete. You can update your information anytime." : "Update your profile to personalize your experience."}</span>
+            </div>
+          </div>
+
+          {/* Profile Completion */}
+          <div>
+            <h3 className="text-sm font-medium mb-2">Profile Completion</h3>
+            <ProfileCompletionIndicator profile={profile} />
+          </div>
+
+          <Separator className="my-4 bg-primary/10" />
+
+          {/* Personal Information */}
+          <div className="space-y-4">
+            <h3 className="font-medium text-primary">Personal Information</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2.5">
+                <Label htmlFor="full_name" className="text-sm font-medium">Full Name <span className="text-destructive">*</span></Label>
+                <Input
+                  id="full_name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={profile.full_name || ''}
+                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                  className={errors.full_name ? 'border-destructive' : 'focus:border-primary'}
+                />
+                {errors.full_name && <p className="text-xs text-destructive">{errors.full_name}</p>}
+              </div>
+
+              <div className="space-y-2.5">
+                <Label htmlFor="age" className="text-sm font-medium">Age</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  placeholder="Enter your age"
+                  value={profile.age || ''}
+                  onChange={(e) => setProfile({ ...profile, age: e.target.value ? Number(e.target.value) : null })}
+                  className={errors.age ? 'border-destructive' : 'focus:border-primary'}
+                />
+                {errors.age && <p className="text-xs text-destructive">{errors.age}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2.5">
+                <Label htmlFor="gender" className="text-sm font-medium">Gender</Label>
+                <Select
+                  value={profile.gender || ''}
+                  onValueChange={(value) => setProfile({ ...profile, gender: value as any })}
+                >
+                  <SelectTrigger id="gender" className={errors.gender ? 'border-destructive' : 'focus:border-primary'}>
+                    <SelectValue placeholder="Select your gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.gender && <p className="text-xs text-destructive">{errors.gender}</p>}
+              </div>
+
+              <div className="space-y-2.5">
+                <Label htmlFor="mobile_number" className="text-sm font-medium">Mobile Number</Label>
+                <Input
+                  id="mobile_number"
+                  type="tel"
+                  placeholder="Enter your mobile number"
+                  value={profile.mobile_number || ''}
+                  onChange={(e) => setProfile({ ...profile, mobile_number: e.target.value ? Number(e.target.value) : null })}
+                  className={errors.mobile_number ? 'border-destructive' : 'focus:border-primary'}
+                />
+                {errors.mobile_number && <p className="text-xs text-destructive">{errors.mobile_number}</p>}
+              </div>
+            </div>
+          </div>
+
+          <Separator className="my-4 bg-primary/10" />
+
+          {/* Professional Information */}
+          <div className="space-y-4">
+            <h3 className="font-medium text-primary">Professional Information</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2.5">
+                <Label htmlFor="profession" className="text-sm font-medium">
+                  <span className="flex items-center gap-1">
+                    <Briefcase className="h-3.5 w-3.5" />
+                    Profession
+                  </span>
+                </Label>
+                <Input
+                  id="profession"
+                  type="text"
+                  placeholder="Enter your profession"
+                  value={profile.profession || ''}
+                  onChange={(e) => setProfile({ ...profile, profession: e.target.value })}
+                  className={errors.profession ? 'border-destructive' : 'focus:border-primary'}
+                />
+                {errors.profession && <p className="text-xs text-destructive">{errors.profession}</p>}
+              </div>
+
+              <div className="space-y-2.5">
+                <Label htmlFor="organization_name" className="text-sm font-medium">
+                  <span className="flex items-center gap-1">
+                    <Building className="h-3.5 w-3.5" />
+                    Organization
+                  </span>
+                </Label>
+                <Input
+                  id="organization_name"
+                  type="text"
+                  placeholder="Enter your organization name"
+                  value={profile.organization_name || ''}
+                  onChange={(e) => setProfile({ ...profile, organization_name: e.target.value })}
+                  className={errors.organization_name ? 'border-destructive' : 'focus:border-primary'}
+                />
+                {errors.organization_name && <p className="text-xs text-destructive">{errors.organization_name}</p>}
+              </div>
+            </div>
+          </div>
+
+          {/* Last Update Information */}
+          {lastSynced && (
+            <div className="text-xs text-muted-foreground mt-4 flex items-center gap-1.5">
+              <RefreshCw className="h-3 w-3" /> 
+              Last updated: {formatLastSynced()}
+            </div>
+          )}
+        </CardContent>
+        
+        <CardFooter className="flex justify-between border-t bg-muted/20 px-6 py-4">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={handleRefreshProfile}
             disabled={isRefreshing || isLoading}
-            className="flex items-center gap-2"
+            className="flex items-center gap-1"
           >
-            {isRefreshing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
+            {isRefreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
             Refresh
           </Button>
-        </div>
-        <CardDescription className="flex justify-between">
-          <span>Update your personal information</span>
-          {lastSynced && (
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              Last synced: {formatLastSynced()}
-            </span>
-          )}
-        </CardDescription>
-      </CardHeader>
+          
+          <Button
+            type="submit"
+            disabled={isSaving || isLoading || (updatedFields.length === 0 && profileExists)}
+            onClick={handleSave}
+            className="flex items-center gap-1.5"
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save Profile
+          </Button>
+        </CardFooter>
+      </Card>
       
-      {!isLoading && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 px-6 py-3 border-b border-amber-100 dark:border-amber-800">
-          {isProfileIncomplete() ? (
-            <div className="space-y-2">
-              <p className="text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                Your profile is incomplete. Please provide the required information.
-              </p>
-              <ProfileCompletionIndicator profile={profile} />
-            </div>
-          ) : (
-            <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Your profile is complete! You can still update your information if needed.
-            </p>
-          )}
-        </div>
-      )}
-      
-      <CardContent className="pt-6">
-        {isLoading ? (
-          <div className="flex justify-center p-4">
-            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Personal Information</h3>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="full_name" className="flex items-center">
-                  Full Name
-                  <span className="text-red-500 ml-1">*</span>
-                  <span className="text-xs text-slate-400 ml-1">(required)</span>
-                </Label>
-                <Input
-                  id="full_name"
-                  value={profile.full_name || ''}
-                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                  placeholder="Enter your full name"
-                  className={`${updatedFields.includes('full_name') ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                    ${errors.full_name ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}
-                    ${!profile.full_name ? 'border-amber-300' : ''}`}
-                />
-                {errors.full_name && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errors.full_name}</p>
-                )}
-                {updatedFields.includes('full_name') && (
-                  <p className="text-xs flex items-center gap-1 text-green-600 dark:text-green-400 mt-1">
-                    <CheckCircle className="h-3 w-3" /> Updated
-                  </p>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="age">Age</Label>
-                  <Input
-                    id="age"
-                    type="number"
-                    value={profile.age || ''}
-                    onChange={(e) => {
-                      const value = e.target.value.trim();
-                      setProfile({ 
-                        ...profile, 
-                        age: value ? Number(value) : null 
-                      });
-                    }}
-                    placeholder="Enter your age"
-                    min="13"
-                    max="120"
-                    className={`${updatedFields.includes('age') ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                      ${errors.age ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}`}
-                  />
-                  {errors.age && (
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errors.age}</p>
-                  )}
-                  {updatedFields.includes('age') && (
-                    <p className="text-xs flex items-center gap-1 text-green-600 dark:text-green-400 mt-1">
-                      <CheckCircle className="h-3 w-3" /> Updated
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-1.5">
-                  <Label htmlFor="gender">Gender</Label>
-                  <Select
-                    value={profile.gender || ''}
-                    onValueChange={(value) => setProfile({ ...profile, gender: value as any })}
-                  >
-                    <SelectTrigger 
-                      id="gender"
-                      className={updatedFields.includes('gender') ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                    >
-                      <SelectValue placeholder="Select your gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="non-binary">Non-binary</SelectItem>
-                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {updatedFields.includes('gender') && (
-                    <p className="text-xs flex items-center gap-1 text-green-600 dark:text-green-400 mt-1">
-                      <CheckCircle className="h-3 w-3" /> Updated
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <Separator className="my-6" />
-            
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Professional Information</h3>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="profession">
-                  <div className="flex items-center gap-1.5">
-                    <Briefcase className="h-4 w-4" />
-                    <span>Profession</span>
-                  </div>
-                </Label>
-                <Input
-                  id="profession"
-                  value={profile.profession || ''}
-                  onChange={(e) => setProfile({ ...profile, profession: e.target.value })}
-                  placeholder="Enter your profession"
-                  className={updatedFields.includes('profession') ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                />
-                {updatedFields.includes('profession') && (
-                  <p className="text-xs flex items-center gap-1 text-green-600 dark:text-green-400 mt-1">
-                    <CheckCircle className="h-3 w-3" /> Updated
-                  </p>
-                )}
-              </div>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="organization_name">
-                  <div className="flex items-center gap-1.5">
-                    <Building className="h-4 w-4" />
-                    <span>Organization</span>
-                  </div>
-                </Label>
-                <Input
-                  id="organization_name"
-                  value={profile.organization_name || ''}
-                  onChange={(e) => setProfile({ ...profile, organization_name: e.target.value })}
-                  placeholder="Enter your organization name"
-                  className={updatedFields.includes('organization_name') ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                />
-                {updatedFields.includes('organization_name') && (
-                  <p className="text-xs flex items-center gap-1 text-green-600 dark:text-green-400 mt-1">
-                    <CheckCircle className="h-3 w-3" /> Updated
-                  </p>
-                )}
-              </div>
-              
-              <div className="space-y-1.5">
-                <Label htmlFor="mobile_number">
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="h-4 w-4" />
-                    <span>Mobile Number</span>
-                  </div>
-                </Label>
-                <Input
-                  id="mobile_number"
-                  type="tel"
-                  inputMode="numeric"
-                  value={profile.mobile_number?.toString() || ''}
-                  onChange={(e) => {
-                    // Only allow numeric values
-                    const value = e.target.value.replace(/[^0-9]/g, '');
-                    setProfile({ 
-                      ...profile, 
-                      mobile_number: value ? Number(value) : null 
-                    });
-                  }}
-                  placeholder="Enter your mobile number"
-                  className={`${updatedFields.includes('mobile_number') ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : ''}
-                    ${errors.mobile_number ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''}`}
-                />
-                {errors.mobile_number && (
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errors.mobile_number}</p>
-                )}
-                {updatedFields.includes('mobile_number') && (
-                  <p className="text-xs flex items-center gap-1 text-green-600 dark:text-green-400 mt-1">
-                    <CheckCircle className="h-3 w-3" /> Updated
-                  </p>
-                )}
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Enter numbers only, no spaces or special characters
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="bg-slate-50 dark:bg-slate-900 rounded-b-lg border-t border-slate-100 dark:border-slate-800 py-4">
-        <Button
-          onClick={handleSave}
-          className={`w-full sm:w-auto ml-auto ${!profileExists ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
-          disabled={isLoading || isSaving}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : !profileExists ? (
-            <>
-              <User className="mr-2 h-4 w-4" />
-              Create Profile
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Profile
-            </>
-          )}
-        </Button>
-      </CardFooter>
-    </Card>
+      {/* Error notification modal would go here if needed */}
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 type ResponsiveContainerProps = {
   children: React.ReactNode;
@@ -25,6 +25,13 @@ export default function ResponsiveContainer({
   padding = 'md',
   centerContent = false,
 }: ResponsiveContainerProps) {
+  // Add client-side only state to prevent hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
   const maxWidthClass = {
     xs: 'max-w-xs', // 20rem (320px)
     sm: 'max-w-sm', // 24rem (384px)
@@ -47,7 +54,8 @@ export default function ResponsiveContainer({
         'w-full mx-auto',
         maxWidthClass,
         paddingClass,
-        centerContent && 'flex flex-col items-center justify-center',
+        // Only apply client-side-specific styling when mounted
+        mounted && centerContent && 'flex flex-col items-center justify-center',
         className
       )}
     >

@@ -72,6 +72,112 @@ export function extractSuggestionsFromText(text: string): string[] {
 }
 
 /**
+ * Parse user prompt to extract suggestion themes or specific suggestion requests
+ * @param userPrompt - The user's prompt text that may contain suggestion directions
+ * @returns Array of suggestion types or specific suggestions
+ */
+export function processSuggestionPrompt(userPrompt: string): string[] {
+  if (!userPrompt) return [];
+  
+  const promptLower = userPrompt.toLowerCase();
+
+  // Check for explicit suggestion requests
+  if (promptLower.includes('suggest') || promptLower.includes('recommendation')) {
+    // Extract what comes after "suggest" or "recommendation"
+    const suggestMatch = promptLower.match(/suggest(?:ion)?s?\s+(?:about|for|on)?\s+([^.?!]+)[.?!]?/i);
+    const recommendMatch = promptLower.match(/recommend(?:ation)?s?\s+(?:about|for|on)?\s+([^.?!]+)[.?!]?/i);
+    
+    if (suggestMatch?.[1] || recommendMatch?.[1]) {
+      const topic = (suggestMatch?.[1] || recommendMatch?.[1]).trim();
+      // Generate suggestions based on the specific topic requested
+      return generateSuggestionsForTopic(topic);
+    }
+  }
+  
+  // Check for theme-based suggestion requests
+  const themes = {
+    coding: ['coding', 'programming', 'development', 'software', 'app', 'web'],
+    writing: ['writing', 'blog', 'article', 'essay', 'content'],
+    learning: ['learning', 'education', 'study', 'understand', 'knowledge'],
+    creative: ['creative', 'design', 'idea', 'brainstorm', 'inspiration'],
+    business: ['business', 'marketing', 'strategy', 'startup', 'product']
+  };
+  
+  for (const [theme, keywords] of Object.entries(themes)) {
+    if (keywords.some(keyword => promptLower.includes(keyword))) {
+      return getThemeSuggestions(theme);
+    }
+  }
+  
+  // Return default suggestions if no specific theme is found
+  return [];
+}
+
+/**
+ * Generate tailored suggestions for a specific topic
+ */
+function generateSuggestionsForTopic(topic: string): string[] {
+  // Generate questions related to the specific topic
+  return [
+    `What are the key aspects of ${topic}?`,
+    `How can I learn more about ${topic}?`,
+    `What are common challenges with ${topic}?`,
+    `What are the best practices for ${topic}?`,
+    `Can you provide examples related to ${topic}?`
+  ];
+}
+
+/**
+ * Get suggestions based on a specific theme
+ */
+function getThemeSuggestions(theme: string): string[] {
+  switch (theme) {
+    case 'coding':
+      return [
+        'How do I optimize my code for better performance?',
+        'What design patterns would be appropriate for my project?',
+        'Can you help me debug this issue?',
+        'What are modern best practices for web development?',
+        'How can I implement this feature more efficiently?'
+      ];
+    case 'writing':
+      return [
+        'How can I make my writing more engaging?',
+        'Can you help me structure this article?',
+        'What tone would be appropriate for this audience?',
+        'How do I create a compelling introduction?',
+        'Can you suggest ways to improve my writing style?'
+      ];
+    case 'learning':
+      return [
+        'What is the most effective way to learn this concept?',
+        'Can you explain this in simpler terms?',
+        'How do these ideas connect to what I already know?',
+        'What resources would you recommend for deeper learning?',
+        'Can you provide a practical example of this concept?'
+      ];
+    case 'creative':
+      return [
+        'How can I approach this problem more creatively?',
+        'Can you help me brainstorm ideas for this project?',
+        'What is an unconventional approach to solving this?',
+        'How do I overcome creative blocks?',
+        'Can you suggest ways to make this design more innovative?'
+      ];
+    case 'business':
+      return [
+        'What strategies would help grow my business?',
+        'How can I improve my product\'s market fit?',
+        'What metrics should I track for my business?',
+        'How do I create an effective marketing plan?',
+        'What are common pitfalls to avoid with my startup?'
+      ];
+    default:
+      return getGeneralSuggestions();
+  }
+}
+
+/**
  * Generate a follow-up question based on the latest message
  */
 export async function generateFollowUpQuestion(message: string): Promise<string | null> {

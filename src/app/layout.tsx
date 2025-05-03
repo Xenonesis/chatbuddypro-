@@ -16,6 +16,40 @@ export const metadata: Metadata = {
   title: 'ChatBuddy - Multiple AI Models Chat',
   description: 'Chat with AI models from OpenAI, Google Gemini, Anthropic Claude, Mistral and more. Use your own API keys.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://chatbuddypro.com'),
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon.png', sizes: '192x192' },
+      { url: '/icon-512.png', sizes: '512x512' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180' },
+    ],
+    shortcut: '/favicon.ico',
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'ChatBuddy',
+  },
+  applicationName: 'ChatBuddy',
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'ChatBuddy',
+    title: 'ChatBuddy - Multiple AI Models Chat',
+    description: 'Chat with AI models from OpenAI, Google Gemini, Anthropic Claude, Mistral and more.',
+    images: [{ url: '/og-image.png' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ChatBuddy - Multiple AI Models Chat',
+    description: 'Chat with AI models from OpenAI, Google Gemini, Anthropic Claude, Mistral and more.',
+    images: [{ url: '/og-image.png' }],
+  },
 };
 
 // Preload critical fonts
@@ -33,7 +67,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://gphdrsfbypnckxbdjjap.supabase.co" />
         <link rel="dns-prefetch" href="https://gphdrsfbypnckxbdjjap.supabase.co" />
       </head>
-      <body className={`${GeistSans.variable} ${GeistMono.variable} min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950`}>
+      <body 
+        className={`${GeistSans.variable} ${GeistMono.variable} min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950`}
+        suppressHydrationWarning
+      >
         <ThemeProvider>
           <AuthProvider>
             <ModelSettingsProvider>

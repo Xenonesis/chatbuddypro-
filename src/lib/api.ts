@@ -72,7 +72,21 @@ function addSystemMessageIfNeeded(messages: ChatMessage[], systemMessage?: strin
 
 // OpenAI API
 export async function callOpenAI(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
-  let apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+  let apiKey = '';
+  
+  // First check localStorage directly
+  if (typeof window !== 'undefined') {
+    apiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY') || localStorage.getItem('OPENAI_API_KEY') || '';
+  }
+  
+  // Fallback to env variable if no localStorage key
+  apiKey = apiKey || process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
+  
+  // Use settings if provided and no direct key found
+  if (settings && !apiKey) {
+    apiKey = settings.openai.apiKey;
+  }
+  
   let model = 'gpt-3.5-turbo';
   let temperature = 0.7;
   let maxTokens = 500;
@@ -80,8 +94,10 @@ export async function callOpenAI(messages: ChatMessage[], settings?: ModelSettin
   
   // Use settings if provided
   if (settings) {
-    apiKey = settings.openai.apiKey || apiKey;
-    model = settings.openai.selectedModel;
+    // Don't override apiKey if we already have one
+    if (!apiKey) {
+      apiKey = settings.openai.apiKey || apiKey;
+    }
     
     // Get parameters based on chat mode
     const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
@@ -129,8 +145,22 @@ export async function callOpenAI(messages: ChatMessage[], settings?: ModelSettin
 }
 
 // Gemini API
-export async function callGemini(prompt: string, settings?: ModelSettings): Promise<string> {
-  let apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+export async function callGemini(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
+  let apiKey = '';
+  
+  // First check localStorage directly
+  if (typeof window !== 'undefined') {
+    apiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY') || localStorage.getItem('GEMINI_API_KEY') || '';
+  }
+  
+  // Fallback to env variable if no localStorage key
+  apiKey = apiKey || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
+  
+  // Use settings if provided and no direct key found
+  if (settings && !apiKey) {
+    apiKey = settings.gemini.apiKey;
+  }
+  
   let model = 'gemini-pro'; // Default to known working model
   let temperature = 0.7;
   let maxTokens = 500;
@@ -151,13 +181,12 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
   if (settings) {
     // Check if gemini settings exist before trying to access apiKey
     if (settings.gemini) {
-      apiKey = settings.gemini.apiKey || apiKey;
-      // Only use selectedModel if it's a non-empty string
-      if (settings.gemini.selectedModel && typeof settings.gemini.selectedModel === 'string' && settings.gemini.selectedModel.trim() !== '') {
-        model = settings.gemini.selectedModel;
+      // Don't override apiKey if we already have one
+      if (!apiKey) {
+        apiKey = settings.gemini.apiKey || apiKey;
       }
       
-      console.log("callGemini: Using model from settings:", model);
+      console.log("callGemini: Using default model:", model);
       
       // Get parameters based on chat mode
       try {
@@ -213,11 +242,12 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
   
   // More robust API key validation - check for proper format
   if (!apiKey) {
-    throw new Error('Gemini API key is not configured. Please add it to your .env.local file or settings.');
+    throw new Error('Gemini API key is not configured. Please set it in Settings or .env.local');
   }
   
-  if (!apiKey.startsWith('AIza')) {
-    throw new Error('Invalid Gemini API key format. Gemini API keys should start with "AIza".');
+  // Remove the strict format check, only ensure key is not empty
+  if (apiKey.trim() === '') {
+    throw new Error('Invalid Gemini API key. The key cannot be empty.');
   }
   
   // Maximum retries for API calls
@@ -309,11 +339,18 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
                 continue;
               }
             }
-            throw new Error(`Gemini API model not found. Model "${apiModelName}" may not exist or be available for the "${apiVersion}" API version.`);
+            const notFoundError = new Error(`Gemini API model not found. Model "${apiModelName}" may not exist or be available for the "${apiVersion}" API version.`);
+            notFoundError.status = response.status;
+            throw notFoundError;
           } else if (response.status === 429) {
-            throw new Error(`Gemini API rate limit exceeded. Please try again later.`);
+            const rateLimitError = new Error(`Gemini API rate limit exceeded. Please try again later.`);
+            rateLimitError.status = response.status;
+            throw rateLimitError;
           } else {
-            throw new Error(errorJson.error?.message || `Gemini API error: ${response.status} - ${response.statusText}`);
+            const apiError = new Error(errorJson.error?.message || `Gemini API error: ${response.status} - ${response.statusText}`);
+            apiError.status = response.status;
+            apiError.responseData = errorJson;
+            throw apiError;
           }
         }
         
@@ -338,7 +375,9 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
         return data.candidates[0].content.parts[0].text;
       } catch (fetchError) {
         if (fetchError && typeof fetchError === 'object' && 'name' in fetchError && fetchError.name === 'AbortError') {
-          throw new Error('Gemini API request timed out after 15 seconds');
+          const timeoutError = new Error('Gemini API request timed out after 15 seconds');
+          timeoutError.cause = fetchError;
+          throw timeoutError;
         }
         throw fetchError;
       }
@@ -385,7 +424,10 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
       // If we've reached max retries, throw the error
       if (retries === MAX_RETRIES) {
         if (error instanceof Error) {
-          throw new Error(`Gemini API error: ${error.message}`);
+          // Preserve the original error with its stack trace by using the cause property
+          const enhancedError = new Error(`Gemini API error: ${error.message}`);
+          enhancedError.cause = error;
+          throw enhancedError;
         } else {
           throw new Error('Unknown error occurred while calling Gemini API');
         }
@@ -403,36 +445,47 @@ export async function callGemini(prompt: string, settings?: ModelSettings): Prom
 
 // Mistral API
 export async function callMistral(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
-  let apiKey = process.env.NEXT_PUBLIC_MISTRAL_API_KEY;
-  let model = 'mistral-small';
+  let apiKey = '';
+  
+  // First check localStorage directly
+  if (typeof window !== 'undefined') {
+    apiKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY') || localStorage.getItem('MISTRAL_API_KEY') || '';
+  }
+  
+  // Fallback to env variable if no localStorage key
+  apiKey = apiKey || process.env.NEXT_PUBLIC_MISTRAL_API_KEY || '';
+  
+  // Use settings if provided and no direct key found
+  if (settings && !apiKey) {
+    apiKey = settings.mistral.apiKey;
+  }
+  
+  let model = 'mistral-small'; // Default model
   let temperature = 0.7;
   let maxTokens = 500;
   let finalMessages = [...messages];
   
-  // Use settings if provided
-  if (settings && settings.mistral) {
-    apiKey = settings.mistral.apiKey || apiKey;
-    model = settings.mistral.selectedModel || model;
+  if (settings) {
+    // Don't override apiKey if we already have one
+    if (!apiKey) {
+      apiKey = settings.mistral.apiKey || apiKey;
+    }
     
     // Get parameters based on chat mode
-    try {
-      const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
-        getParametersForMode(settings, 'mistral');
-      
-      temperature = modeTemp || temperature;
-      maxTokens = modeMaxTokens || maxTokens;
-      
-      // Add system message if provided
-      if (systemMessage) {
-        finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
-      }
-    } catch (error) {
-      console.warn('Error getting parameters for Mistral, using defaults:', error);
+    const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
+      getParametersForMode(settings, 'mistral');
+    
+    temperature = modeTemp;
+    maxTokens = modeMaxTokens;
+    
+    // Add system message if provided
+    if (systemMessage) {
+      finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
     }
   }
   
   if (!apiKey) {
-    throw new Error('Mistral API key is not configured. Please add it to your .env.local file or settings.');
+    throw new Error('Mistral API key is not configured');
   }
   
   // Maximum retries
@@ -474,13 +527,22 @@ export async function callMistral(messages: ChatMessage[], settings?: ModelSetti
         
         // Check for specific error types and provide more helpful messages
         if (response.status === 401) {
-          throw new Error(`Mistral API key is invalid or has expired`);
+          const authError = new Error(`Mistral API key is invalid or has expired`);
+          authError.status = response.status;
+          throw authError;
         } else if (response.status === 404) {
-          throw new Error(`Mistral API model not found: "${model}". The model may not exist or be available.`);
+          const notFoundError = new Error(`Mistral API model not found: "${model}". The model may not exist or be available.`);
+          notFoundError.status = response.status;
+          throw notFoundError;
         } else if (response.status === 429) {
-          throw new Error(`Mistral API rate limit exceeded. Please try again later.`);
+          const rateLimitError = new Error(`Mistral API rate limit exceeded. Please try again later.`);
+          rateLimitError.status = response.status;
+          throw rateLimitError;
         } else {
-          throw new Error(errorJson.error?.message || `Mistral API error: ${response.status} - ${response.statusText}`);
+          const apiError = new Error(errorJson.error?.message || `Mistral API error: ${response.status} - ${response.statusText}`);
+          apiError.status = response.status;
+          apiError.responseData = errorJson;
+          throw apiError;
         }
       }
       
@@ -501,7 +563,10 @@ export async function callMistral(messages: ChatMessage[], settings?: ModelSetti
       // If we're on the final retry, throw the error
       if (retries === MAX_RETRIES) {
         if (error instanceof Error) {
-          throw new Error(`Mistral API error: ${error.message}`);
+          // Preserve the original error with its stack trace
+          const enhancedError = new Error(`Mistral API error: ${error.message}`);
+          enhancedError.cause = error;
+          throw enhancedError;
         } else {
           throw new Error('Unknown error occurred while calling Mistral API');
         }
@@ -519,16 +584,31 @@ export async function callMistral(messages: ChatMessage[], settings?: ModelSetti
 
 // Claude API
 export async function callClaude(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
-  let apiKey = process.env.NEXT_PUBLIC_CLAUDE_API_KEY;
-  let model = 'claude-3-5-sonnet-20240620';
+  let apiKey = '';
+  
+  // First check localStorage directly
+  if (typeof window !== 'undefined') {
+    apiKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY') || localStorage.getItem('CLAUDE_API_KEY') || '';
+  }
+  
+  // Fallback to env variable if no localStorage key
+  apiKey = apiKey || process.env.NEXT_PUBLIC_CLAUDE_API_KEY || '';
+  
+  // Use settings if provided and no direct key found
+  if (settings && !apiKey) {
+    apiKey = settings.claude.apiKey;
+  }
+  
+  let model = 'claude-3-5-sonnet-20240620'; // Default model
   let temperature = 0.7;
   let maxTokens = 500;
   let finalMessages = [...messages];
   
-  // Use settings if provided
   if (settings) {
-    apiKey = settings.claude.apiKey || apiKey;
-    model = settings.claude.selectedModel;
+    // Don't override apiKey if we already have one
+    if (!apiKey) {
+      apiKey = settings.claude.apiKey || apiKey;
+    }
     
     // Get parameters based on chat mode
     const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
@@ -579,28 +659,37 @@ export async function callClaude(messages: ChatMessage[], settings?: ModelSettin
 
 // Llama API
 export async function callLlama(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
-  let apiKey = process.env.NEXT_PUBLIC_LLAMA_API_KEY;
-  let model = 'llama-3-8b-instruct';
+  let apiKey = '';
+  
+  // First check localStorage directly
+  if (typeof window !== 'undefined') {
+    apiKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY') || localStorage.getItem('LLAMA_API_KEY') || '';
+  }
+  
+  // Fallback to env variable if no localStorage key
+  apiKey = apiKey || process.env.NEXT_PUBLIC_LLAMA_API_KEY || '';
+  
+  // Use settings if provided and no direct key found
+  if (settings && !apiKey) {
+    apiKey = settings.llama.apiKey;
+  }
+  
+  let model = 'llama-3-8b-instruct'; // Default model
   let temperature = 0.7;
   let maxTokens = 500;
-  let finalMessages = [...messages];
   
-  // Use settings if provided
   if (settings) {
-    apiKey = settings.llama.apiKey || apiKey;
-    model = settings.llama.selectedModel;
+    // Don't override apiKey if we already have one
+    if (!apiKey) {
+      apiKey = settings.llama.apiKey || apiKey;
+    }
     
     // Get parameters based on chat mode
-    const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
+    const { temperature: modeTemp, maxTokens: modeMaxTokens } = 
       getParametersForMode(settings, 'llama');
     
     temperature = modeTemp;
     maxTokens = modeMaxTokens;
-    
-    // Add system message if provided
-    if (systemMessage) {
-      finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
-    }
   }
   
   if (!apiKey) {
@@ -617,7 +706,7 @@ export async function callLlama(messages: ChatMessage[], settings?: ModelSetting
       },
       body: JSON.stringify({
         model,
-        prompt: formatMessagesForLlama(finalMessages),
+        prompt: formatMessagesForLlama(messages),
         temperature,
         max_tokens: maxTokens
       })
@@ -661,18 +750,33 @@ function formatMessagesForLlama(messages: ChatMessage[]): string {
   return `${systemPrompt}${conversationPrompt}\n<|assistant|>\n`;
 }
 
-// Deepseek API
+// DeepSeek API
 export async function callDeepseek(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
-  let apiKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
-  let model = 'deepseek-chat';
+  let apiKey = '';
+  
+  // First check localStorage directly
+  if (typeof window !== 'undefined') {
+    apiKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY') || localStorage.getItem('DEEPSEEK_API_KEY') || '';
+  }
+  
+  // Fallback to env variable if no localStorage key
+  apiKey = apiKey || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY || '';
+  
+  // Use settings if provided and no direct key found
+  if (settings && !apiKey) {
+    apiKey = settings.deepseek.apiKey;
+  }
+  
+  let model = 'deepseek-chat'; // Default model
   let temperature = 0.7;
   let maxTokens = 500;
   let finalMessages = [...messages];
   
-  // Use settings if provided
   if (settings) {
-    apiKey = settings.deepseek.apiKey || apiKey;
-    model = settings.deepseek.selectedModel;
+    // Don't override apiKey if we already have one
+    if (!apiKey) {
+      apiKey = settings.deepseek.apiKey || apiKey;
+    }
     
     // Get parameters based on chat mode
     const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } = 
@@ -688,7 +792,7 @@ export async function callDeepseek(messages: ChatMessage[], settings?: ModelSett
   }
   
   if (!apiKey) {
-    throw new Error('Deepseek API key is not configured');
+    throw new Error('DeepSeek API key is not configured');
   }
   
   try {
@@ -722,7 +826,7 @@ export async function callDeepseek(messages: ChatMessage[], settings?: ModelSett
 
 // Function to validate API configuration
 export function validateApiConfiguration() {
-  // Focus on localStorage keys stored by the settings component rather than env vars
+  // First check for API keys in localStorage with the NEXT_PUBLIC prefix
   let openaiKey = '';
   let geminiKey = '';
   let mistralKey = '';
@@ -732,12 +836,21 @@ export function validateApiConfiguration() {
   
   // In the browser, check localStorage
   if (typeof window !== 'undefined') {
-    openaiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY') || '';
-    geminiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY') || '';
-    mistralKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY') || '';
-    claudeKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY') || '';
-    llamaKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY') || '';
-    deepseekKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY') || '';
+    // Check both formats - new NEXT_PUBLIC format and old direct format
+    openaiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY') || localStorage.getItem('OPENAI_API_KEY') || '';
+    geminiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY') || localStorage.getItem('GEMINI_API_KEY') || '';
+    mistralKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY') || localStorage.getItem('MISTRAL_API_KEY') || '';
+    claudeKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY') || localStorage.getItem('CLAUDE_API_KEY') || '';
+    llamaKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY') || localStorage.getItem('LLAMA_API_KEY') || '';
+    deepseekKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY') || localStorage.getItem('DEEPSEEK_API_KEY') || '';
+    
+    // Fallback to env variables if needed
+    openaiKey = openaiKey || process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
+    geminiKey = geminiKey || process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
+    mistralKey = mistralKey || process.env.NEXT_PUBLIC_MISTRAL_API_KEY || '';
+    claudeKey = claudeKey || process.env.NEXT_PUBLIC_CLAUDE_API_KEY || '';
+    llamaKey = llamaKey || process.env.NEXT_PUBLIC_LLAMA_API_KEY || '';
+    deepseekKey = deepseekKey || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY || '';
   }
   
   const results = {

@@ -11,17 +11,24 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, LogOut, Settings, UserPlus, LogIn, Download } from 'lucide-react';
+import { User, LogOut, Settings, UserPlus, LogIn, Download, Loader2, Bug } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePathname } from 'next/navigation';
+import { useToast } from '@/components/ui/use-toast';
+import { userService } from '@/lib/services/userService';
+import { testSupabaseConnection } from '@/lib/utils';
 
 export function UserMenu() {
   const { user, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const pathname = usePathname();
+  const { toast } = useToast();
   
   // Ensure hydration
   useEffect(() => {
@@ -63,6 +70,98 @@ export function UserMenu() {
   const handleSignOut = async () => {
     setIsOpen(false);
     await signOut();
+  };
+
+  // Handle export data action
+  const handleExportData = async () => {
+    if (!user) return;
+    
+    setIsExporting(true);
+    setIsOpen(false);
+    setDebugInfo('');
+    
+    try {
+      // First test the connection
+      if (isDebugMode) {
+        setDebugInfo('Testing Supabase connection...');
+        const connectionTest = await testSupabaseConnection();
+        setDebugInfo(prev => prev + `\nConnection test: ${connectionTest.success ? 'SUCCESS' : 'FAILED'}`);
+        if (connectionTest.latency) setDebugInfo(prev => prev + `\nLatency: ${connectionTest.latency}ms`);
+        if (connectionTest.error) setDebugInfo(prev => prev + `\nError: ${connectionTest.error}`);
+      }
+      
+      // Proceed with export
+      const exportData = await userService.exportUserData(user.id);
+      
+      // Create and download the file
+      const blob = new Blob([exportData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `chatbuddy-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      if (isDebugMode) {
+        setDebugInfo(prev => prev + '\nExport successful! Data downloaded.');
+        // Show full debug info toast
+        toast({
+          title: 'Debug Info',
+          description: debugInfo,
+          duration: 10000,
+        });
+      } else {
+        toast({
+          title: 'Data exported successfully',
+          description: 'Your data has been downloaded as a JSON file',
+        });
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setDebugInfo(prev => prev + `\nEXPORT ERROR: ${errorMessage}`);
+      
+      if (isDebugMode) {
+        // Show technical error in debug mode
+        toast({
+          title: 'Export Failed (Debug)',
+          description: (
+            <div className="mt-2 max-h-[200px] overflow-auto rounded bg-slate-950 p-4 text-xs text-white">
+              <p className="font-bold text-red-400">Error Details:</p>
+              <pre className="mt-1 whitespace-pre-wrap">{errorMessage}</pre>
+              <p className="mt-2 font-bold text-amber-400">Debug Info:</p>
+              <pre className="mt-1 whitespace-pre-wrap">{debugInfo}</pre>
+            </div>
+          ),
+          variant: 'destructive',
+          duration: 10000,
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to export data. Try enabling debug mode for details.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Toggle debug mode
+  const toggleDebugMode = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDebugMode(!isDebugMode);
+    
+    toast({
+      title: `Debug Mode ${!isDebugMode ? 'Enabled' : 'Disabled'}`,
+      description: !isDebugMode 
+        ? 'Export will now show detailed debug information' 
+        : 'Export will show standard notifications',
+    });
   };
   
   if (!mounted) {
@@ -154,9 +253,34 @@ export function UserMenu() {
             </DropdownMenuItem>
           </Link>
           
-          <DropdownMenuItem className="cursor-pointer rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 py-2">
-            <Download className="mr-2 h-4 w-4 text-green-500" />
-            <span>Export Data</span>
+          <DropdownMenuItem 
+            onClick={handleExportData}
+            disabled={isExporting}
+            className="cursor-pointer rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 py-2 relative"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 text-green-500 animate-spin" />
+                <span>Exporting...</span>
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4 text-green-500" />
+                <span>Export Data</span>
+              </>
+            )}
+            
+            {/* Debug mode toggle */}
+            <button 
+              onClick={toggleDebugMode}
+              aria-label="Toggle debug mode"
+              className={cn(
+                "absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full flex items-center justify-center", 
+                isDebugMode ? "text-amber-500" : "text-gray-400 opacity-50"
+              )}
+            >
+              <Bug className="h-3 w-3" />
+            </button>
           </DropdownMenuItem>
           
         </div>

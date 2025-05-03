@@ -375,6 +375,12 @@ export type UserPreferences = {
   theme?: string;
   language?: string;
   api_keys?: Record<string, string>;
+  ai_providers?: {
+    [provider: string]: {
+      enabled: boolean;
+      api_keys: Record<string, string>;
+    }
+  };
   created_at: string;
   updated_at: string;
 };

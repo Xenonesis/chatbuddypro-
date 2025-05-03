@@ -78,6 +78,10 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
       case 'openai': return 'OpenAI';
       case 'gemini': return 'Gemini';
       case 'mistral': return 'Mistral';
+      case 'claude': return 'Claude';
+      case 'llama': return 'Llama';
+      case 'deepseek': return 'DeepSeek';
+      default: return provider.charAt(0).toUpperCase() + provider.slice(1);
     }
   };
   
@@ -106,9 +110,45 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
         case 'mistral-medium': return 'Mistral Medium offers advanced capabilities for complex reasoning tasks.';
         default: return 'Mistral language model';
       }
+    } else if (provider === 'claude') {
+      switch (model) {
+        case 'claude-3-5-sonnet-20240620': return 'Claude 3.5 Sonnet is Anthropic\'s latest model with excellent performance and speed.';
+        case 'claude-3-opus-20240229': return 'Claude 3 Opus is Anthropic\'s most powerful model for complex tasks.';
+        case 'claude-3-sonnet-20240229': return 'Claude 3 Sonnet offers a balance of intelligence and speed.';
+        case 'claude-3-haiku-20240307': return 'Claude 3 Haiku is optimized for speed in applications requiring quick responses.';
+        default: return 'Anthropic Claude language model';
+      }
+    } else if (provider === 'llama') {
+      switch (model) {
+        case 'llama-3-8b-instruct': return 'Llama 3 8B Instruct is Meta\'s efficient instruction-tuned model.';
+        case 'llama-3-70b-instruct': return 'Llama 3 70B Instruct is Meta\'s most powerful instruction-tuned model.';
+        case 'llama-3-8b': return 'Llama 3 8B is the base model with 8 billion parameters.';
+        case 'llama-3-70b': return 'Llama 3 70B is the larger base model with 70 billion parameters.';
+        default: return 'Meta Llama language model';
+      }
+    } else if (provider === 'deepseek') {
+      switch (model) {
+        case 'deepseek-coder': return 'DeepSeek Coder is optimized for programming tasks and code generation.';
+        case 'deepseek-chat': return 'DeepSeek Chat is a general-purpose conversational model.';
+        case 'deepseek-llm': return 'DeepSeek LLM is the base large language model for various tasks.';
+        default: return 'DeepSeek language model';
+      }
     }
     
     return 'AI language model';
+  };
+  
+  // Add a function to get the default model for each provider
+  const getDefaultModelForProvider = (provider: AIProvider): string => {
+    switch(provider) {
+      case 'openai': return 'gpt-3.5-turbo';
+      case 'gemini': return 'gemini-pro';
+      case 'mistral': return 'mistral-small';
+      case 'claude': return 'claude-3-5-sonnet-20240620';
+      case 'llama': return 'llama-3-8b-instruct';
+      case 'deepseek': return 'deepseek-chat';
+      default: return 'Unknown model';
+    }
   };
   
   return (
@@ -148,11 +188,11 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
               <div className="flex items-center justify-between text-sm">
                 <span>Model:</span>
                 <Badge variant="outline" className="font-mono text-xs px-1.5 py-0">
-                  {providerSettings.selectedModel}
+                  {getDefaultModelForProvider(provider)}
                 </Badge>
               </div>
               <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {getModelDescription(provider, providerSettings.selectedModel)}
+                {getModelDescription(provider, getDefaultModelForProvider(provider))}
               </div>
             </div>
             

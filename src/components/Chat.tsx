@@ -80,8 +80,18 @@ type ChatProps = {
   chatId?: string | null;
 };
 
+// Define default models for each provider
+const DEFAULT_MODELS = {
+  openai: 'gpt-3.5-turbo',
+  gemini: 'gemini-pro',
+  mistral: 'mistral-small',
+  claude: 'claude-3-5-sonnet-20240620',
+  llama: 'llama-3-8b-instruct',
+  deepseek: 'deepseek-chat'
+};
+
 export default function Chat({ initialMessages = [], initialTitle = '', initialModel = '', chatId: initialChatId = null }: ChatProps) {
-  const { settings, currentProvider, setCurrentProvider, setChatMode, toggleShowThinking, updateSettings } = useModelSettings();
+  const { settings, currentProvider, setCurrentProvider, setChatMode, toggleShowThinking, updateSettings, apiKeys } = useModelSettings();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -110,25 +120,58 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
   const [title, setTitle] = useState<string>(initialTitle);
   const [selectedModel, setSelectedModel] = useState<string>(initialModel);
   const [chatId, setChatId] = useState<string | null>(initialChatId);
+  const [activeModel, setActiveModel] = useState<string>(initialModel || DEFAULT_MODELS.openai);
   
   // Set initial model if provided
   useEffect(() => {
     if (initialModel && initialModel !== '') {
-      // Find the provider for this model and set it
-      Object.entries(settings).forEach(([providerKey, providerSettings]) => {
-        if (providerKey !== 'defaultProvider' && 
-            providerKey !== 'chatMode' && 
-            providerKey !== 'showThinking' &&
-            typeof providerSettings === 'object' &&
-            'models' in providerSettings &&
-            Array.isArray(providerSettings.models) &&
-            providerSettings.models.includes(initialModel)) {
-          setCurrentProvider(providerKey as AIProvider);
+      // Find the provider for this model
+      Object.entries(DEFAULT_MODELS).forEach(([provider, modelName]) => {
+        if (modelName === initialModel) {
+          setCurrentProvider(provider as AIProvider);
         }
       });
+    } else if (!initialModel && settings.defaultProvider) {
+      // No initial model specified, use the default provider if it's enabled and has an API key
+      const defaultProvider = settings.defaultProvider;
+      if (settings[defaultProvider]?.enabled && settings[defaultProvider]?.apiKey) {
+        console.log(`Using default provider from settings: ${defaultProvider}`);
+        setCurrentProvider(defaultProvider);
+      }
     }
   }, [initialModel, settings, setCurrentProvider]);
   
+  // Set initial provider if it doesn't have an API key
+  useEffect(() => {
+    // Calculate available providers inside the effect
+    const availableProvidersList = Object.entries(settings)
+      .filter(([key, value]) => 
+        key !== 'defaultProvider' && 
+        key !== 'chatMode' && 
+        key !== 'showThinking' && 
+        typeof value === 'object' && 
+        'enabled' in value && 
+        value.enabled && 
+        'apiKey' in value && 
+        value.apiKey // Only include providers with API keys configured
+      )
+      .map(([key]) => key as AIProvider);
+    
+    // Check if current provider has an API key
+    if (!settings[currentProvider]?.apiKey && availableProvidersList.length > 0) {
+      // First try to use the default provider if it's in the available list
+      const defaultProvider = settings.defaultProvider;
+      if (defaultProvider && availableProvidersList.includes(defaultProvider)) {
+        console.log(`Using default provider from settings: ${defaultProvider}`);
+        setCurrentProvider(defaultProvider);
+      } else {
+        // Fall back to the first available provider with an API key
+        console.log(`Default provider not available, using ${availableProvidersList[0]}`);
+        setCurrentProvider(availableProvidersList[0]);
+      }
+    }
+  }, [settings, currentProvider, setCurrentProvider]);
+
   const { voiceInputSettings } = settings;
   
   const { 
@@ -195,19 +238,35 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
 
   // Check if the current provider has an API key configured
   const hasApiKey = (provider: AIProvider): boolean => {
-    return !!settings[provider]?.apiKey;
+    // First check settings
+    const settingsHasKey = !!settings[provider]?.apiKey;
+    
+    // If settings doesn't have a key, check localStorage directly
+    if (!settingsHasKey && typeof window !== 'undefined') {
+      const localStorageKey = localStorage.getItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`) || 
+                           localStorage.getItem(`${provider.toUpperCase()}_API_KEY`);
+      return !!localStorageKey;
+    }
+    
+    return settingsHasKey;
   };
 
   // Effect to set initial provider
   useEffect(() => {
-    // If current provider is disabled, switch to the default or first available
-    if (!settings[currentProvider]?.enabled) {
-      const newProvider = settings.defaultProvider && settings[settings.defaultProvider].enabled 
-        ? settings.defaultProvider 
-        : availableProviders[0];
-      
-      if (newProvider) {
-        setCurrentProvider(newProvider);
+    // If current provider is disabled or doesn't have an API key, switch to another provider
+    if (!settings[currentProvider]?.enabled || !settings[currentProvider]?.apiKey) {
+      // First try to use the default provider if it's enabled and has an API key
+      const defaultProvider = settings.defaultProvider;
+      if (defaultProvider && 
+          settings[defaultProvider]?.enabled && 
+          settings[defaultProvider]?.apiKey) {
+        console.log(`Current provider unavailable, using default provider: ${defaultProvider}`);
+        setCurrentProvider(defaultProvider);
+      }
+      // Otherwise use the first available provider
+      else if (availableProviders.length > 0) {
+        console.log(`Default provider unavailable, using first available: ${availableProviders[0]}`);
+        setCurrentProvider(availableProviders[0]);
       }
     }
   }, [settings, currentProvider, setCurrentProvider, availableProviders]);
@@ -320,7 +379,7 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
       if (messages.length === 0 && user) {
         try {
           // Get the current model name
-          const modelName = settings[currentProvider].selectedModel;
+          const modelName = DEFAULT_MODELS[currentProvider];
           
           // Create a chat with the first message as the title and save the model name
           const chat = await chatService.createChat(
@@ -427,7 +486,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
         console.log('Gemini provider settings:', {
           apiKeyConfigured: Boolean(apiKey),
           apiKeyPrefix: apiKey ? `${apiKey.substring(0, 6)}...` : 'none',
-          model: settings?.gemini?.selectedModel,
+          model: DEFAULT_MODELS.gemini,
           temperature: settings?.gemini?.temperature,
           maxTokens: settings?.gemini?.maxTokens,
         });
@@ -436,8 +495,8 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
           throw new Error('Gemini API key is not configured. Please set it in Settings or .env.local');
         }
         
-        if (!apiKey.startsWith('AIza')) {
-          throw new Error('Invalid Gemini API key format. Keys should start with "AIza".');
+        if (apiKey.trim() === '') {
+          throw new Error('Invalid Gemini API key. The key cannot be empty.');
         }
       }
       
@@ -472,7 +531,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
           );
           
           // Update the chat with the current model if it changed
-          const modelName = settings[currentProvider].selectedModel;
+          const modelName = DEFAULT_MODELS[currentProvider];
           await chatService.updateChat(chatId, user.id, { model: modelName });
         } catch (error) {
           console.error('Error saving assistant response:', error);
@@ -503,7 +562,7 @@ Please try:
 2. If that fails, try restarting your browser
 3. Or switch to a different AI provider temporarily`;
         } else if (error.message.includes('Model not found') || error.message.includes('not available')) {
-          errorContent = `Error: The selected Gemini model (${settings.gemini.selectedModel}) is not available. 
+          errorContent = `Error: The Gemini model (${DEFAULT_MODELS['gemini']}) is not available. 
           
 This may be because:
 1. The model is still in preview and not yet publicly available
@@ -540,35 +599,25 @@ The app will automatically try to fall back to the standard gemini-pro model. If
         // If the last message was also an error from the same provider, try to switch providers
         if (lastMessage.role === 'assistant' && 
             lastMessage.content.startsWith('Error:') && 
-            lastUsedProvider === currentProvider &&
-            availableProviders.length > 1) {
+            lastUsedProvider === currentProvider) {
           
-          // Find the next available provider that's not the current one
-          const nextProviderIndex = (availableProviders.indexOf(currentProvider) + 1) % availableProviders.length;
-          const nextProvider = availableProviders[nextProviderIndex];
-          
-          // Display message about fallback
-          const fallbackNote: Message = {
-            id: Date.now().toString() + '-fallback',
-            content: `I'm automatically switching to ${getProviderDisplayName(nextProvider)} because ${getProviderDisplayName(currentProvider)} is experiencing issues.`,
-            role: 'assistant',
-            timestamp: new Date(),
-          };
-          
-          setMessages((prev) => [...prev, errorMessage, fallbackNote]);
-          
-          // Switch provider
-          setCurrentProvider(nextProvider);
-          
-          // No need to add the regular error message since we added the fallback note too
+          // Try to fallback to another provider
+          if (fallbackToAnotherProvider(currentProvider, errorMessage)) {
+            // Fallback handled, cleanup
+            setThinking('');
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          // Just show the error message
           setThinking('');
-          setIsLoading(false);
-          return;
+          setMessages((prev) => [...prev, errorMessage]);
         }
+      } else {
+        // No previous messages, just show the error
+        setThinking('');
+        setMessages((prev) => [...prev, errorMessage]);
       }
-      
-      setThinking('');
-      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -981,8 +1030,8 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
 
   // Function to get model name from current provider
   const getCurrentModelName = () => {
-    if (!currentProvider || !settings[currentProvider]) return 'AI Model';
-    return settings[currentProvider].selectedModel;
+    if (!currentProvider) return 'AI Model';
+    return DEFAULT_MODELS[currentProvider];
   };
 
   // Function to get model pricing info for models
@@ -1114,11 +1163,9 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     return mode.charAt(0).toUpperCase() + mode.slice(1);
   };
 
-  // Function to handle model change
-  const handleModelChange = (model: string) => {
-    const updatedSettings = {...settings};
-    updatedSettings[currentProvider].selectedModel = model;
-    updateSettings(updatedSettings);
+  // Function to handle model change (disabled since we're using fixed models)
+  const handleModelChange = () => {
+    // Model selection has been disabled
     setShowModelMenu(false);
   };
 
@@ -1271,6 +1318,62 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     }
   };
 
+  // Get available providers with API keys in the database
+  const getProvidersWithApiKeys = () => {
+    const providersWithApiKeys = Object.keys(apiKeys || {}) as AIProvider[];
+    return validProviders.filter(provider => providersWithApiKeys.includes(provider));
+  };
+
+  // For fallback purposes, we need providers with API keys
+  const getAvailableFallbackProviders = () => {
+    const providersWithApiKeys = getProvidersWithApiKeys();
+    return providersWithApiKeys.length > 0 ? providersWithApiKeys : availableProviders;
+  };
+
+  // Function to handle fallback to another provider if needed
+  const fallbackToAnotherProvider = (currentProvider: AIProvider, errorMessage: Message) => {
+    const fallbackProviders = getAvailableFallbackProviders();
+    
+    // If we have more than one provider with API keys, try to fallback
+    if (fallbackProviders.length > 1) {
+      // Find the next available provider that's not the current one
+      const nextProviderIndex = (fallbackProviders.indexOf(currentProvider) + 1) % fallbackProviders.length;
+      const nextProvider = fallbackProviders[nextProviderIndex];
+      
+      // Display message about fallback
+      const fallbackNote: Message = {
+        id: Date.now().toString() + '-fallback',
+        content: `I'm automatically switching to ${getProviderDisplayName(nextProvider)} because ${getProviderDisplayName(currentProvider)} is experiencing issues.`,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, errorMessage, fallbackNote]);
+      
+      // Switch provider
+      setCurrentProvider(nextProvider);
+      
+      return true;
+    }
+    
+    // No fallback available, just show the error
+    setMessages((prev) => [...prev, errorMessage]);
+    return false;
+  };
+
+  // Replace line 1415 with a fixed set of models for each provider
+  const getFixedModels = (provider: AIProvider) => {
+    switch(provider) {
+      case 'openai': return ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'];
+      case 'gemini': return ['gemini-pro', 'gemini-pro-vision', 'gemini-1.5-pro', 'gemini-1.5-flash'];
+      case 'mistral': return ['mistral-tiny', 'mistral-small', 'mistral-medium'];
+      case 'claude': return ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'];
+      case 'llama': return ['llama-3-8b-instruct', 'llama-3-70b-instruct', 'llama-3-8b', 'llama-3-70b'];
+      case 'deepseek': return ['deepseek-coder', 'deepseek-chat', 'deepseek-llm'];
+      default: return [];
+    }
+  };
+
   return (
     <div className="flex flex-col h-full relative overflow-hidden">
       {/* Chat controls bar */}
@@ -1325,11 +1428,11 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             {showModelMenu && (
               <div className="absolute z-50 top-full left-0 mt-1.5 py-1.5 px-1.5 rounded-lg shadow-lg border bg-white/95 dark:bg-slate-800/95 backdrop-blur-md dark:border-slate-700 min-w-[180px]">
                 {settings[currentProvider].apiKey ? (
-                  settings[currentProvider].models.map((model) => (
+                  getFixedModels(currentProvider).map((model) => (
                     <div 
                       key={model}
-                      className={`flex items-center px-2.5 py-2 rounded-md ${settings[currentProvider].selectedModel === model ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-slate-100 dark:hover:bg-slate-700'} cursor-pointer transition-all duration-200`}
-                      onClick={() => handleModelChange(model)}
+                      className={`flex items-center px-2.5 py-2 rounded-md ${model === DEFAULT_MODELS[currentProvider] ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-slate-100 dark:hover:bg-slate-700'} cursor-not-allowed transition-all duration-200`}
+                      onClick={() => {/* Model selection disabled */}}
                     >
                       {getProviderIcon(currentProvider)}
                       <span className="ml-2 text-xs font-medium truncate">{model}</span>
@@ -1417,73 +1520,90 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
               Select your AI model and start your conversation with ChatBuddy.
             </p>
             
-            {/* Quick model selection for mobile */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 w-full max-w-xs sm:max-w-md">
-              {['openai', 'gemini', 'claude', 'mistral'].map((provider: string) => (
-                <button
-                  key={provider}
-                  onClick={() => setCurrentProvider(provider as AIProvider)}
-                  className={cn(
-                    "py-3 px-2 rounded-lg flex flex-col items-center justify-center transition-all",
-                    "border border-slate-200 dark:border-slate-700",
-                    "hover:bg-slate-100 dark:hover:bg-slate-800",
-                    currentProvider === provider ? 
-                      "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-400 dark:ring-blue-600" : 
-                      "bg-white dark:bg-slate-800/50"
-                  )}
+            {availableProviders.length === 0 ? (
+              <div className="mb-8 py-4 px-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg text-amber-700 dark:text-amber-300 max-w-xs sm:max-w-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-5 w-5" />
+                  <h3 className="font-semibold">No API Keys Configured</h3>
+                </div>
+                <p className="text-sm mb-4">You need to configure at least one API key to start using the chat.</p>
+                <Link 
+                  href="/settings" 
+                  className="inline-flex items-center gap-2 font-medium text-sm bg-amber-100 dark:bg-amber-800/40 hover:bg-amber-200 dark:hover:bg-amber-800/60 py-2 px-4 rounded-md transition-colors"
                 >
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center mb-1",
-                    getProviderBackgroundColor(provider as AIProvider)
-                  )}>
-                    {provider === 'openai' && <Sparkles className="h-4 w-4 text-white" />}
-                    {provider === 'gemini' && <Star className="h-4 w-4 text-white" />}
-                    {provider === 'claude' && <Cpu className="h-4 w-4 text-white" />}
-                    {provider === 'mistral' && <Wand2 className="h-4 w-4 text-white" />}
-                  </div>
-                  <span className="text-xs font-medium">{getProviderDisplayName(provider as AIProvider)}</span>
-                </button>
-              ))}
-            </div>
-            
-            {/* Getting started button */}
-            <button
-              onClick={() => {
-                // Focus the input field to start typing
-                if (textareaRef.current) {
-                  textareaRef.current.focus();
-                }
-              }}
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-full font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-            >
-              <MessageSquare className="h-5 w-5" />
-              <span>Start typing</span>
-            </button>
-            
-            {/* Helper suggestion chips */}
-            <div className="mt-8 w-full max-w-xs sm:max-w-md">
-              <p className="text-xs text-slate-500 dark:text-slate-500 mb-3">Try asking:</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {[
-                  "Explain quantum computing",
-                  "Write a short poem",
-                  "Help with my resume"
-                ].map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setInput(suggestion);
-                      if (textareaRef.current) {
-                        textareaRef.current.focus();
-                      }
-                    }}
-                    className="text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 py-1.5 px-3 rounded-full text-slate-700 dark:text-slate-300 transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+                  <Settings className="h-4 w-4" />
+                  Go to Settings
+                </Link>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Quick model selection for mobile - only show providers with API keys */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 w-full max-w-xs sm:max-w-md">
+                  {availableProviders.map((provider: string) => (
+                    <button
+                      key={provider}
+                      onClick={() => setCurrentProvider(provider as AIProvider)}
+                      className={cn(
+                        "py-3 px-2 rounded-lg flex flex-col items-center justify-center transition-all",
+                        "border border-slate-200 dark:border-slate-700",
+                        "hover:bg-slate-100 dark:hover:bg-slate-800",
+                        currentProvider === provider ? 
+                          "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-1 ring-blue-400 dark:ring-blue-600" : 
+                          "bg-white dark:bg-slate-800/50"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center mb-1",
+                        getProviderBackgroundColor(provider as AIProvider)
+                      )}>
+                        {getProviderIcon(provider as AIProvider)}
+                      </div>
+                      <span className="text-xs font-medium">{getProviderDisplayName(provider as AIProvider)}</span>
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Getting started button */}
+                <button
+                  onClick={() => {
+                    // Focus the input field to start typing
+                    if (textareaRef.current) {
+                      textareaRef.current.focus();
+                    }
+                  }}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-full font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                >
+                  <MessageSquare className="h-5 w-5" />
+                  <span>Start typing</span>
+                </button>
+                
+                {/* Helper suggestion chips */}
+                <div className="mt-8 w-full max-w-xs sm:max-w-md">
+                  <p className="text-xs text-slate-500 dark:text-slate-500 mb-3">Try asking:</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {[
+                      "Explain quantum computing",
+                      "Write a short poem",
+                      "Help with my resume"
+                    ].map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setInput(suggestion);
+                          if (textareaRef.current) {
+                            textareaRef.current.focus();
+                          }
+                        }}
+                        className="text-xs bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 py-1.5 px-3 rounded-full text-slate-700 dark:text-slate-300 transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+            
           </div>
         ) : (
           <div className="py-4">

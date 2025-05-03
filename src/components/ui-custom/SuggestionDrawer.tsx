@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, MessageCircle, Search, Brain, Book, Code, Lightbulb, Zap } from 'lucide-react';
+import { X, Sparkles, MessageCircle, Search, Brain, Book, Code, Lightbulb, Zap, SendHorizonal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { extractSuggestionsFromText, getGeneralSuggestions } from '@/lib/suggestions';
+import { extractSuggestionsFromText, getGeneralSuggestions, processSuggestionPrompt } from '@/lib/suggestions';
 import { useModelSettings } from '@/lib/context/ModelSettingsContext';
+import { toast } from '@/components/ui/use-toast';
 
 interface SuggestionDrawerProps {
   open: boolean;
@@ -40,10 +41,74 @@ export function SuggestionDrawer({ open, onOpenChange }: SuggestionDrawerProps) 
   const { settings } = useModelSettings();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const [userInputPrompt, setUserInputPrompt] = useState('');
+  const [isProcessingPrompt, setIsProcessingPrompt] = useState(false);
   
   // Function to close the drawer
   const handleClose = () => onOpenChange(false);
   
+  // Process user-entered prompt for custom suggestions
+  const processUserPrompt = () => {
+    if (!userInputPrompt.trim()) return;
+    
+    setIsProcessingPrompt(true);
+    
+    // Process the user's prompt to generate tailored suggestions
+    const promptedSuggestions = processSuggestionPrompt(userInputPrompt);
+    
+    if (promptedSuggestions.length > 0) {
+      // Convert the string array to Suggestion objects
+      const newSuggestions: Suggestion[] = promptedSuggestions.map(text => ({
+        text,
+        category: determineCategoryFromText(text)
+      }));
+      
+      // Add these to the top of our suggestions list
+      setSuggestions(prev => [...newSuggestions, ...prev]);
+      setFilteredSuggestions(prev => [...newSuggestions, ...prev]);
+      
+      // Clear the prompt input
+      setUserInputPrompt('');
+      
+      // Show a brief success message or visual indicator
+      toast({
+        title: "Custom suggestions generated",
+        description: "Based on your prompt, we've added new suggestions",
+        duration: 3000
+      });
+    }
+    
+    setIsProcessingPrompt(false);
+  };
+  
+  // Determine which category a suggestion belongs to based on its content
+  const determineCategoryFromText = (text: string): SuggestionCategory => {
+    const textLower = text.toLowerCase();
+    
+    // Check for technical content
+    if (/\b(code|programming|api|function|algorithm|data|software|develop|framework|library)\b/i.test(textLower)) {
+      return 'technical';
+    }
+    
+    // Check for creative content
+    if (/\b(creative|design|idea|brainstorm|innovative|imagination|concept)\b/i.test(textLower)) {
+      return 'creative';
+    }
+    
+    // Check for learning content
+    if (/\b(learn|study|explain|understand|concept|knowledge|education)\b/i.test(textLower)) {
+      return 'learning';
+    }
+    
+    // Check for quick requests
+    if (text.length < 60 && /^(how|what|why|can|could)/i.test(textLower)) {
+      return 'quick';
+    }
+    
+    // Default to general
+    return 'general';
+  };
+
   // Load suggestions when drawer opens
   useEffect(() => {
     if (open) {
@@ -149,11 +214,17 @@ export function SuggestionDrawer({ open, onOpenChange }: SuggestionDrawerProps) 
         e.preventDefault();
         searchInputRef.current?.focus();
       }
+      
+      // Process custom prompt on Enter
+      if (e.key === 'Enter' && document.activeElement === document.getElementById('user-prompt-input')) {
+        e.preventDefault();
+        processUserPrompt();
+      }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open]);
+  }, [open, userInputPrompt]);
   
   // Handle clicks outside the drawer
   useEffect(() => {
@@ -228,6 +299,32 @@ export function SuggestionDrawer({ open, onOpenChange }: SuggestionDrawerProps) 
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
             />
+          </div>
+        </div>
+        
+        <div className="p-3 border-b border-slate-200 dark:border-slate-700">
+          <div className="relative flex">
+            <Input
+              id="user-prompt-input"
+              type="text"
+              placeholder="Ask for specific suggestions..."
+              value={userInputPrompt}
+              onChange={(e) => setUserInputPrompt(e.target.value)}
+              className="pr-9 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+              onKeyDown={(e) => e.key === 'Enter' && processUserPrompt()}
+            />
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              onClick={processUserPrompt}
+              disabled={isProcessingPrompt || !userInputPrompt.trim()}
+              className="absolute right-1 top-1 h-7 w-7 rounded-full"
+            >
+              <SendHorizonal className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Enter a prompt like "suggest coding tips" or "recommend writing topics"
           </div>
         </div>
         

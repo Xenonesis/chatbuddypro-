@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useModelSettings, ModelSettings, ChatMode } from '@/lib/context/ModelSettingsContext';
 import { 
   Eye, EyeOff, MessageSquare, Brain, Zap, Lightbulb, Code, GraduationCap, 
-  Info, LayoutGrid, AlignJustify, Check, Bot
+  Info, LayoutGrid, AlignJustify, Check, Bot, Save
 } from 'lucide-react';
 import { getChatModeIcon, getChatModeColor, getChatModeDescription, getChatModeButtonColor } from './SettingsUtils';
 import { cn } from '@/lib/utils';
@@ -19,8 +19,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useToast } from '@/components/ui/use-toast';
 
-// Add this keyframe animation at the top of the file after the imports
+// Add keyframe animation at the top of the file after the imports
 const styles = `
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -46,9 +47,11 @@ const styles = `
 
 export default function ChatSettings() {
   const { settings, updateSettings } = useModelSettings();
+  const { toast } = useToast();
   const [localSettings, setLocalSettings] = useState<ModelSettings>(settings);
   const [showPreview, setShowPreview] = useState(false);
   const [activeView, setActiveView] = useState('grid');
+  const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
@@ -70,9 +73,8 @@ export default function ChatSettings() {
     setHasChanges(settingsJSON !== localSettingsJSON);
   }, [settings, localSettings]);
 
-  // Add this right after the component declaration
+  // Add the styles to the document head
   useEffect(() => {
-    // Add the styles to the document head
     const styleElement = document.createElement('style');
     styleElement.innerHTML = styles;
     document.head.appendChild(styleElement);
@@ -96,8 +98,20 @@ export default function ChatSettings() {
     }));
   };
 
-  const saveChanges = () => {
-    updateSettings(localSettings);
+  const handleSaveSettings = () => {
+    setIsSaving(true);
+    
+    setTimeout(() => {
+      updateSettings(localSettings);
+      
+      setIsSaving(false);
+      setHasChanges(false);
+      
+      toast({
+        title: "Chat settings saved",
+        description: "Your chat preferences have been updated.",
+      });
+    }, 500);
   };
 
   const resetChanges = () => {
@@ -162,26 +176,27 @@ export default function ChatSettings() {
   };
 
   return (
-    <Card className="border dark:border-slate-700 shadow-sm">
-      <CardHeader className="pb-2 sm:pb-4 bg-slate-50 dark:bg-slate-900 rounded-t-lg border-b border-slate-100 dark:border-slate-800">
-        <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-indigo-500" />
-          Chat Settings
-        </CardTitle>
-        <CardDescription>
-          Configure your AI chat experience and response style
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="p-4 sm:p-6">
-        <div className="space-y-6">
+    <div className="w-full space-y-6 animate-fadeIn">
+      <Card className="overflow-hidden border-primary/10">
+        <CardHeader className="relative pb-2">
+          <div className="absolute inset-0 h-12 bg-gradient-to-r from-primary/10 to-primary/5"></div>
+          <CardTitle className="flex items-center gap-2 pt-4 z-10 relative">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Chat Settings
+          </CardTitle>
+          <CardDescription className="z-10 relative">
+            Configure your AI chat experience and response style
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
           {/* View Toggle */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
               <Info className="h-4 w-4 text-blue-500" />
-            Chat Mode
-          </h3>
-          
+              Chat Mode
+            </h3>
+            
             <div className="flex items-center space-x-1 rounded-md bg-slate-100 dark:bg-slate-800 p-1">
               <Button
                 variant="ghost"
@@ -327,101 +342,103 @@ export default function ChatSettings() {
                     </h4>
                     <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate sm:whitespace-normal">
                       {getChatModeDescription(mode)}
-          </p>
-        </div>
+                    </p>
+                  </div>
                   
                   {localSettings.chatMode === mode ? (
-                    <div className="h-6 w-6 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white shadow-sm animate-fadeIn">
-                      <Check className="h-4 w-4" />
-                    </div>
+                    <Check className="h-4 w-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
                   ) : (
-                    <div className="h-6 w-6 flex-shrink-0"></div>
+                    <div className="h-4 w-4 rounded-full border-2 border-slate-300 dark:border-slate-600 flex-shrink-0"></div>
                   )}
                 </div>
               ))}
             </div>
           )}
           
-          <Separator />
-        
-        {/* Show Thinking Toggle */}
-        <div className="pt-2">
-          <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Show Thinking Process
-              </h3>
-                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                    New
-                  </Badge>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  See the AI's reasoning process before it responds
-                </p>
-              </div>
-              
-              <Switch
-                checked={localSettings.showThinking}
-                onCheckedChange={handleToggleShowThinking}
-              />
-            </div>
-            
-            <div className="mt-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-800/50">
-              <div className="flex items-center gap-2">
-                {localSettings.showThinking ? (
-                  <Eye className="h-4 w-4 text-blue-500" />
-                ) : (
-                  <EyeOff className="h-4 w-4 text-slate-400" />
-                )}
-                <span className="text-xs sm:text-sm">
-                  {localSettings.showThinking 
-                    ? "You'll see how the AI thinks through its responses" 
-                    : "The thinking process is hidden"}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <Separator />
-          
           {/* Preview Toggle */}
-          <div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPreview(!showPreview)}
-              className="w-full"
-            >
-              {showPreview ? 'Hide Preview' : 'Show Example Preview'}
-            </Button>
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowPreview(!showPreview)}
+                className="text-xs h-8 px-3"
+              >
+                {showPreview ? 'Hide Preview' : 'Show Preview'}
+              </Button>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                See how responses will look
+              </span>
+            </div>
             
-            {showPreview && (
-              <div className="mt-4">
-                {renderPreview()}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="thinking-mode" 
+                  checked={localSettings.showThinking}
+                  onCheckedChange={handleToggleShowThinking}
+                />
+                <Label htmlFor="thinking-mode" className="text-xs cursor-pointer">
+                  {localSettings.showThinking ? (
+                    <span className="flex items-center gap-1">
+                      <Eye className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                      Show Thinking
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <EyeOff className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                      Hide Thinking
+                    </span>
+                  )}
+                </Label>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      </CardContent>
-      
-      {hasChanges && (
-        <CardFooter className="bg-slate-50 dark:bg-slate-900 rounded-b-lg border-t border-slate-100 dark:border-slate-800 py-3 px-4 sm:px-6 flex justify-between">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={resetChanges}
-          >
-            Reset
-          </Button>
-          <Button 
-            onClick={saveChanges}
-            size="sm"
-          >
-            Save Changes
-          </Button>
-        </CardFooter>
-      )}
-    </Card>
+          
+          {/* Preview area */}
+          {showPreview && (
+            <div className="mt-4 animate-fadeIn">
+              {renderPreview()}
+            </div>
+          )}
+          
+          {/* Action buttons */}
+          <div className="flex justify-end gap-2 pt-2">
+            {hasChanges && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetChanges}
+                className="text-xs"
+              >
+                Reset
+              </Button>
+            )}
+            
+            <Button
+              onClick={handleSaveSettings}
+              size="sm"
+              disabled={!hasChanges || isSaving}
+              className={cn(
+                "text-xs",
+                !hasChanges && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {isSaving ? (
+                <span className="flex items-center gap-1">
+                  <span className="h-3 w-3 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                  Saving...
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Save className="h-3.5 w-3.5 mr-1" />
+                  Save Settings
+                </span>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 } 
