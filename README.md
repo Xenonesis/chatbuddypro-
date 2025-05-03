@@ -3,7 +3,7 @@
 A modern, full-featured chatbot interface that connects to multiple AI providers, featuring beautiful syntax highlighting for code blocks, response time tracking, and regeneration capabilities.
 
 ![ChatBuddy App](https://img.shields.io/badge/ChatBuddy-Next.js-blue)
-![Version](https://img.shields.io/badge/version-1.1.0-green)
+![Version](https://img.shields.io/badge/version-2.0.0-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
 
 ## ✨ Features
@@ -45,6 +45,9 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ## 🆕 Recent Updates
 
+- **Database Improvements (v2.0.0)**: Fixed synchronization issues and enhanced data persistence
+- **Performance Optimization (v2.0.0)**: Faster loading and response times, especially for larger conversations
+- **Enhanced Accessibility (v2.0.0)**: Improved screen reader compatibility and keyboard navigation
 - **GitHub Integration (v1.1.0)**: Added GitHub repository integration, making it easier to track versions and collaborate
 - **Notification System Improvements (v1.1.0)**: Enhanced notification system for better user experience
 - **UI Improvements (v1.0.0)**: Fixed chat history container styling and improved dashboard layout consistency
@@ -173,6 +176,18 @@ The application is built with Next.js and React, using the following architectur
 - **Theming**: Next-themes for dark/light mode support
 - **Code Formatting**: React Syntax Highlighter for code blocks
 - **Voice Input**: Web Speech API with custom hook implementation
+- **Brand Identity**: Complete favicon and PWA assets with script-based generation
+
+### Brand Identity & Favicon
+
+The application includes a comprehensive brand identity setup with:
+
+- Favicons in multiple sizes for all devices and browsers
+- OpenGraph images for social media sharing
+- Web App Manifest for PWA functionality
+- Automated generation scripts for easy updates
+
+For more details, see [FAVICON.md](./FAVICON.md)
 
 ## 🛠️ Customization
 

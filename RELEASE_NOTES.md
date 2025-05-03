@@ -1,3 +1,20 @@
+# ChatBuddy v2.0.0 Release Notes
+
+We're thrilled to announce the release of ChatBuddy v2.0.0!
+
+## What's New
+
+- **Database Integration Improvements**: Fixed synchronization issues for better user data persistence
+- **Enhanced Accessibility**: Improved screen reader compatibility and keyboard navigation
+- **Performance Optimizations**: Faster loading and response times, especially for larger conversations
+- **Error Handling**: Comprehensive error messages and recovery options
+- **Account Synchronization**: Fixed issues with data synchronization across devices
+- **Smart Suggestions Enhancement**: Improved context-aware suggestions and recommendations
+- **API Support**: Added support for latest AI model versions from providers
+- **UI Refinements**: Polished user interface with better responsiveness
+
+## Previous Releases
+
 # ChatBuddy v1.0.0 Release Notes
 
 We're excited to announce the official v1.0.0 release of ChatBuddy!
