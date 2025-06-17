@@ -1,0 +1,50 @@
+[build]
+  command = "NETLIFY=true npm ci && npm run verify-supabase && (cd netlify/functions && npm install --production) && NODE_OPTIONS='--max_old_space_size=4096' NEXT_TELEMETRY_DISABLED=1 npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps --no-optional"
+  NEXT_TELEMETRY_DISABLED = "1"
+  NETLIFY_USE_YARN = "false"
+  NETLIFY = "true"
+  NEXT_PUBLIC_SUPABASE_URL = "https://gphdrsfbypnckxbdjjap.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwaGRyc2ZieXBuY2t4YmRqamFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MDAwMjIsImV4cCI6MjA1OTE3NjAyMn0.skYsz1EJGdRwo5RW6HLljpy-D2KcQmBPJHYXb7MeyJw"
+
+# Use a custom deployment mode that doesn't rely on the plugin for static exports
+[build.processing]
+  skip_processing = true
+
+[functions]
+  # Only include the specific dependencies needed for functions
+  included_files = [
+    "node_modules/@supabase/supabase-js/**",
+    "node_modules/@supabase/functions-js/**",
+    "node_modules/@supabase/postgrest-js/**",
+    "node_modules/@supabase/storage-js/**",
+    "node_modules/@supabase/realtime-js/**",
+    "node_modules/@supabase/gotrue-js/**",
+    "next.config.js",
+    ".env.local"
+  ]
+  # Limit the size of the function bundle
+  node_bundler = "esbuild"
+
+# Special handling for auth routes
+[[redirects]]
+  from = "/auth/callback"
+  to = "/.netlify/functions/auth/callback"
+  status = 200
+  force = true
+  
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+# Create redirects for SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 

@@ -1,0 +1,1594 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 25% 36%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+
+    --font-sans: "var(--font-geist-sans)";
+    --font-mono: "var(--font-geist-mono)";
+
+    /* Enhanced Chat mode theme colors */
+    --thoughtful-gradient-from: 221.2 83.2% 53.3%;
+    --thoughtful-gradient-to: 225 95% 65%;
+    --quick-gradient-from: 39 100% 50%;
+    --quick-gradient-to: 45 100% 60%;
+    --creative-gradient-from: 21 90% 48%;
+    --creative-gradient-to: 15 95% 55%;
+    --technical-gradient-from: 220 14% 32%;
+    --technical-gradient-to: 215 20% 45%;
+    --learning-gradient-from: 146 68% 55%;
+    --learning-gradient-to: 150 80% 65%;
+
+    /* Light mode specific shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    /* Enhanced glass effect for light mode */
+    --glass-light: rgba(255, 255, 255, 0.7);
+    --glass-border-light: rgba(255, 255, 255, 0.5);
+
+    /* Light mode specific gradients */
+    --gradient-blue-light: linear-gradient(135deg, #3b82f6, #60a5fa);
+    --gradient-indigo-light: linear-gradient(135deg, #4f46e5, #818cf8);
+    --gradient-purple-light: linear-gradient(135deg, #7c3aed, #a78bfa);
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 30% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    /* Enhanced Dark mode shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4),
+      0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4),
+      0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4),
+      0 8px 10px -6px rgb(0 0 0 / 0.3);
+
+    /* Enhanced Dark mode glass effect */
+    --glass-dark: rgba(15, 23, 42, 0.7);
+    --glass-border-dark: rgba(30, 41, 59, 0.5);
+
+    /* Enhanced Dark mode gradients */
+    --gradient-blue-dark: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    --gradient-indigo-dark: linear-gradient(135deg, #4338ca, #6366f1);
+    --gradient-purple-dark: linear-gradient(135deg, #6d28d9, #8b5cf6);
+
+    /* Enhanced Dark mode gradient adjustments */
+    --thoughtful-gradient-from: 220 90% 50%;
+    --thoughtful-gradient-to: 225 95% 60%;
+    --quick-gradient-from: 39 90% 45%;
+    --quick-gradient-to: 45 95% 55%;
+    --creative-gradient-from: 21 80% 45%;
+    --creative-gradient-to: 15 85% 50%;
+    --technical-gradient-from: 220 25% 35%;
+    --technical-gradient-to: 215 30% 45%;
+    --learning-gradient-from: 146 60% 45%;
+    --learning-gradient-to: 150 70% 55%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar for desktop - hidden for mobile */
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-200;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-400 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    @apply bg-slate-800;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+}
+
+@layer components {
+  /* Custom component styles */
+  .card-hover {
+    @apply transition-all duration-300 ease-in-out;
+    @apply hover:translate-y-[-3px] hover:shadow-xl;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-hover::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      to right bottom,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0)
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    pointer-events: none;
+  }
+
+  .card-hover:hover::after {
+    opacity: 1;
+  }
+
+  .message-bubble {
+    @apply rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-sm;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .message-bubble::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      to right bottom,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.03)
+    );
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.7;
+  }
+
+  /* Enhanced Chat mode specific styles with gradients */
+  .thoughtful-mode .thinking-indicator {
+    @apply text-blue-500 border-blue-200;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--thoughtful-gradient-from) / 0.1),
+      hsl(var(--thoughtful-gradient-to) / 0.15)
+    );
+  }
+
+  .quick-mode .thinking-indicator {
+    @apply text-yellow-500 border-yellow-200;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--quick-gradient-from) / 0.1),
+      hsl(var(--quick-gradient-to) / 0.15)
+    );
+  }
+
+  .creative-mode .thinking-indicator {
+    @apply text-orange-500 border-orange-200;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--creative-gradient-from) / 0.1),
+      hsl(var(--creative-gradient-to) / 0.15)
+    );
+  }
+
+  .technical-mode .thinking-indicator {
+    @apply text-slate-700 border-slate-200;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--technical-gradient-from) / 0.1),
+      hsl(var(--technical-gradient-to) / 0.15)
+    );
+  }
+
+  .learning-mode .thinking-indicator {
+    @apply text-emerald-600 border-emerald-200;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--learning-gradient-from) / 0.1),
+      hsl(var(--learning-gradient-to) / 0.15)
+    );
+  }
+
+  /* Gradient Buttons */
+  .gradient-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .gradient-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0)
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .gradient-button:hover::before {
+    opacity: 1;
+  }
+
+  /* Enhanced dark mode card styles */
+  .card-dark {
+    @apply bg-slate-900/50 border-slate-800/50;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .card-dark:hover {
+    @apply bg-slate-900/70 border-slate-700/50;
+  }
+
+  /* Enhanced dark mode button styles */
+  .button-dark {
+    @apply bg-slate-800 text-white border-slate-700;
+    background-image: linear-gradient(
+      to bottom right,
+      rgba(59, 130, 246, 0.1),
+      rgba(99, 102, 241, 0.1)
+    );
+  }
+
+  .button-dark:hover {
+    @apply bg-slate-700 border-slate-600;
+    background-image: linear-gradient(
+      to bottom right,
+      rgba(59, 130, 246, 0.2),
+      rgba(99, 102, 241, 0.2)
+    );
+  }
+
+  /* Enhanced dark mode input styles */
+  .input-dark {
+    @apply bg-slate-900/50 border-slate-800 text-white;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .input-dark:focus {
+    @apply border-blue-500/50 ring-2 ring-blue-500/20;
+  }
+
+  /* Enhanced dark mode glass effect */
+  .glass-dark {
+    background: var(--glass-dark);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border-dark);
+  }
+
+  /* Enhanced dark mode text gradients */
+  .gradient-text-dark {
+    background: var(--gradient-blue-dark);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out forwards;
+  }
+
+  .animate-pulse {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-bounce {
+    animation: bounce 1.5s infinite;
+  }
+
+  .animate-thinking {
+    animation: thinking 2s ease-in-out infinite;
+  }
+
+  .animate-typing {
+    animation: typing 1.2s steps(5, end) infinite;
+  }
+
+  .animate-stream {
+    animation: fadeInChar 0.01s ease forwards;
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-slow {
+    animation: floatSlow 8s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInFromLeft 0.6s ease-out forwards;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInFromRight 0.6s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.5s ease-out forwards;
+  }
+
+  .animate-modern-pulse {
+    animation: modernPulse 3s ease-in-out infinite;
+  }
+
+  .animate-modern-glow {
+    animation: modernGlow 4s ease-in-out infinite;
+  }
+
+  .animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradientShift 8s ease infinite;
+  }
+
+  .bg-gradient-primary {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)),
+      hsl(var(--primary) / 0.8)
+    );
+  }
+
+  .bg-gradient-accent {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--accent)),
+      hsl(var(--accent) / 0.8)
+    );
+  }
+
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .transition-modern {
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .transition-bounce {
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  /* Modern glassmorphism effects */
+  .glass-modern {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  }
+
+  .glass-modern-dark {
+    background: rgba(15, 23, 42, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(30, 41, 59, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  /* Modern gradient backgrounds */
+  .bg-gradient-modern-blue {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .bg-gradient-modern-purple {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+
+  .bg-gradient-modern-teal {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
+
+  /* Enhanced 2025 gradient backgrounds */
+  .bg-gradient-hero {
+    background: linear-gradient(
+      135deg,
+      #3b82f6 0%,
+      #6366f1 25%,
+      #8b5cf6 50%,
+      #a855f7 75%,
+      #d946ef 100%
+    );
+  }
+
+  .bg-gradient-feature {
+    background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.1) 0%,
+      rgba(99, 102, 241, 0.05) 50%,
+      rgba(139, 92, 246, 0.1) 100%
+    );
+  }
+
+  .bg-gradient-card {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.7) 100%
+    );
+  }
+
+  .dark .bg-gradient-card {
+    background: linear-gradient(
+      135deg,
+      rgba(15, 23, 42, 0.9) 0%,
+      rgba(30, 41, 59, 0.7) 100%
+    );
+  }
+
+  /* Enhanced glass effects */
+  .glass-enhanced {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+  }
+
+  .dark .glass-enhanced {
+    background: rgba(15, 23, 42, 0.15);
+    border: 1px solid rgba(30, 41, 59, 0.4);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Interactive hover effects */
+  .hover-glow {
+    transition: all 0.3s ease;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3),
+      0 0 40px rgba(59, 130, 246, 0.1);
+  }
+
+  .dark .hover-glow:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4),
+      0 0 40px rgba(59, 130, 246, 0.2);
+  }
+
+  /* Hide scrollbar but maintain functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  /* Fix for Safari compatibility with backdrop-filter */
+  .glass-light {
+    background: var(--glass-light);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border-light);
+  }
+
+  .glass-dark {
+    background: var(--glass-dark);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border-dark);
+  }
+
+  /* Ensure all backdrop-filter uses have webkit prefix */
+  .backdrop-blur-sm {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+
+  .backdrop-blur-md {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .backdrop-blur-lg {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+
+  .backdrop-blur-2xl {
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+
+  .backdrop-blur-3xl {
+    -webkit-backdrop-filter: blur(36px);
+    backdrop-filter: blur(36px);
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes thinking {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes typing {
+  0% {
+    content: ".";
+  }
+  25% {
+    content: "..";
+  }
+  50% {
+    content: "...";
+  }
+  75% {
+    content: "....";
+  }
+  100% {
+    content: ".....";
+  }
+}
+
+@keyframes fadeInChar {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+  66% {
+    transform: translateY(-6px) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+@keyframes floatSlow {
+  0% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) translateX(4px) rotate(0.5deg);
+  }
+  50% {
+    transform: translateY(-4px) translateX(-2px) rotate(-0.5deg);
+  }
+  75% {
+    transform: translateY(-10px) translateX(2px) rotate(0.3deg);
+  }
+  100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modernPulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes modernGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6),
+      0 0 60px rgba(99, 102, 241, 0.4);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Responsive styles */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+  height: 100%;
+}
+
+/* Improved responsive styles */
+@media (max-width: 640px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  textarea,
+  button,
+  select {
+    font-size: 16px !important; /* Prevent iOS zoom on focus */
+  }
+
+  .mobile-full {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-basis: 100% !important;
+  }
+
+  .mobile-compact-p {
+    padding: 0.5rem !important;
+  }
+
+  .mobile-compact-m {
+    margin: 0.5rem !important;
+  }
+
+  .mobile-compact-gap {
+    gap: 0.5rem !important;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  /* Improved touch targets */
+  button,
+  [role="button"],
+  a {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem;
+    touch-action: manipulation;
+  }
+
+  /* Better spacing for mobile */
+  .chat-scroll {
+    max-height: calc(100vh - 180px) !important;
+    max-height: calc(100dvh - 180px) !important;
+  }
+
+  /* Improved mobile input experience */
+  .chat-input {
+    position: sticky;
+    bottom: 0;
+    background-color: inherit;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    z-index: 10;
+  }
+
+  /* Better mobile message bubbles */
+  .message-bubble {
+    max-width: 85% !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Improved mobile scrolling */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better mobile text sizing */
+  .responsive-text {
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Floating suggestions for mobile */
+  .suggestions-panel {
+    border-radius: 0;
+    max-height: 7rem;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  .suggestions-panel::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Settings page mobile optimizations */
+  .container {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* Improved card styles for mobile */
+  .card {
+    border-radius: 0.75rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .card-header {
+    padding: 0.75rem 1rem !important;
+  }
+
+  .card-content {
+    padding: 0.75rem 1rem !important;
+  }
+
+  /* Better form controls on mobile */
+  .input,
+  .textarea {
+    padding: 0.75rem !important;
+    border-radius: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Optimized provider buttons on mobile */
+  .provider-btn {
+    min-height: 3rem !important;
+    padding: 0.5rem !important;
+    border-radius: 0.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* Improved touch experience for toggles/switches */
+  [type="checkbox"],
+  [type="radio"] {
+    transform: scale(1.2) !important;
+  }
+
+  /* Better bottom navigation */
+  .sticky-bottom {
+    position: sticky !important;
+    bottom: 0 !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
+    z-index: 10 !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+
+  /* Add bottom spacing for safe area */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0) !important;
+  }
+
+  /* Faster transitions for better feeling on mobile */
+  .transition-all {
+    transition-duration: 200ms !important;
+  }
+
+  /* Better active state feedback */
+  button:active,
+  [role="button"]:active,
+  a:active {
+    transform: scale(0.98) !important;
+    transition: transform 0.1s ease-in-out !important;
+  }
+
+  /* Better spacing and typography for mobile */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    word-break: break-word;
+  }
+
+  h1 {
+    font-size: clamp(1.75rem, 5vw, 2.25rem) !important;
+    line-height: 1.2 !important;
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 1.875rem) !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Improved mobile card styles */
+  .card {
+    padding: 1rem !important;
+  }
+
+  /* Better mobile layout for feature section */
+  .feature-grid {
+    gap: 1.5rem !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Enhance mobile buttons */
+  .button-stack {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 1rem !important;
+  }
+
+  .button-stack > * {
+    width: 100% !important;
+  }
+
+  /* Modern mobile optimizations */
+  .mobile-hero-text {
+    font-size: clamp(2rem, 8vw, 3rem) !important;
+    line-height: 1.1 !important;
+  }
+
+  .mobile-subtitle {
+    font-size: clamp(1.25rem, 4vw, 1.5rem) !important;
+    line-height: 1.3 !important;
+  }
+
+  .mobile-description {
+    font-size: clamp(1rem, 3vw, 1.125rem) !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Enhanced mobile cards */
+  .mobile-card {
+    padding: 1.5rem !important;
+    border-radius: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  /* Better mobile spacing */
+  .mobile-section-padding {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
+
+  /* Improved mobile animations - reduce motion for better performance */
+  .animate-float {
+    animation: none !important;
+  }
+
+  .animate-modern-pulse {
+    animation-duration: 4s !important;
+  }
+
+  /* Fix spacing issues on mobile */
+  .py-20 {
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+
+  .py-16 {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+
+  /* Fix glass effects on mobile - reduce blur for better performance */
+  .glass-light,
+  .glass-dark {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Reduce animation intensity on mobile for better performance */
+  .animate-bounce {
+    animation-duration: 2s !important;
+  }
+
+  .hover-scale:hover,
+  .hover-lift:hover {
+    transform: none !important;
+  }
+
+  /* Fix for grid/flex layouts */
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* New Suggestions Styles */
+.suggestions-panel {
+  transition: all 0.2s ease-in-out;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.2) transparent;
+}
+
+.suggestions-panel::-webkit-scrollbar {
+  height: 4px;
+}
+
+.suggestions-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.suggestions-panel::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.2);
+  border-radius: 20px;
+}
+
+/* Smart suggestion button styles */
+.smart-suggestion {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  margin-right: 0.5rem;
+  margin-bottom: 0.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: rgba(59, 130, 246, 1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.dark .smart-suggestion {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: rgba(96, 165, 250, 1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.smart-suggestion:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+  cursor: pointer;
+}
+
+.smart-suggestion:active {
+  transform: translateY(0);
+}
+
+/* Animation for suggestions appearance/disappearance */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.suggestions-panel {
+  animation: fadeSlideIn 0.2s forwards;
+}
+
+.suggestions-panel.hiding {
+  animation: fadeSlideOut 0.2s forwards;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-adaptive {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex-basis: 100% !important;
+  }
+
+  .tablet-row {
+    flex-direction: row !important;
+  }
+
+  .tablet-center {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+}
+
+/* Viewport height fix for mobile browsers */
+.h-screen {
+  height: 100vh; /* Fallback */
+  height: 100dvh; /* Dynamic viewport height */
+}
+
+/* Ensure the body takes full height */
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hover effects only for devices that support hover */
+@media (hover: hover) {
+  .hover-scale {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .hover-scale:hover {
+    transform: scale(1.03);
+  }
+}
+
+/* Fix layout for mobile browsers */
+html {
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Safe area insets for modern mobile browsers */
+.h-screen,
+.min-h-screen {
+  height: 100vh;
+  height: calc(100vh - env(safe-area-inset-bottom));
+  height: calc(100dvh - env(safe-area-inset-bottom));
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Improved responsive text sizing */
+.responsive-text {
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  line-height: 1.6;
+}
+
+.responsive-heading {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.2;
+}
+
+/* Code block styles */
+.code-message {
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+pre {
+  border-radius: 0.5rem;
+  background-color: hsl(var(--slate-950));
+  color: hsl(var(--slate-100));
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background-color: hsl(var(--slate-100));
+  color: hsl(var(--slate-900));
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+}
+
+.dark code {
+  background-color: hsl(var(--slate-800));
+  color: hsl(var(--slate-100));
+}
+
+/* Syntax highlighting theme colors */
+.hljs-string {
+  color: hsl(var(--green-400));
+}
+
+.hljs-keyword {
+  color: hsl(var(--blue-400));
+}
+
+.hljs-function {
+  color: hsl(var(--purple-400));
+}
+
+.dark .hljs-string {
+  color: hsl(var(--green-300));
+}
+
+.dark .hljs-keyword {
+  color: hsl(var(--blue-300));
+}
+
+.dark .hljs-function {
+  color: hsl(var(--purple-300));
+}
+
+/* Enhanced touch feedback */
+@media (hover: none) {
+  .hover-scale:active {
+    transform: scale(0.98);
+  }
+
+  .hover-shadow:active {
+    box-shadow: none;
+  }
+
+  .hover-opacity:active {
+    opacity: 0.7;
+  }
+}
+
+/* Improved mobile layout */
+@supports (padding: max(0px)) {
+  .mobile-safe-padding {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Better mobile keyboard handling */
+.has-keyboard .chat-scroll {
+  max-height: calc(100vh - 280px) !important;
+  max-height: calc(100dvh - 280px) !important;
+}
+
+/* Improved mobile animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Add animations for enhanced Chat component */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bounceSlow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 3s infinite ease-in-out;
+}
+
+/* Ensure message bubbles have consistent styling across devices */
+.message-bubble {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.message-bubble:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+@media (max-width: 640px) {
+  .message-bubble {
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem !important;
+  }
+}
+
+/* Add new utility classes */
+.glass-light {
+  background: var(--glass-light);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border-light);
+}
+
+.gradient-text-light {
+  background: var(--gradient-blue-light);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Enhanced card styles for light mode */
+.card-light {
+  background: var(--glass-light);
+  border: 1px solid var(--glass-border-light);
+  box-shadow: var(--shadow-md);
+}
+
+.card-light:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Improved button styles for light mode */
+.button-light {
+  background: var(--gradient-blue-light);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.button-light:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+/* Enhanced scrollbar for light mode */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+}
+
+/* Light mode specific text colors */
+.text-primary-light {
+  @apply text-slate-900;
+}
+
+.text-secondary-light {
+  @apply text-slate-700;
+}
+
+.text-muted-light {
+  @apply text-slate-600;
+}
+
+/* Enhanced focus styles for light mode */
+*:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Improved input styles for light mode */
+input,
+textarea,
+select {
+  @apply bg-white border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20;
+}
+
+/* Better link styles for light mode */
+a {
+  @apply text-blue-600 hover:text-blue-700 transition-colors;
+}
+
+/* Enhanced light mode specific animations */
+@keyframes shimmer-light {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer-light {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-light 2s infinite;
+}
+
+/* Improved responsive styles */
+@media (max-width: 640px) {
+  .glass-light {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .card-light {
+    @apply rounded-xl;
+  }
+
+  .button-light {
+    @apply text-sm py-2 px-4;
+  }
+}
+
+/* Enhanced light mode transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Improved light mode hover effects */
+@media (hover: hover) {
+  .hover-light:hover {
+    @apply bg-slate-50;
+  }
+
+  .hover-light-border:hover {
+    @apply border-slate-300;
+  }
+}
+
+/* Fix hydration issues by ensuring consistent rendering */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Preventing content shifts during hydration */
+.no-js-hide {
+  display: none;
+}
+
+.js-ready .no-js-hide {
+  display: block;
+}
+
+/* Add JS detection */
+:root {
+  --hydrated: 0;
+}
+
+.js-ready {
+  --hydrated: 1;
+}
+
+/* Improve light mode contrast further */
+.dark .text-slate-400 {
+  color: rgba(
+    148,
+    163,
+    184,
+    1
+  ) !important; /* Increased from lower opacity for better contrast */
+}
+
+.text-slate-600 {
+  color: rgba(
+    71,
+    85,
+    105,
+    1
+  ) !important; /* Darker for better light mode contrast */
+}
+
+/* Fix any scroll jank */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}

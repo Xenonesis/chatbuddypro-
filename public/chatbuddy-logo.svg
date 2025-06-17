@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradientFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="256" fill="url(#gradientFill)" />
+  <path d="M347.676 164.324C347.676 153.623 339.001 145 328.243 145H137.433C126.675 145 118 153.623 118 164.324V290.486C118 301.187 126.675 309.811 137.433 309.811H164.379L192.162 338L219.946 309.811H328.243C339.001 309.811 347.676 301.187 347.676 290.486V164.324Z" fill="white" fill-opacity="0.9"/>
+  <path d="M394 221.514C394 210.813 385.325 202.189 374.567 202.189H364.649V290.486C364.649 310.756 348.621 327.108 328.243 327.108H219.946L192.162 355.297L164.379 327.108H147.784V337.027C147.784 347.728 156.459 356.351 167.217 356.351H194.162L221.946 384.54L249.729 356.351H374.567C385.325 356.351 394 347.728 394 337.027V221.514Z" fill="white" fill-opacity="0.7"/>
+  <circle cx="164" cy="227" r="15" fill="url(#gradientFill)"/>
+  <circle cx="222" cy="227" r="15" fill="url(#gradientFill)"/>
+  <circle cx="280" cy="227" r="15" fill="url(#gradientFill)"/>
+</svg> 

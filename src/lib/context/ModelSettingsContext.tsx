@@ -1,0 +1,866 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { userService } from '@/lib/services/userService';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+
+export type AIProvider = 'openai' | 'gemini' | 'mistral' | 'claude' | 'llama' | 'deepseek';
+export type ChatMode = 'thoughtful' | 'quick' | 'creative' | 'technical' | 'learning';
+
+// Provider information
+export const PROVIDER_INFO: Record<AIProvider, { name: string, displayName: string }> = {
+  'openai': { name: 'openai', displayName: 'OpenAI' },
+  'gemini': { name: 'gemini', displayName: 'Google Gemini' },
+  'mistral': { name: 'mistral', displayName: 'Mistral AI' },
+  'claude': { name: 'claude', displayName: 'Anthropic Claude' },
+  'llama': { name: 'llama', displayName: 'Meta Llama' },
+  'deepseek': { name: 'deepseek', displayName: 'DeepSeek' }
+};
+
+export type ModelSettings = {
+  openai: {
+    enabled: boolean;
+    apiKey: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  gemini: {
+    enabled: boolean;
+    apiKey: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  mistral: {
+    enabled: boolean;
+    apiKey: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  claude: {
+    enabled: boolean;
+    apiKey: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  llama: {
+    enabled: boolean;
+    apiKey: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  deepseek: {
+    enabled: boolean;
+    apiKey: string;
+    maxTokens: number;
+    temperature: number;
+  };
+  suggestionsSettings: {
+    enabled: boolean;
+    saveHistory: boolean;
+    maxHistoryItems: number;
+    showFollowUpQuestions: boolean;
+    showTopicSuggestions: boolean;
+    showPromptRecommendations: boolean;
+    useAI: boolean;
+    favoritePrompts: string[];
+  };
+  voiceInputSettings: {
+    enabled: boolean;
+    language: string;
+    continuous: boolean;
+  };
+  defaultProvider: AIProvider;
+  chatMode: ChatMode;
+  showThinking: boolean;
+};
+
+export type VoiceInputSettings = {
+  enabled: boolean;
+  language: string;
+  continuous: boolean;
+};
+
+const defaultSettings: ModelSettings = {
+  openai: {
+    enabled: true,
+    apiKey: '',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  gemini: {
+    enabled: true,
+    apiKey: '',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  mistral: {
+    enabled: true,
+    apiKey: '',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  claude: {
+    enabled: true,
+    apiKey: '',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  llama: {
+    enabled: true,
+    apiKey: '',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  deepseek: {
+    enabled: true,
+    apiKey: '',
+    maxTokens: 500,
+    temperature: 0.7
+  },
+  suggestionsSettings: {
+    enabled: true,
+    saveHistory: true,
+    maxHistoryItems: 50,
+    showFollowUpQuestions: true, 
+    showTopicSuggestions: true,
+    showPromptRecommendations: true,
+    useAI: true,
+    favoritePrompts: []
+  },
+  voiceInputSettings: {
+    enabled: true,
+    language: 'en-US',
+    continuous: true
+  },
+  defaultProvider: 'openai',
+  chatMode: 'thoughtful',
+  showThinking: false
+};
+
+interface ModelSettingsContextType {
+  settings: ModelSettings;
+  currentProvider: AIProvider;
+  setCurrentProvider: (provider: AIProvider) => void;
+  updateSettings: (newSettings: ModelSettings) => void;
+  getApiKey: (provider: AIProvider) => string;
+  setChatMode: (mode: ChatMode) => void;
+  toggleShowThinking: () => void;
+  getDefaultSettings: () => ModelSettings;
+  addFavoritePrompt: (prompt: string) => void;
+  removeFavoritePrompt: (prompt: string) => void;
+  toggleSuggestionsEnabled: () => void;
+  toggleSaveHistory: () => void;
+  toggleFollowUpQuestions: () => void;
+  toggleTopicSuggestions: () => void;
+  togglePromptRecommendations: () => void;
+  toggleUseAI: () => void;
+  toggleVoiceInput: () => void;
+  setVoiceLanguage: (language: string) => void;
+  toggleContinuousListening: () => void;
+  apiKeys: Record<string, string>;
+  hasLoadedKeysFromSupabase: boolean;
+  showAddApiKeyForm: boolean;
+  setShowAddApiKeyForm: (show: boolean) => void;
+}
+
+const ModelSettingsContext = createContext<ModelSettingsContextType | undefined>(undefined);
+
+export function ModelSettingsProvider({ children }: { children: ReactNode }) {
+  const [settings, setSettings] = useState<ModelSettings>(defaultSettings);
+  const [currentProvider, setCurrentProvider] = useState<AIProvider>(defaultSettings.defaultProvider);
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [hasLoadedKeysFromSupabase, setHasLoadedKeysFromSupabase] = useState(false);
+  const [showAddApiKeyForm, setShowAddApiKeyForm] = useState(false);
+  const { user, isAuthReady } = useAuth();
+  const [loadingKeys, setLoadingKeys] = useState(false);
+
+  useEffect(() => {
+    // Load settings from localStorage on client side
+    if (typeof window !== 'undefined') {
+      const savedSettings = localStorage.getItem('aiSettings');
+      if (savedSettings) {
+        try {
+          const parsedSettings = JSON.parse(savedSettings);
+          
+          // Create a clean version of settings without models and selectedModel
+          const cleanSettings: ModelSettings = {
+            ...defaultSettings
+          };
+          
+          // For each provider, copy over the relevant properties
+          Object.keys(PROVIDER_INFO).forEach(provider => {
+            const providerKey = provider as AIProvider;
+            if (parsedSettings[providerKey]) {
+              cleanSettings[providerKey] = {
+                enabled: parsedSettings[providerKey].enabled ?? defaultSettings[providerKey].enabled,
+                apiKey: parsedSettings[providerKey].apiKey ?? '',
+                maxTokens: parsedSettings[providerKey].maxTokens ?? defaultSettings[providerKey].maxTokens,
+                temperature: parsedSettings[providerKey].temperature ?? defaultSettings[providerKey].temperature
+              };
+            }
+          });
+          
+          // Copy other settings
+          if (parsedSettings.defaultProvider) {
+            cleanSettings.defaultProvider = parsedSettings.defaultProvider;
+          }
+          
+          if (parsedSettings.chatMode) {
+            cleanSettings.chatMode = parsedSettings.chatMode;
+          }
+          
+          if (parsedSettings.showThinking !== undefined) {
+            cleanSettings.showThinking = parsedSettings.showThinking;
+          }
+          
+          if (parsedSettings.suggestionsSettings) {
+            cleanSettings.suggestionsSettings = {
+              ...defaultSettings.suggestionsSettings,
+              ...parsedSettings.suggestionsSettings
+            };
+          }
+          
+          if (parsedSettings.voiceInputSettings) {
+            cleanSettings.voiceInputSettings = {
+              ...defaultSettings.voiceInputSettings,
+              ...parsedSettings.voiceInputSettings
+            };
+          }
+          
+          setSettings(cleanSettings);
+          
+          // Update localStorage with the cleaned settings
+          localStorage.setItem('aiSettings', JSON.stringify(cleanSettings));
+          
+          // If there's a default provider set, update the current provider
+          if (cleanSettings.defaultProvider) {
+            setCurrentProvider(cleanSettings.defaultProvider);
+          }
+        } catch (error) {
+          console.error('Error parsing saved settings:', error);
+          // In case of error, fall back to default settings
+          setSettings(defaultSettings);
+        }
+      }
+      
+      // Load API keys from localStorage if they exist
+      const openaiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY');
+      const geminiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY');
+      const mistralKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY');
+      const claudeKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY');
+      const llamaKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY');
+      const deepseekKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY');
+    
+      if (openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey) {
+        setSettings(prevSettings => ({
+          ...prevSettings,
+          openai: { ...prevSettings.openai, apiKey: openaiKey || '' },
+          gemini: { ...prevSettings.gemini, apiKey: geminiKey || '' },
+          mistral: { ...prevSettings.mistral, apiKey: mistralKey || '' },
+          claude: { ...prevSettings.claude, apiKey: claudeKey || '' },
+          llama: { ...prevSettings.llama, apiKey: llamaKey || '' },
+          deepseek: { ...prevSettings.deepseek, apiKey: deepseekKey || '' },
+        }));
+      }
+    }
+  }, []);
+
+  // Add this effect to load API keys when the user state is ready
+  useEffect(() => {
+    if (user && isAuthReady) {
+      loadAPIKeysFromSupabase();
+    }
+  }, [user, isAuthReady]);
+
+  // Load API keys from Supabase
+  const loadAPIKeysFromSupabase = async () => {
+    if (!user?.id) {
+      console.log('Cannot load API keys: No user ID available');
+      return;
+    }
+
+    try {
+      setLoadingKeys(true);
+      // Get user ID from state (already validated)
+      const userId = user.id;
+      console.log('Loading API keys from Supabase for user:', userId.substring(0, 8) + '...');
+      
+      // Try to access user preferences
+      const preferences = await userService.getUserPreferences(userId);
+      if (!preferences) {
+        console.log('No preferences found, creating default preferences');
+        await userService.createDefaultPreferences(userId);
+        setLoadingKeys(false);
+        setHasLoadedKeysFromSupabase(true);
+        return;
+      }
+      
+      // Check new ai_providers structure first
+      if (preferences.ai_providers) {
+        console.log('Found ai_providers structure in preferences');
+        
+        const newApiKeys: Record<string, string> = {};
+        const newSettings = { ...settings };
+        
+        // Process each provider
+        Object.entries(preferences.ai_providers).forEach(([provider, providerInfo]) => {
+          const validProvider = provider as AIProvider;
+          if (validProvider && providerInfo && providerInfo.enabled && providerInfo.api_keys) {
+            // Get the default key or first available key
+            const apiKey = providerInfo.api_keys['default'] || 
+                         Object.values(providerInfo.api_keys)[0];
+                         
+            if (apiKey) {
+              console.log(`Found API key for ${provider} in ai_providers`);
+              newApiKeys[provider] = apiKey;
+              
+              // Also update the settings
+              if (newSettings[validProvider]) {
+                newSettings[validProvider].enabled = true;
+                newSettings[validProvider].apiKey = apiKey;
+                
+                // Also store in localStorage for immediate use
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`, apiKey);
+                }
+              }
+            }
+          }
+        });
+        
+        // Update state with keys found
+        if (Object.keys(newApiKeys).length > 0) {
+          setApiKeys(newApiKeys);
+          setSettings(newSettings);
+          console.log('Updated settings with API keys from ai_providers');
+        }
+      }
+      // Fall back to legacy api_keys structure if no keys found in ai_providers
+      else if (preferences.api_keys && Object.keys(preferences.api_keys).length > 0) {
+        console.log('Found legacy api_keys structure in preferences');
+        
+        // Extract API keys in the format we expect
+        const apiKeysFromDB = { ...preferences.api_keys };
+        
+        // Update state with these keys
+        const newSettings = { ...settings };
+        
+        // For each provider in our settings, check if we have a key
+        Object.keys(PROVIDER_INFO).forEach(provider => {
+          const typedProvider = provider as AIProvider;
+          const apiKey = apiKeysFromDB[provider];
+          
+          if (apiKey && typedProvider && newSettings[typedProvider]) {
+            console.log(`Found API key for ${provider} in legacy structure`);
+            newSettings[typedProvider].enabled = true;
+            newSettings[typedProvider].apiKey = apiKey;
+            
+            // Also store in localStorage for immediate use
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`, apiKey);
+            }
+          }
+        });
+        
+        setApiKeys(apiKeysFromDB);
+        setSettings(newSettings);
+        console.log('Updated settings with API keys from legacy structure');
+      } else {
+        console.log('No API keys found in user preferences');
+      }
+      
+      // Get providers with API keys in the database
+      const providersWithApiKeys = Object.keys(apiKeys || {}) as AIProvider[];
+      console.log('Providers with API keys in database:', providersWithApiKeys);
+      
+      // Check if there's a defaultProvider in preferences and apply it
+      if (preferences.preferences && preferences.preferences.settings && 
+          preferences.preferences.settings.defaultProvider) {
+            
+        const defaultProviderFromPrefs = preferences.preferences.settings.defaultProvider as AIProvider;
+        console.log(`Found defaultProvider in preferences: ${defaultProviderFromPrefs}`);
+        
+        // Verify the provider is valid and has an API key in the database
+        if (providersWithApiKeys.includes(defaultProviderFromPrefs)) {
+          // Valid provider with API key, set as current
+          setCurrentProvider(defaultProviderFromPrefs);
+          setSettings(current => ({
+            ...current,
+            defaultProvider: defaultProviderFromPrefs
+          }));
+          console.log(`Updated defaultProvider to: ${defaultProviderFromPrefs}`);
+        } else {
+          console.log(`Default provider ${defaultProviderFromPrefs} does not have an API key in the database`);
+          
+          // Set default provider to the first available provider with an API key
+          if (providersWithApiKeys.length > 0) {
+            const newDefaultProvider = providersWithApiKeys[0];
+            setCurrentProvider(newDefaultProvider);
+            setSettings(current => ({
+              ...current,
+              defaultProvider: newDefaultProvider
+            }));
+            console.log(`Setting default provider to ${newDefaultProvider} instead, as it has an API key in the database`);
+          }
+        }
+      } else {
+        // No default provider in preferences, set to first provider with API key
+        if (providersWithApiKeys.length > 0) {
+          const newDefaultProvider = providersWithApiKeys[0];
+          setCurrentProvider(newDefaultProvider);
+          setSettings(current => ({
+            ...current,
+            defaultProvider: newDefaultProvider
+          }));
+          console.log(`No default provider in preferences, setting to ${newDefaultProvider} as it has an API key in the database`);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading API keys from Supabase:', error);
+    } finally {
+      setLoadingKeys(false);
+      setHasLoadedKeysFromSupabase(true);
+    }
+  };
+
+  const updateSettings = async (newSettings: ModelSettings) => {
+    // Get providers with valid API keys in the database
+    const providersWithApiKeys = Object.keys(apiKeys || {}) as AIProvider[];
+    
+    // Validate default provider has an API key in the database
+    if (newSettings.defaultProvider !== settings.defaultProvider) {
+      if (!providersWithApiKeys.includes(newSettings.defaultProvider)) {
+        console.log(`Default provider ${newSettings.defaultProvider} does not have an API key in the database`);
+        
+        // Keep the current default provider if it has an API key
+        if (providersWithApiKeys.includes(settings.defaultProvider)) {
+          newSettings.defaultProvider = settings.defaultProvider;
+          console.log(`Keeping current default provider ${settings.defaultProvider}`);
+        }
+        // Otherwise set to the first provider with an API key
+        else if (providersWithApiKeys.length > 0) {
+          newSettings.defaultProvider = providersWithApiKeys[0];
+          console.log(`Setting default provider to ${providersWithApiKeys[0]} as it has an API key in the database`);
+        }
+      }
+    }
+    
+    // Update settings in state
+    setSettings(newSettings);
+    
+    // If the default provider has changed and it's enabled with an API key, update currentProvider
+    if (newSettings.defaultProvider !== settings.defaultProvider &&
+        newSettings[newSettings.defaultProvider]?.enabled &&
+        providersWithApiKeys.includes(newSettings.defaultProvider)) {
+      console.log(`Default provider changed to ${newSettings.defaultProvider}, updating current provider`);
+      setCurrentProvider(newSettings.defaultProvider);
+    }
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      console.log(`Saving settings to localStorage with defaultProvider: ${newSettings.defaultProvider}`);
+      localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+    }
+    
+    // TODO: Migrate this to work with the new ai_providers structure
+
+    // Save API keys to Supabase for each provider if changed
+    if (user && user.id) {
+      // Create a queue of API key update operations
+      const apiKeyUpdatePromises: Promise<boolean>[] = [];
+      
+      // For each provider, check if the API key changed
+      Object.keys(PROVIDER_INFO).forEach(providerKey => {
+        const provider = providerKey as AIProvider;
+        const oldApiKey = settings[provider].apiKey;
+        const newApiKey = newSettings[provider].apiKey;
+        
+        // Only update if the key changed and the new key is valid
+        if (newApiKey !== oldApiKey && newApiKey) {
+          console.log(`API key for ${provider} has changed, updating in Supabase...`);
+          
+          // Store the API key with a name (default) for better organization
+          apiKeyUpdatePromises.push(
+            userService.storeApiKey(user.id, provider, newApiKey, 'default')
+          );
+        }
+      });
+      
+      // Execute all API key updates in parallel
+      if (apiKeyUpdatePromises.length > 0) {
+        try {
+          const results = await Promise.all(apiKeyUpdatePromises);
+          const allSuccessful = results.every(result => result === true);
+          
+          if (allSuccessful) {
+            console.log('All API key updates completed successfully');
+              } else {
+            console.warn('Some API key updates failed:', results);
+          }
+        } catch (error) {
+          console.error('Error updating API keys:', error);
+        }
+      }
+      
+      // Update other settings in the database
+      try {
+        // Remove API keys from the settings object to avoid duplication
+        const settingsWithoutApiKeys = { ...newSettings };
+        Object.keys(PROVIDER_INFO).forEach(provider => {
+          settingsWithoutApiKeys[provider as AIProvider].apiKey = '';
+        });
+        
+        // Save settings to database
+        await userService.saveUserSettings(user.id, { settings: settingsWithoutApiKeys });
+        console.log('Settings saved to database');
+      } catch (error) {
+        console.error('Error saving settings to database:', error);
+      }
+          } else {
+      console.log('User not logged in, settings will only be saved locally');
+    }
+  };
+
+  const getApiKey = (provider: AIProvider): string => {
+    // For mistral, apply more permissive validation
+    if (provider === 'mistral') {
+      // Don't block mistral keys based on length
+      return settings[provider].apiKey || '';
+    }
+    
+    // Perform basic validation on the API key
+    const apiKey = settings[provider].apiKey || '';
+    
+    // Different providers have different key formats, apply some basic validation
+    switch (provider) {
+      case 'openai':
+        // OpenAI API keys are typically long strings starting with 'sk-'
+        if (apiKey && (!apiKey.startsWith('sk-') || apiKey.length < 20)) {
+          console.warn('OpenAI API key appears to be invalid (incorrect format)');
+          return '';
+        }
+        break;
+      case 'gemini':
+        // Gemini API keys are typically long strings
+        if (apiKey && apiKey.length < 20) {
+          console.warn('Gemini API key appears to be invalid (too short)');
+          return '';
+        }
+        break;
+      case 'claude':
+        // Claude API keys are typically long strings
+        if (apiKey && apiKey.length < 20) {
+          console.warn('Claude API key appears to be invalid (too short)');
+          return '';
+        }
+        break;
+      // Remove the mistral validation which was too strict
+    }
+    
+    return apiKey;
+  };
+
+  const setChatMode = async (mode: ChatMode) => {
+    setSettings(prev => ({
+      ...prev,
+      chatMode: mode
+    }));
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aiSettings', JSON.stringify({
+        ...settings,
+        chatMode: mode
+      }));
+    }
+    
+    // Save to database if user is logged in
+    if (user) {
+      try {
+        await userService.saveUserSettings(user.id, {
+          ...settings,
+          chatMode: mode
+        });
+      } catch (error) {
+        console.error('Error saving chatMode setting:', error);
+      }
+    }
+  };
+
+  const toggleShowThinking = async () => {
+    const newShowThinking = !settings.showThinking;
+    
+    setSettings(prev => ({
+      ...prev,
+      showThinking: newShowThinking
+    }));
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aiSettings', JSON.stringify({
+        ...settings,
+        showThinking: newShowThinking
+      }));
+    }
+    
+    // Save to database if user is logged in
+    if (user) {
+      try {
+        await userService.saveUserSettings(user.id, {
+          ...settings,
+          showThinking: newShowThinking
+        });
+      } catch (error) {
+        console.error('Error saving showThinking setting:', error);
+      }
+    }
+  };
+
+  const getDefaultSettings = () => {
+    return JSON.parse(JSON.stringify(defaultSettings));
+  };
+
+  const addFavoritePrompt = (prompt: string) => {
+    setSettings(prev => {
+      // Don't add duplicate prompts
+      if (prev.suggestionsSettings.favoritePrompts.includes(prompt)) {
+        return prev;
+      }
+      
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          favoritePrompts: [...prev.suggestionsSettings.favoritePrompts, prompt]
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const removeFavoritePrompt = (prompt: string) => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          favoritePrompts: prev.suggestionsSettings.favoritePrompts.filter(p => p !== prompt)
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleSuggestionsEnabled = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          enabled: !prev.suggestionsSettings.enabled
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleSaveHistory = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          saveHistory: !prev.suggestionsSettings.saveHistory
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleFollowUpQuestions = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          showFollowUpQuestions: !prev.suggestionsSettings.showFollowUpQuestions
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleTopicSuggestions = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          showTopicSuggestions: !prev.suggestionsSettings.showTopicSuggestions
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const togglePromptRecommendations = () => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          showPromptRecommendations: !prev.suggestionsSettings.showPromptRecommendations
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  };
+
+  const toggleUseAI = () => {
+    setSettings(prev => {
+      const newSettings = {
+        ...prev,
+        suggestionsSettings: {
+          ...prev.suggestionsSettings,
+          useAI: !prev.suggestionsSettings.useAI
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+      
+      return newSettings;
+    });
+  };
+
+  const toggleVoiceInput = useCallback(() => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        voiceInputSettings: {
+          ...prev.voiceInputSettings,
+          enabled: !prev.voiceInputSettings.enabled
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+      
+      return newSettings;
+    });
+  }, []);
+
+  const setVoiceLanguage = useCallback((language: string) => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        voiceInputSettings: {
+          ...prev.voiceInputSettings,
+          language
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+      
+      return newSettings;
+    });
+  }, []);
+
+  const toggleContinuousListening = useCallback(() => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        voiceInputSettings: {
+          ...prev.voiceInputSettings,
+          continuous: !prev.voiceInputSettings.continuous
+        }
+      };
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+      
+      return newSettings;
+    });
+  }, []);
+
+  const contextValue: ModelSettingsContextType = {
+    settings,
+    currentProvider,
+    setCurrentProvider,
+    updateSettings,
+    getApiKey,
+    setChatMode,
+    toggleShowThinking,
+    getDefaultSettings,
+    addFavoritePrompt,
+    removeFavoritePrompt,
+    toggleSuggestionsEnabled,
+    toggleSaveHistory,
+    toggleFollowUpQuestions,
+    toggleTopicSuggestions,
+    togglePromptRecommendations,
+    toggleUseAI,
+    toggleVoiceInput,
+    setVoiceLanguage,
+    toggleContinuousListening,
+    apiKeys,
+    hasLoadedKeysFromSupabase,
+    showAddApiKeyForm,
+    setShowAddApiKeyForm
+  };
+
+  return (
+    <ModelSettingsContext.Provider
+      value={contextValue}
+    >
+      {children}
+    </ModelSettingsContext.Provider>
+  );
+}
+
+export function useModelSettings() {
+  const context = useContext(ModelSettingsContext);
+  if (context === undefined) {
+    throw new Error('useModelSettings must be used within a ModelSettingsProvider');
+  }
+  return context;
+} 
