@@ -1,6 +1,6 @@
 {
   "name": "chatbuddy-functions",
-  "version": "1.0.0",
+  "version": "2.4",
   "description": "Netlify functions for ChatBuddy",
   "main": "index.js",
   "dependencies": {

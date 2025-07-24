@@ -1,6 +1,6 @@
 {
   "name": "chatbuddy",
-  "version": "0.1.0",
+  "version": "2.4",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -63,7 +63,7 @@
     "framer-motion": "^12.6.3",
     "geist": "^1.3.1",
     "lucide-react": "^0.487.0",
-    "next": "15.2.4",
+    "next": "15.4.3",
     "next-themes": "^0.4.6",
     "node-fetch": "3.3.2",
     "node-libs-browser": "^2.2.1",
@@ -94,7 +94,7 @@
     "autoprefixer": "^10.4.21",
     "canvas": "3.1.0",
     "eslint": "^9",
-    "eslint-config-next": "15.2.4",
+    "eslint-config-next": "15.4.3",
     "postcss": "^8.5.3",
     "sharp": "0.34.1",
     "tailwindcss": "^3.4.0",
