@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { userService } from '@/lib/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, decryptApiKey } from '@/lib/supabase';
 
 export type AIProvider = 'openai' | 'gemini' | 'mistral' | 'claude' | 'llama' | 'deepseek';
 export type ChatMode = 'thoughtful' | 'quick' | 'creative' | 'technical' | 'learning';
@@ -24,36 +24,42 @@ export type ModelSettings = {
     apiKey: string;
     maxTokens: number;
     temperature: number;
+    selectedModel: string;
   };
   gemini: {
     enabled: boolean;
     apiKey: string;
     maxTokens: number;
     temperature: number;
+    selectedModel: string;
   };
   mistral: {
     enabled: boolean;
     apiKey: string;
     maxTokens: number;
     temperature: number;
+    selectedModel: string;
   };
   claude: {
     enabled: boolean;
     apiKey: string;
     maxTokens: number;
     temperature: number;
+    selectedModel: string;
   };
   llama: {
     enabled: boolean;
     apiKey: string;
     maxTokens: number;
     temperature: number;
+    selectedModel: string;
   };
   deepseek: {
     enabled: boolean;
     apiKey: string;
     maxTokens: number;
     temperature: number;
+    selectedModel: string;
   };
   suggestionsSettings: {
     enabled: boolean;
@@ -86,37 +92,43 @@ const defaultSettings: ModelSettings = {
     enabled: true,
     apiKey: '',
     maxTokens: 500,
-    temperature: 0.7
+    temperature: 0.7,
+    selectedModel: 'gpt-3.5-turbo'
   },
   gemini: {
     enabled: true,
     apiKey: '',
     maxTokens: 500,
-    temperature: 0.7
+    temperature: 0.7,
+    selectedModel: 'gemini-2.0-flash'
   },
   mistral: {
     enabled: true,
     apiKey: '',
     maxTokens: 500,
-    temperature: 0.7
+    temperature: 0.7,
+    selectedModel: 'mistral-small'
   },
   claude: {
     enabled: true,
     apiKey: '',
     maxTokens: 500,
-    temperature: 0.7
+    temperature: 0.7,
+    selectedModel: 'claude-3-5-sonnet-20240620'
   },
   llama: {
     enabled: true,
     apiKey: '',
     maxTokens: 500,
-    temperature: 0.7
+    temperature: 0.7,
+    selectedModel: 'llama-3-8b-instruct'
   },
   deepseek: {
     enabled: true,
     apiKey: '',
     maxTokens: 500,
-    temperature: 0.7
+    temperature: 0.7,
+    selectedModel: 'deepseek-chat'
   },
   suggestionsSettings: {
     enabled: true,
@@ -196,7 +208,8 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
                 enabled: parsedSettings[providerKey].enabled ?? defaultSettings[providerKey].enabled,
                 apiKey: parsedSettings[providerKey].apiKey ?? '',
                 maxTokens: parsedSettings[providerKey].maxTokens ?? defaultSettings[providerKey].maxTokens,
-                temperature: parsedSettings[providerKey].temperature ?? defaultSettings[providerKey].temperature
+                temperature: parsedSettings[providerKey].temperature ?? defaultSettings[providerKey].temperature,
+                selectedModel: parsedSettings[providerKey].selectedModel ?? defaultSettings[providerKey].selectedModel
               };
             }
           });
@@ -244,13 +257,13 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Load API keys from localStorage if they exist
-      const openaiKey = localStorage.getItem('NEXT_PUBLIC_OPENAI_API_KEY');
-      const geminiKey = localStorage.getItem('NEXT_PUBLIC_GEMINI_API_KEY');
-      const mistralKey = localStorage.getItem('NEXT_PUBLIC_MISTRAL_API_KEY');
-      const claudeKey = localStorage.getItem('NEXT_PUBLIC_CLAUDE_API_KEY');
-      const llamaKey = localStorage.getItem('NEXT_PUBLIC_LLAMA_API_KEY');
-      const deepseekKey = localStorage.getItem('NEXT_PUBLIC_DEEPSEEK_API_KEY');
+      // Load API keys from environment variables only
+      const openaiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+      const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      const mistralKey = process.env.NEXT_PUBLIC_MISTRAL_API_KEY;
+      const claudeKey = process.env.NEXT_PUBLIC_CLAUDE_API_KEY;
+      const llamaKey = process.env.NEXT_PUBLIC_LLAMA_API_KEY;
+      const deepseekKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
     
       if (openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey) {
         setSettings(prevSettings => ({
@@ -269,7 +282,9 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   // Add this effect to load API keys when the user state is ready
   useEffect(() => {
     if (user && isAuthReady) {
-      loadAPIKeysFromSupabase();
+      loadAPIKeysFromSupabase().catch(error => {
+        console.error('Error loading API keys from Supabase:', error);
+      });
     }
   }, [user, isAuthReady]);
 
@@ -297,43 +312,56 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       }
       
       // Check new ai_providers structure first
+      let currentApiKeys: Record<string, string> = {};
       if (preferences.ai_providers) {
         console.log('Found ai_providers structure in preferences');
         
         const newApiKeys: Record<string, string> = {};
         const newSettings = { ...settings };
         
-        // Process each provider
-        Object.entries(preferences.ai_providers).forEach(([provider, providerInfo]) => {
+        // Process each provider (need to use async/await for decryption)
+        const providerPromises = Object.entries(preferences.ai_providers).map(async ([provider, providerInfo]) => {
           const validProvider = provider as AIProvider;
           if (validProvider && providerInfo && providerInfo.enabled && providerInfo.api_keys) {
-            // Get the default key or first available key
-            const apiKey = providerInfo.api_keys['default'] || 
-                         Object.values(providerInfo.api_keys)[0];
-                         
-            if (apiKey) {
-              console.log(`Found API key for ${provider} in ai_providers`);
-              newApiKeys[provider] = apiKey;
-              
-              // Also update the settings
-              if (newSettings[validProvider]) {
-                newSettings[validProvider].enabled = true;
-                newSettings[validProvider].apiKey = apiKey;
-                
-                // Also store in localStorage for immediate use
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`, apiKey);
+            // Get the default key or first available key (these are encrypted)
+            const encryptedApiKey = providerInfo.api_keys['default'] ||
+                                  Object.values(providerInfo.api_keys)[0];
+
+            if (encryptedApiKey) {
+              try {
+                console.log(`Found encrypted API key for ${provider} in ai_providers, decrypting...`);
+                const decryptedApiKey = await decryptApiKey(encryptedApiKey, userId);
+
+                console.log(`Successfully decrypted API key for ${provider}`);
+                newApiKeys[provider] = decryptedApiKey;
+
+                // Also update the settings
+                if (newSettings[validProvider]) {
+                  newSettings[validProvider].enabled = true;
+                  newSettings[validProvider].apiKey = decryptedApiKey;
                 }
+
+                return { provider, success: true };
+              } catch (error) {
+                console.error(`Error decrypting API key for ${provider}:`, error);
+                return { provider, success: false };
               }
             }
           }
+          return { provider, success: false };
         });
+
+        // Wait for all decryption operations to complete
+        await Promise.all(providerPromises);
         
         // Update state with keys found
         if (Object.keys(newApiKeys).length > 0) {
           setApiKeys(newApiKeys);
           setSettings(newSettings);
+          currentApiKeys = newApiKeys;
           console.log('Updated settings with API keys from ai_providers');
+        } else {
+          console.log('No API keys found in ai_providers structure');
         }
       }
       // Fall back to legacy api_keys structure if no keys found in ai_providers
@@ -346,32 +374,53 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
         // Update state with these keys
         const newSettings = { ...settings };
         
-        // For each provider in our settings, check if we have a key
-        Object.keys(PROVIDER_INFO).forEach(provider => {
+        // For each provider in our settings, check if we have a key (need async for decryption)
+        const legacyPromises = Object.keys(PROVIDER_INFO).map(async (provider) => {
           const typedProvider = provider as AIProvider;
-          const apiKey = apiKeysFromDB[provider];
-          
-          if (apiKey && typedProvider && newSettings[typedProvider]) {
-            console.log(`Found API key for ${provider} in legacy structure`);
-            newSettings[typedProvider].enabled = true;
-            newSettings[typedProvider].apiKey = apiKey;
-            
-            // Also store in localStorage for immediate use
-            if (typeof window !== 'undefined') {
-              localStorage.setItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`, apiKey);
+          const encryptedApiKey = apiKeysFromDB[provider];
+
+          if (encryptedApiKey && typedProvider && newSettings[typedProvider]) {
+            try {
+              console.log(`Found encrypted API key for ${provider} in legacy structure, decrypting...`);
+              const decryptedApiKey = await decryptApiKey(encryptedApiKey, userId);
+
+              console.log(`Successfully decrypted legacy API key for ${provider}`);
+              newSettings[typedProvider].enabled = true;
+              newSettings[typedProvider].apiKey = decryptedApiKey;
+
+              return { provider, success: true };
+            } catch (error) {
+              console.error(`Error decrypting legacy API key for ${provider}:`, error);
+              return { provider, success: false };
             }
           }
+          return { provider, success: false };
         });
-        
-        setApiKeys(apiKeysFromDB);
+
+        // Wait for all legacy decryption operations to complete
+        await Promise.all(legacyPromises);
+
+        // Create a new object with decrypted keys for the state
+        const decryptedApiKeys: Record<string, string> = {};
+        Object.keys(PROVIDER_INFO).forEach(provider => {
+          const typedProvider = provider as AIProvider;
+          if (newSettings[typedProvider]?.apiKey) {
+            decryptedApiKeys[provider] = newSettings[typedProvider].apiKey;
+          }
+        });
+
+        setApiKeys(decryptedApiKeys);
         setSettings(newSettings);
-        console.log('Updated settings with API keys from legacy structure');
+        console.log('Updated settings with decrypted API keys from legacy structure');
+
+        // Update the currentApiKeys for the provider check below
+        currentApiKeys = decryptedApiKeys;
       } else {
         console.log('No API keys found in user preferences');
       }
       
-      // Get providers with API keys in the database
-      const providersWithApiKeys = Object.keys(apiKeys || {}) as AIProvider[];
+      // Get providers with API keys in the database (use the newly loaded keys)
+      const providersWithApiKeys = Object.keys(currentApiKeys) as AIProvider[];
       console.log('Providers with API keys in database:', providersWithApiKeys);
       
       // Check if there's a defaultProvider in preferences and apply it
@@ -523,15 +572,21 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   };
 
   const getApiKey = (provider: AIProvider): string => {
+    // Get the API key from settings
+    const apiKey = settings[provider].apiKey || '';
+
+    console.log(`getApiKey called for ${provider}:`, {
+      hasKey: !!apiKey,
+      keyLength: apiKey.length,
+      keyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'none'
+    });
+
     // For mistral, apply more permissive validation
     if (provider === 'mistral') {
       // Don't block mistral keys based on length
-      return settings[provider].apiKey || '';
+      return apiKey;
     }
-    
-    // Perform basic validation on the API key
-    const apiKey = settings[provider].apiKey || '';
-    
+
     // Different providers have different key formats, apply some basic validation
     switch (provider) {
       case 'openai':
@@ -557,7 +612,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
         break;
       // Remove the mistral validation which was too strict
     }
-    
+
     return apiKey;
   };
 

@@ -50,9 +50,6 @@ export default function ProfileSettings() {
 
     try {
       setIsLoading(true);
-      if (showToast) {
-        setIsRefreshing(true);
-      }
       
       console.log('Fetching real-time profile data for user:', user.id);
       
@@ -136,13 +133,24 @@ export default function ProfileSettings() {
       });
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   }, [user, toast]);
 
   // Manually refresh profile data from database
-  const handleRefreshProfile = () => {
-    fetchProfileData(true);
+  const handleRefreshProfile = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchProfileData(true);
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh profile data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Set up Supabase real-time subscription for profile updates
@@ -325,12 +333,12 @@ export default function ProfileSettings() {
 
     // Validate the data
     const errors: Record<string, string> = {};
-    
+
     // Basic validation
     if (!profileToSave.full_name) {
       errors.full_name = "Full name is required";
     }
-    
+
     if (profileToSave.age !== null) {
       if (isNaN(Number(profileToSave.age))) {
         errors.age = "Age must be a number";
@@ -340,10 +348,10 @@ export default function ProfileSettings() {
         errors.age = "Age must be less than 120";
       }
     }
-    
+
     // Update errors state
     setErrors(errors);
-    
+
     // Don't proceed if there are validation errors
     if (Object.keys(errors).length > 0) {
       toast({
@@ -360,10 +368,10 @@ export default function ProfileSettings() {
     try {
       console.log('Saving profile for user:', user.id);
       console.log('Profile data to save:', profileToSave);
-      
+
       // Use userService to save the profile
       const result = await userService.upsertUserProfile(user.id, profileToSave);
-      
+
       if (!result) {
         console.error('Profile save operation returned null result');
         toast({
@@ -374,47 +382,81 @@ export default function ProfileSettings() {
         setIsSaving(false);
         return;
       }
-      
-      // Verify the save operation with a delay to ensure DB consistency
-      const verified = await verifyProfileSave();
-      
-      // Mark all fields as updated for better UI feedback
-      const fieldsToUpdate = ['full_name', 'age', 'gender', 'profession', 'organization_name', 'mobile_number'];
-      setUpdatedFields(fieldsToUpdate);
-      
-      // Update local state with the saved data
-      setProfile({
-        ...profile,
-        full_name: result.full_name,
-        age: result.age,
-        gender: result.gender,
-        profession: result.profession || '',
-        organization_name: result.organization_name || '',
-        mobile_number: result.mobile_number
-      });
-      
-      if (verified) {
-        toast({
-          title: !profileExists ? "Profile Created" : "Profile Updated",
-          description: !profileExists 
-            ? "Your profile has been created successfully! Thank you for providing your information." 
-            : "Your profile has been updated successfully",
+
+      // After successful save, fetch the latest data from database to ensure UI shows current state
+      console.log('Profile saved successfully, fetching latest data from database...');
+
+      // Add a small delay to ensure database consistency
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Fetch the latest profile data from database
+      const latestProfile = await userService.getUserProfile(user.id);
+
+      if (latestProfile) {
+        // Update local state with the latest data from database
+        setProfile({
+          full_name: latestProfile.full_name || '',
+          age: latestProfile.age,
+          gender: latestProfile.gender,
+          profession: latestProfile.profession || '',
+          organization_name: latestProfile.organization_name || '',
+          mobile_number: latestProfile.mobile_number
         });
-        
+
+        // Update last synced timestamp
+        setLastSynced(new Date());
+
+        // Mark all fields as updated for better UI feedback
+        const fieldsToUpdate = ['full_name', 'age', 'gender', 'profession', 'organization_name', 'mobile_number'];
+        setUpdatedFields(fieldsToUpdate);
+
         // Update profileExists status if it was just created
         if (!profileExists) {
           setProfileExists(true);
         }
-      } else {
-        console.warn('Profile verification failed - data may not have saved correctly');
+
+        // Show success message
         toast({
-          title: "Warning",
+          title: !profileExists ? "Profile Created" : "Profile Updated",
           description: !profileExists
-            ? "Your profile was created but verification failed. Please check your information."
-            : "Your profile was updated but verification failed. Please check your information.",
-          variant: "warning",
+            ? "Your profile has been created successfully! The data is now synced with Supabase and visible in the dashboard."
+            : "Your profile has been updated successfully! The data is now synced with Supabase and visible in the dashboard.",
         });
+
+        console.log('Profile updated with latest database data:', latestProfile);
+      } else {
+        // Fallback to using the result from the save operation
+        setProfile({
+          full_name: result.full_name || '',
+          age: result.age,
+          gender: result.gender,
+          profession: result.profession || '',
+          organization_name: result.organization_name || '',
+          mobile_number: result.mobile_number
+        });
+
+        // Update last synced timestamp
+        setLastSynced(new Date());
+
+        // Mark all fields as updated
+        const fieldsToUpdate = ['full_name', 'age', 'gender', 'profession', 'organization_name', 'mobile_number'];
+        setUpdatedFields(fieldsToUpdate);
+
+        // Update profileExists status if it was just created
+        if (!profileExists) {
+          setProfileExists(true);
+        }
+
+        toast({
+          title: !profileExists ? "Profile Created" : "Profile Updated",
+          description: !profileExists
+            ? "Your profile has been created successfully! The data is now synced with Supabase."
+            : "Your profile has been updated successfully! The data is now synced with Supabase.",
+        });
+
+        console.warn('Could not fetch latest profile data, using save result instead');
       }
+
     } catch (error) {
       console.error('Error saving profile:', error);
       toast({
@@ -606,25 +648,25 @@ export default function ProfileSettings() {
         </CardContent>
         
         <CardFooter className="flex justify-between border-t bg-muted/20 px-6 py-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleRefreshProfile}
-            disabled={isRefreshing || isLoading}
+            disabled={isRefreshing || isLoading || isSaving}
             className="flex items-center gap-1"
           >
             {isRefreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-            Refresh
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
           
           <Button
             type="submit"
-            disabled={isSaving || isLoading || (updatedFields.length === 0 && profileExists)}
+            disabled={isSaving || isLoading || isRefreshing}
             onClick={handleSave}
             className="flex items-center gap-1.5"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Profile
+            {isSaving ? 'Saving...' : 'Save Profile'}
           </Button>
         </CardFooter>
       </Card>

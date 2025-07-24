@@ -377,6 +377,7 @@ export default function ProviderSettings() {
   // Get providers that have API keys saved in the database
   const providersWithApiKeys = Object.keys(apiKeys || {}) as AIProvider[];
   console.log('Providers with API keys in database:', providersWithApiKeys);
+  console.log('Current apiKeys object:', apiKeys);
 
   useEffect(() => {
     setLocalSettings({...settings});

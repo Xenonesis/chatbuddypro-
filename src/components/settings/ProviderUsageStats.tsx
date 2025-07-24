@@ -72,7 +72,7 @@ const mockUsageData: Record<AIProvider, ProviderUsageData> = {
       { date: '2023-12-01', tokens: 120000 },
     ],
     topModels: [
-      { name: 'gemini-pro', percentage: 70 },
+      { name: 'gemini-2.0-flash', percentage: 70 },
       { name: 'gemini-pro-vision', percentage: 20 },
       { name: 'gemini-1.5-pro', percentage: 10 },
     ]

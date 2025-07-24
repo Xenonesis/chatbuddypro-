@@ -71,24 +71,34 @@ export default function RootLayout({
         className={`${GeistSans.variable} ${GeistMono.variable} min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950`}
         suppressHydrationWarning
       >
-        <ThemeProvider>
-          <AuthProvider>
-            <ModelSettingsProvider>
-              <EnhancedUIProvider>
-                <AppInitializer />
-                <Navbar />
-                <main className="flex-1 flex flex-col">
-                  <ErrorBoundary>
-                    <Suspense fallback={<LoadingIndicator />}>
-                      {children}
-                    </Suspense>
-                  </ErrorBoundary>
-                </main>
-                <Toaster />
-              </EnhancedUIProvider>
-            </ModelSettingsProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <ErrorBoundary>
+          <ThemeProvider>
+            <ErrorBoundary>
+              <AuthProvider>
+                <ErrorBoundary>
+                  <ModelSettingsProvider>
+                    <ErrorBoundary>
+                      <EnhancedUIProvider>
+                        <ErrorBoundary>
+                          <AppInitializer />
+                        </ErrorBoundary>
+                        <Navbar />
+                        <main className="flex-1 flex flex-col">
+                          <ErrorBoundary>
+                            <Suspense fallback={<LoadingIndicator />}>
+                              {children}
+                            </Suspense>
+                          </ErrorBoundary>
+                        </main>
+                        <Toaster />
+                      </EnhancedUIProvider>
+                    </ErrorBoundary>
+                  </ModelSettingsProvider>
+                </ErrorBoundary>
+              </AuthProvider>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

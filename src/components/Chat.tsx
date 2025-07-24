@@ -49,6 +49,9 @@ import { containsCodeBlock, isCodingQuestion, saveChatHistory, ChatHistoryItem, 
 import ApiDiagnostics from "@/components/ApiDiagnostics";
 import { FormattedMessage } from '@/components/ui-custom/FormattedMessage';
 import { SmartSuggestions } from '@/components/ui-custom/SmartSuggestions';
+import { EnhancedErrorFeedback } from '@/components/ui-custom/EnhancedErrorFeedback';
+import { FeatureFeedback } from '@/components/ui-custom/FeatureFeedback';
+import { ApiStatusIndicator } from '@/components/ui-custom/ApiStatusIndicator';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import CodeBlock from '@/components/ui-custom/CodeBlock';
@@ -71,6 +74,7 @@ type Message = {
   timestamp: Date;
   thinking?: string;
   responseTime?: number;
+  error?: Error;
 };
 
 type ChatProps = {
@@ -83,7 +87,7 @@ type ChatProps = {
 // Define default models for each provider
 const DEFAULT_MODELS = {
   openai: 'gpt-3.5-turbo',
-  gemini: 'gemini-pro',
+  gemini: 'gemini-2.0-flash',
   mistral: 'mistral-small',
   claude: 'claude-3-5-sonnet-20240620',
   llama: 'llama-3-8b-instruct',
@@ -121,6 +125,23 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
   const [selectedModel, setSelectedModel] = useState<string>(initialModel);
   const [chatId, setChatId] = useState<string | null>(initialChatId);
   const [activeModel, setActiveModel] = useState<string>(initialModel || DEFAULT_MODELS.openai);
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
+  const [lastError, setLastError] = useState<Error | null>(null);
+  
+  // Monitor network status
+  useEffect(() => {
+    const updateNetworkStatus = () => {
+      setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+    };
+    
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    
+    return () => {
+      window.removeEventListener('online', updateNetworkStatus);
+      window.removeEventListener('offline', updateNetworkStatus);
+    };
+  }, []);
   
   // Set initial model if provided
   useEffect(() => {
@@ -238,17 +259,11 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
 
   // Check if the current provider has an API key configured
   const hasApiKey = (provider: AIProvider): boolean => {
-    // First check settings
+    // Check settings and environment variables only
     const settingsHasKey = !!settings[provider]?.apiKey;
-    
-    // If settings doesn't have a key, check localStorage directly
-    if (!settingsHasKey && typeof window !== 'undefined') {
-      const localStorageKey = localStorage.getItem(`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`) || 
-                           localStorage.getItem(`${provider.toUpperCase()}_API_KEY`);
-      return !!localStorageKey;
-    }
-    
-    return settingsHasKey;
+    const envHasKey = !!process.env[`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`];
+
+    return settingsHasKey || envHasKey;
   };
 
   // Effect to set initial provider
@@ -464,13 +479,25 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       
       // Adjust API settings for coding questions to allow for longer responses
       const apiSettings = {...settings};
+
+      // Debug: Log the current settings being passed to API
+      console.log(`Chat: About to call ${currentProvider} API with settings:`, {
+        provider: currentProvider,
+        hasApiKey: !!(apiSettings[currentProvider]?.apiKey),
+        apiKeyLength: apiSettings[currentProvider]?.apiKey?.length || 0,
+        apiKeyPrefix: apiSettings[currentProvider]?.apiKey ?
+          apiSettings[currentProvider].apiKey.substring(0, 8) + '...' : 'none',
+        temperature: apiSettings[currentProvider]?.temperature,
+        maxTokens: apiSettings[currentProvider]?.maxTokens
+      });
+
       if (isCodeQuestion) {
         // For coding questions, increase the max tokens to allow for complete code examples
         if (apiSettings[currentProvider]?.maxTokens) {
           const currentMaxTokens = apiSettings[currentProvider].maxTokens;
           apiSettings[currentProvider].maxTokens = Math.max(currentMaxTokens, 8000);
         }
-        
+
         // Also reduce temperature slightly for more precise code generation
         if (apiSettings[currentProvider]?.temperature) {
           const currentTemp = apiSettings[currentProvider].temperature;
@@ -481,7 +508,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       // Debug check for Gemini API key when using Gemini
       if (currentProvider === 'gemini') {
         const apiKey = settings?.gemini?.apiKey || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-        
+
         // Log Gemini settings for debugging
         console.log('Gemini provider settings:', {
           apiKeyConfigured: Boolean(apiKey),
@@ -490,21 +517,16 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
           temperature: settings?.gemini?.temperature,
           maxTokens: settings?.gemini?.maxTokens,
         });
-        
-        if (!apiKey) {
-          throw new Error('Gemini API key is not configured. Please set it in Settings or .env.local');
-        }
-        
-        if (apiKey.trim() === '') {
-          throw new Error('Invalid Gemini API key. The key cannot be empty.');
-        }
+
+        // Note: We don't throw errors here anymore since callAI handles validation
+        // and provides demo mode fallback when API keys are missing or invalid
       }
       
       // Make API call using the unified callAI function with adjusted settings
       const response = await callAI(apiMessages, currentProvider, apiSettings);
       const endTime = performance.now();
       const responseTime = Math.round(endTime - startTime) / 1000;
-      
+
       // Add assistant message
       const assistantMessage: Message = {
         id: Date.now().toString(),
@@ -514,7 +536,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
         thinking: thinking || undefined,
         responseTime
       };
-      
+
       setThinking('');
       setMessages((prev) => [...prev, assistantMessage]);
       setMessageHasBeenSent(true);
@@ -544,10 +566,15 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       // Create better error message depending on provider
       let errorContent = '';
       if (currentProvider === 'gemini' && error instanceof Error) {
-        if (error.message.includes('API key not valid') || error.message.includes('invalid')) {
-          errorContent = `Error: Your Gemini API key is invalid. Please go to Settings and add a valid Gemini API key, or create a .env.local file with the correct NEXT_PUBLIC_GEMINI_API_KEY.
-          
-Get your API key at: https://aistudio.google.com/app/apikey`;
+        if (error.message.includes('API key not valid') || error.message.includes('invalid') || error.message.includes('Invalid Gemini API key detected')) {
+          errorContent = `Error: Your Gemini API key is invalid or not properly configured.
+
+To fix this:
+1. Go to Settings and remove any existing invalid API key
+2. Get a new API key from: https://aistudio.google.com/app/apikey
+3. Add the new key in Settings or in your .env.local file as NEXT_PUBLIC_GEMINI_API_KEY
+
+Note: If you see this error repeatedly, try clearing your browser's localStorage and re-entering your API key.`;
         } else if (error.message.includes('API key')) {
           errorContent = `Error: ${error.message}\n\nPlease go to Settings and add your Gemini API key, or create a .env.local file with NEXT_PUBLIC_GEMINI_API_KEY.`;
         } else if (error.message.includes('rate limit')) {
@@ -569,7 +596,7 @@ This may be because:
 2. Your API key doesn't have access to this model
 3. You need to wait for Google to update their API
 
-The app will automatically try to fall back to the standard gemini-pro model. If that doesn't work, please try a different model.`;
+The app will automatically try to fall back to the standard gemini-2.0-flash model. If that doesn't work, please try a different model.`;
         } else {
           errorContent = `Error from Gemini: ${error.message}`;
         }
@@ -597,8 +624,8 @@ The app will automatically try to fall back to the standard gemini-pro model. If
         const lastMessage = messages[messages.length - 1];
         
         // If the last message was also an error from the same provider, try to switch providers
-        if (lastMessage.role === 'assistant' && 
-            lastMessage.content.startsWith('Error:') && 
+        if (lastMessage && lastMessage.role === 'assistant' &&
+            lastMessage.content && lastMessage.content.startsWith('Error:') &&
             lastUsedProvider === currentProvider) {
           
           // Try to fallback to another provider
@@ -738,168 +765,7 @@ The app will automatically try to fall back to the standard gemini-pro model. If
     };
   }, []);
 
-  // Enhanced message display with typing animation and timestamps 
-  const renderMessages = () => {
-    return messages.map((message, index) => {
-      const isLastMessage = index === messages.length - 1;
-      const isAssistantMessage = message.role === 'assistant';
-      const isUserMessage = message.role === 'user';
-      const shouldShowTypingAnimation = isLastMessage && isAssistantMessage && !typingAnimationComplete;
-      const responseTime = message.responseTime || 0;
-      
-      // Calculate animation speed based on response time 
-      // Shorter response time = faster animation
-      const animationDuration = responseTime > 0 
-        ? Math.max(1, Math.min(5, responseTime / 2)) 
-        : 2.5;
-      
-      return (
-        <div 
-          key={message.id} 
-          className={`p-3 sm:p-4 rounded-xl mb-3 ${
-            isAssistantMessage 
-              ? 'bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/30 dark:to-slate-900/30 border border-slate-200/50 dark:border-slate-700/40 shadow-sm message-bubble animate-fadeIn' 
-              : 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-100/50 dark:border-blue-800/30 shadow-sm message-bubble animate-slideIn'
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm backdrop-blur-sm ${
-              isUserMessage
-                ? 'bg-gradient-to-br from-blue-400 to-indigo-500 dark:from-blue-600 dark:to-indigo-800 text-white' 
-                : `${getProviderGradient(currentProvider)} dark:${getProviderGradient(currentProvider, true)} text-white`
-            }`}>
-              {isUserMessage ? (
-                <User className="h-4 w-4" />
-              ) : (
-                <div className={`${shouldShowTypingAnimation ? `animate-spin-slow` : ''}`} style={shouldShowTypingAnimation ? {animationDuration: `${animationDuration}s`} : {}}>
-                  {getProviderIcon(currentProvider)}
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0 overflow-hidden">
-              {shouldShowTypingAnimation ? (
-                <div className="flex items-center gap-1.5 h-5 mb-2">
-                  <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce"></div>
-                  <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-1.5 h-1.5 bg-blue-400 dark:bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                </div>
-              ) : (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    code({node, className, children, ...props}: any) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      return !props.inline ? (
-                        <CodeBlock
-                          language={match?.[1] || ''}
-                          value={String(children).replace(/\n$/, '')}
-                        />
-                      ) : (
-                        <code className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-sm" {...props}>
-                          {children}
-                        </code>
-                      );
-                    },
-                    p({children}) {
-                      return <p className="mb-4 last:mb-0">{children}</p>;
-                    },
-                    a({href, children}) {
-                      return (
-                        <a 
-                          href={href} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 dark:text-blue-400 hover:underline"
-                        >
-                          {children}
-                        </a>
-                      );
-                    },
-                    ul({children}) {
-                      return <ul className="list-disc pl-6 mb-4">{children}</ul>;
-                    },
-                    ol({children}) {
-                      return <ol className="list-decimal pl-6 mb-4">{children}</ol>;
-                    },
-                    li({children}) {
-                      return <li className="mb-1">{children}</li>;
-                    },
-                    h1({children}) {
-                      return <h1 className="text-xl font-bold mb-4 mt-6">{children}</h1>;
-                    },
-                    h2({children}) {
-                      return <h2 className="text-lg font-bold mb-3 mt-5">{children}</h2>;
-                    },
-                    h3({children}) {
-                      return <h3 className="text-md font-bold mb-2 mt-4">{children}</h3>;
-                    },
-                    table({children}) {
-                      return (
-                        <div className="overflow-x-auto mb-4">
-                          <table className="w-full border-collapse border border-slate-300 dark:border-slate-700">
-                            {children}
-                          </table>
-                        </div>
-                      );
-                    },
-                    thead({children}) {
-                      return <thead className="bg-slate-100 dark:bg-slate-800">{children}</thead>;
-                    },
-                    th({children}) {
-                      return <th className="border border-slate-300 dark:border-slate-700 p-2 text-left">{children}</th>;
-                    },
-                    td({children}) {
-                      return <td className="border border-slate-300 dark:border-slate-700 p-2">{children}</td>;
-                    },
-                    blockquote({children}) {
-                      return (
-                        <blockquote className="border-l-4 border-slate-300 dark:border-slate-700 pl-4 italic mb-4">
-                          {children}
-                        </blockquote>
-                      );
-                    },
-                    hr() {
-                      return <hr className="my-4 border-t border-slate-300 dark:border-slate-700" />;
-                    }
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              )}
-              
-              {/* Subtle timestamp and action buttons */}
-              <div className="flex items-center justify-between mt-2 text-xs text-slate-400 dark:text-slate-500">
-                <div className="flex items-center gap-1.5">
-                  <span className="opacity-70">
-                    {message.timestamp && new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  {isAssistantMessage && message.responseTime && (
-                    <span className="flex items-center gap-1 opacity-70">
-                      <Activity className="h-3 w-3" />
-                      {message.responseTime.toFixed(1)}s
-                    </span>
-                  )}
-                </div>
-                
-                {isAssistantMessage && !isLoading && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleRegenerate}
-                    className="h-6 w-6 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 opacity-70 hover:opacity-100 transition-opacity"
-                    aria-label="Regenerate response"
-                    title="Regenerate response"
-                  >
-                    <RotateCw className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    });
-  };
+
 
   // Add regenerate function to re-send the last user message
   const handleRegenerate = async () => {
@@ -907,7 +773,7 @@ The app will automatically try to fall back to the standard gemini-pro model. If
     
     // Find the last user message index (scanning from the end)
     const messagesReversed = [...messages].reverse();
-    const lastUserMessageIndex = messagesReversed.findIndex(m => m.role === 'user');
+    const lastUserMessageIndex = messagesReversed.findIndex(m => m && m.role === 'user');
     
     if (lastUserMessageIndex === -1) return;
     
@@ -998,19 +864,16 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       setThinking('');
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error regenerating response:', error);
+      console.error('Error sending message:', error);
+      setLastError(error instanceof Error ? error : new Error('Unknown error occurred'));
       
-      // Create error message
-      const errorContent = error instanceof Error 
-        ? `Error: ${error.message}` 
-        : 'Sorry, an error occurred while regenerating the response.';
-      
-      // Add error message to chat
+      // Create enhanced error message with feedback component
       const errorMessage: Message = {
         id: Date.now().toString(),
-        content: errorContent,
+        content: '', // Will be handled by the enhanced error component
         role: 'assistant',
         timestamp: new Date(),
+        error: error instanceof Error ? error : new Error('Unknown error occurred')
       };
       
       setMessages((prev) => [...prev, errorMessage]);
@@ -1031,7 +894,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
   // Function to get model name from current provider
   const getCurrentModelName = () => {
     if (!currentProvider) return 'AI Model';
-    return DEFAULT_MODELS[currentProvider];
+    return settings[currentProvider]?.selectedModel || DEFAULT_MODELS[currentProvider];
   };
 
   // Function to get model pricing info for models
@@ -1163,9 +1026,11 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     return mode.charAt(0).toUpperCase() + mode.slice(1);
   };
 
-  // Function to handle model change (disabled since we're using fixed models)
-  const handleModelChange = () => {
-    // Model selection has been disabled
+  // Function to handle model change
+  const handleModelChange = (model: string) => {
+    const updatedSettings = {...settings};
+    updatedSettings[currentProvider].selectedModel = model;
+    updateSettings(updatedSettings);
     setShowModelMenu(false);
   };
 
@@ -1225,7 +1090,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
 
   // Get the last assistant message content for follow-up questions
   const lastAssistantMessage = messages
-    .filter(msg => msg.role === 'assistant')
+    .filter(msg => msg && msg.role === 'assistant')
     .pop()?.content || '';
 
   // Handle input change
@@ -1330,6 +1195,97 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     return providersWithApiKeys.length > 0 ? providersWithApiKeys : availableProviders;
   };
 
+  // Copy to clipboard function with fallback
+  const copyToClipboard = async (text: string) => {
+    try {
+      // Check if clipboard API is available
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          document.execCommand('copy');
+        } catch (fallbackError) {
+          console.warn('Copy to clipboard not supported in this browser');
+          return false;
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.warn('Failed to copy to clipboard:', error);
+      return false;
+    }
+  };
+
+  // Function to render messages with enhanced feedback
+  const renderMessages = () => {
+    return messages.filter(message => message && message.role).map((message, index) => (
+      <div key={message.id} className="mb-4">
+        <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div className={`max-w-[85%] ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white dark:bg-slate-800'} rounded-lg p-3 shadow-sm`}>
+            {message.error ? (
+              <EnhancedErrorFeedback
+                error={message.error}
+                provider={currentProvider}
+                onRetry={() => {
+                  // Remove error message and retry
+                  setMessages(prev => prev.filter(m => m.id !== message.id));
+                  handleSend();
+                }}
+                onSwitchProvider={(newProvider) => {
+                  setCurrentProvider(newProvider);
+                  setMessages(prev => prev.filter(m => m.id !== message.id));
+                }}
+                availableProviders={availableProviders}
+              />
+            ) : (
+              <>
+                <MessageRenderer
+                  message={message}
+                  content={message.content}
+                  onCopy={copyToClipboard}
+                />
+                {message.role === 'assistant' && message.responseTime && (
+                  <div className="mt-3">
+                    <FeatureFeedback
+                      provider={currentProvider}
+                      model={getCurrentModelName()}
+                      responseTime={message.responseTime}
+                      isVoiceEnabled={settings.voiceInputSettings.enabled}
+                      isThinkingEnabled={settings.showThinking}
+                      networkStatus={networkStatus}
+                      onFeatureToggle={(feature) => {
+                        if (feature === 'voice') {
+                          // Toggle voice input
+                          const newSettings = { ...settings };
+                          newSettings.voiceInputSettings.enabled = !newSettings.voiceInputSettings.enabled;
+                          updateSettings(newSettings);
+                        } else if (feature === 'thinking') {
+                          toggleShowThinking();
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    ));
+  };
+
   // Function to handle fallback to another provider if needed
   const fallbackToAnotherProvider = (currentProvider: AIProvider, errorMessage: Message) => {
     const fallbackProviders = getAvailableFallbackProviders();
@@ -1365,7 +1321,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
   const getFixedModels = (provider: AIProvider) => {
     switch(provider) {
       case 'openai': return ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'];
-      case 'gemini': return ['gemini-pro', 'gemini-pro-vision', 'gemini-1.5-pro', 'gemini-1.5-flash'];
+      case 'gemini': return ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro-vision'];
       case 'mistral': return ['mistral-tiny', 'mistral-small', 'mistral-medium'];
       case 'claude': return ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'];
       case 'llama': return ['llama-3-8b-instruct', 'llama-3-70b-instruct', 'llama-3-8b', 'llama-3-70b'];
@@ -1429,14 +1385,14 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
               <div className="absolute z-50 top-full left-0 mt-1.5 py-1.5 px-1.5 rounded-lg shadow-lg border bg-white/95 dark:bg-slate-800/95 backdrop-blur-md dark:border-slate-700 min-w-[180px]">
                 {settings[currentProvider].apiKey ? (
                   getFixedModels(currentProvider).map((model) => (
-                    <div 
+                    <button
                       key={model}
-                      className={`flex items-center px-2.5 py-2 rounded-md ${model === DEFAULT_MODELS[currentProvider] ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-slate-100 dark:hover:bg-slate-700'} cursor-not-allowed transition-all duration-200`}
-                      onClick={() => {/* Model selection disabled */}}
+                      className={`flex items-center px-2.5 py-2 rounded-md w-full text-left ${model === (settings[currentProvider]?.selectedModel || DEFAULT_MODELS[currentProvider]) ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-slate-100 dark:hover:bg-slate-700'} cursor-pointer transition-all duration-200`}
+                      onClick={() => handleModelChange(model)}
                     >
                       {getProviderIcon(currentProvider)}
                       <span className="ml-2 text-xs font-medium truncate">{model}</span>
-                    </div>
+                    </button>
                   ))
                 ) : (
                   <div className="p-2.5 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
@@ -1521,19 +1477,8 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             </p>
             
             {availableProviders.length === 0 ? (
-              <div className="mb-8 py-4 px-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-lg text-amber-700 dark:text-amber-300 max-w-xs sm:max-w-md">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle className="h-5 w-5" />
-                  <h3 className="font-semibold">No API Keys Configured</h3>
-                </div>
-                <p className="text-sm mb-4">You need to configure at least one API key to start using the chat.</p>
-                <Link 
-                  href="/settings" 
-                  className="inline-flex items-center gap-2 font-medium text-sm bg-amber-100 dark:bg-amber-800/40 hover:bg-amber-200 dark:hover:bg-amber-800/60 py-2 px-4 rounded-md transition-colors"
-                >
-                  <Settings className="h-4 w-4" />
-                  Go to Settings
-                </Link>
+              <div className="mb-8 max-w-md">
+                <ApiStatusIndicator />
               </div>
             ) : (
               <>

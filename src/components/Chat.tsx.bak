@@ -288,7 +288,7 @@ This may be because:
 2. Your API key doesn't have access to this model
 3. You need to wait for Google to update their API
 
-The app will automatically try to fall back to the standard gemini-pro model. If that doesn't work, please try a different model.`;
+The app will automatically try to fall back to the standard gemini-2.0-flash model. If that doesn't work, please try a different model.`;
         } else {
           errorContent = `Error from Gemini: ${error.message}`;
         }

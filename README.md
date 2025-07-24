@@ -1,21 +1,23 @@
-# 🤖 ChatBuddy Pro
+# 🤖 ChatBuddy
 
-A modern, full-featured chatbot interface that connects to multiple AI providers, featuring beautiful syntax highlighting for code blocks, response time tracking, and regeneration capabilities.
+A modern, full-featured AI chat interface that connects to multiple AI providers with beautiful syntax highlighting, voice input, real-time synchronization, and advanced user management.
 
-![ChatBuddy App](https://img.shields.io/badge/ChatBuddy-Next.js-blue)
-![Version](https://img.shields.io/badge/version-2.0.0-green)
+![ChatBuddy App](https://img.shields.io/badge/ChatBuddy-Next.js_15-blue)
+![Version](https://img.shields.io/badge/version-0.1.0-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
+![Node](https://img.shields.io/badge/node-18+-brightgreen)
+![React](https://img.shields.io/badge/react-19-blue)
 
 ## ✨ Key Features
 
 ### 🤖 Multiple AI Providers
 
-- **OpenAI**: GPT-3.5, GPT-4, GPT-4o models
-- **Google Gemini**: Pro and Vision variants
-- **Mistral AI**: Tiny, Small, Medium models
-- **Anthropic Claude**: Sonnet, Opus, Haiku variants
-- **Meta Llama**: 8B, 70B Instruct models
-- **DeepSeek**: Chat and Coder variants
+- **OpenAI**: GPT-3.5-turbo, GPT-4, GPT-4-turbo
+- **Google Gemini**: Gemini-2.0-flash, Gemini-2.0-flash-lite, Gemini-1.5-pro, Gemini-1.5-flash, Gemini-pro-vision
+- **Mistral AI**: Mistral-tiny, Mistral-small, Mistral-medium
+- **Anthropic Claude**: Claude-3-5-sonnet, Claude-3-opus, Claude-3-sonnet, Claude-3-haiku
+- **Meta Llama**: Llama-3-8b-instruct, Llama-3-70b-instruct, Llama-3-8b, Llama-3-70b
+- **DeepSeek**: DeepSeek-coder, DeepSeek-chat, DeepSeek-llm
 
 ### 💻 Enhanced Code Experience
 
@@ -45,28 +47,31 @@ A modern, full-featured chatbot interface that connects to multiple AI providers
 
 ### 🛠️ Developer Experience
 
-- Built with Next.js 14 and React 18
+- Built with Next.js 15 and React 19
 - TypeScript for type safety
 - Tailwind CSS with Shadcn UI components
+- Supabase for authentication and database
 - Responsive design for all devices
 - PWA support with offline capabilities
+- Netlify deployment ready
 
-## 🆕 What's New in v2.0.0
+## 🆕 Current Features (v0.1.0)
 
-- **Enhanced Database Integration**: Fixed synchronization issues and improved data persistence
-- **Performance Optimizations**: Faster loading times and better response handling for large conversations
-- **Improved Accessibility**: Better screen reader compatibility and keyboard navigation
-- **Advanced Code Features**: Complete syntax highlighting with copy functionality and language detection
-- **Voice Input Support**: Browser-based speech recognition with multiple language support
-- **Real-time Synchronization**: Live profile data updates and cross-device synchronization
-- **Production Ready**: Resolved build issues, improved TypeScript safety, and enhanced error handling
+- **Real-time Authentication**: Secure user authentication with Supabase
+- **Database Integration**: Complete user profile and chat history management
+- **Voice Input**: Browser-based speech recognition with multiple language support
+- **Smart Suggestions**: AI-powered follow-up questions and topic suggestions
+- **Enhanced UI**: Modern interface with dark/light theme support
+- **Performance Optimized**: Fast loading times with optimized webpack configuration
+- **Production Ready**: Deployed on Netlify with proper build configuration
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
 - Node.js 18.0 or later
-- npm or yarn
+- npm (comes with Node.js)
+- A Supabase account (for authentication and database)
 
 ### Installation
 
@@ -81,52 +86,42 @@ cd chatbuddy
 
 ```bash
 npm install
-# or
-yarn install
 ```
 
-3. **Configure API keys**
+3. **Set up Supabase (Required)**
 
-You have two options to configure your API keys:
+ChatBuddy uses Supabase for authentication and data persistence. Follow the complete setup guide:
 
-#### Option 1: Using the setup script
+See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed setup instructions.
 
-Run the setup script which will guide you through the process:
+4. **Configure environment variables**
 
-```bash
-npm run setup
-```
-
-#### Option 2: Manual configuration
-
-Copy the `.env.example` file to `.env.local` and fill in your API keys:
-
-```bash
-cp .env.example .env.local
-```
-
-Then edit the `.env.local` file and add your API keys:
+Create a `.env.local` file in the root directory:
 
 ```env
-NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
-NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
-NEXT_PUBLIC_MISTRAL_API_KEY=your_mistral_api_key_here
-NEXT_PUBLIC_CLAUDE_API_KEY=your_claude_api_key_here
-NEXT_PUBLIC_LLAMA_API_KEY=your_llama_api_key_here
-NEXT_PUBLIC_DEEPSEEK_API_KEY=your_deepseek_api_key_here
-```
-
-4. **Set up Supabase (Optional)**
-
-For user authentication and data persistence, configure Supabase:
-
-```env
+# Supabase Configuration (Required)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Optional: Site URL for metadata
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed setup instructions.
+5. **Configure AI Provider API Keys**
+
+API keys are managed through the application interface after user registration. You can:
+- Sign up for an account
+- Go to Settings → Provider Settings
+- Add your API keys for the providers you want to use
+
+Supported providers:
+- OpenAI (platform.openai.com)
+- Google Gemini (ai.google.dev)
+- Mistral AI (console.mistral.ai)
+- Anthropic Claude (console.anthropic.com)
+- Meta Llama (via compatible APIs)
+- DeepSeek (platform.deepseek.com)
 
 ### Running the Application
 
@@ -134,8 +129,6 @@ Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
 ```
 
 For production build:
@@ -146,6 +139,17 @@ npm start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run setup-supabase` - Set up Supabase configuration
+- `npm run verify-supabase` - Verify Supabase connection
+- `npm run check-database` - Check database health
+- `npm run cleanup-db` - Clean up duplicate records
+- `npm run generate-favicon` - Generate favicon assets
 
 ## 💻 Usage
 
@@ -179,15 +183,16 @@ The application supports voice input through your browser's speech recognition A
 
 The application is built with modern web technologies:
 
-- **Frontend**: Next.js 14 with React 18 and TypeScript
+- **Frontend**: Next.js 15 with React 19 and TypeScript
 - **UI Components**: Shadcn UI components with Tailwind CSS
 - **Database**: Supabase (PostgreSQL) with real-time subscriptions
-- **Authentication**: Supabase Auth with email/password and social providers
+- **Authentication**: Supabase Auth with email/password authentication
 - **AI Integration**: Direct API calls to multiple AI providers
 - **State Management**: React Context API for global state
 - **Styling**: Tailwind CSS with dark/light theme support
-- **Code Highlighting**: React Syntax Highlighter with 100+ languages
+- **Code Highlighting**: React Syntax Highlighter with Prism.js
 - **Voice Input**: Web Speech API with custom React hooks
+- **Deployment**: Netlify with static export and edge functions
 - **PWA Features**: Service worker, offline support, and app manifest
 
 ### Brand Identity
@@ -279,10 +284,23 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 🚀 Deployment
+
+ChatBuddy is configured for deployment on Netlify:
+
+1. **Connect your repository** to Netlify
+2. **Build settings** are automatically configured via `netlify.toml`
+3. **Environment variables** need to be set in Netlify dashboard:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+
+The application uses static export for optimal performance and compatibility.
+
 ## 👨‍💻 Developer
 
-Developed with ❤️ by [Aditya](https://github.com/addy)
+Developed with ❤️ for the AI community
 
 ---
 
-**ChatBuddy Pro** - Your intelligent coding companion with multi-model AI support.
+**ChatBuddy** - Your intelligent AI companion with multi-provider support.

@@ -479,7 +479,7 @@ export function Navbar() {
                           <User className="h-4 w-4" />
                         </div>
                         <div className="text-sm overflow-hidden">
-                          <div className="font-medium truncate">{user.email}</div>
+                          <div className="font-medium truncate">{user?.email || 'User'}</div>
                           <div className="text-xs text-slate-500 dark:text-slate-400">Signed in</div>
                         </div>
                       </div>

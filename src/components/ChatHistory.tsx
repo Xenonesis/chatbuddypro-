@@ -115,7 +115,7 @@ export default function ChatHistory() {
     const modelMap: Record<string, string> = {
       'gpt-4': 'GPT-4',
       'gpt-3.5-turbo': 'GPT-3.5',
-      'gemini-pro': 'Gemini Pro',
+      'gemini-2.0-flash': 'Gemini 2.0 Flash',
       'claude-3-opus': 'Claude 3 Opus',
       'claude-3-sonnet': 'Claude 3 Sonnet',
       'mistral-medium': 'Mistral Medium',

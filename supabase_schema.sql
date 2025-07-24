@@ -12,7 +12,10 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name TEXT,
   age INTEGER,
-  gender TEXT CHECK (gender IN ('male', 'female', 'non-binary', 'prefer-not-to-say')),
+  gender TEXT CHECK (gender IN ('male', 'female', 'other', 'prefer_not_to_say')),
+  profession TEXT,
+  organization_name TEXT,
+  mobile_number BIGINT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -136,6 +139,42 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Function to save chat with user info
+CREATE OR REPLACE FUNCTION save_chat_with_user_info(
+  p_user_id UUID,
+  p_title TEXT,
+  p_model TEXT,
+  p_user_email TEXT,
+  p_user_name TEXT
+)
+RETURNS UUID AS $$
+DECLARE
+  v_chat_id UUID;
+BEGIN
+  -- Insert new chat record
+  INSERT INTO chats (
+    user_id,
+    title,
+    model,
+    user_email,
+    user_name,
+    created_at,
+    updated_at
+  ) VALUES (
+    p_user_id,
+    p_title,
+    p_model,
+    p_user_email,
+    p_user_name,
+    NOW(),
+    NOW()
+  )
+  RETURNING id INTO v_chat_id;
+
+  RETURN v_chat_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Chat history table
 CREATE TABLE IF NOT EXISTS chats (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -143,6 +182,8 @@ CREATE TABLE IF NOT EXISTS chats (
   title TEXT NOT NULL,
   last_message TEXT,
   model VARCHAR(50),
+  user_email TEXT,
+  user_name TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

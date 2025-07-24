@@ -36,7 +36,7 @@ export const userService = {
       console.debug(`Querying user_preferences for user_id: ${userId}`);
       const response = await supabase
         .from('user_preferences')
-        .select('id, user_id, preferences, api_keys, created_at, updated_at')
+        .select('id, user_id, theme, language, api_keys, ai_providers, created_at, updated_at')
         .eq('user_id', userId as any)
         .order('updated_at', { ascending: false }); // Get most recent first
 
@@ -183,6 +183,14 @@ export const userService = {
           theme: 'light',
           language: 'en',
           api_keys: {},
+          ai_providers: {
+            "openai": {"enabled": false, "api_keys": {}},
+            "gemini": {"enabled": false, "api_keys": {}},
+            "mistral": {"enabled": false, "api_keys": {}},
+            "claude": {"enabled": false, "api_keys": {}},
+            "llama": {"enabled": false, "api_keys": {}},
+            "deepseek": {"enabled": false, "api_keys": {}}
+          },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -249,6 +257,14 @@ export const userService = {
             theme: preferences.theme || 'light',
             language: preferences.language || 'en',
             api_keys: preferences.api_keys || {},
+            ai_providers: preferences.ai_providers || {
+              "openai": {"enabled": false, "api_keys": {}},
+              "gemini": {"enabled": false, "api_keys": {}},
+              "mistral": {"enabled": false, "api_keys": {}},
+              "claude": {"enabled": false, "api_keys": {}},
+              "llama": {"enabled": false, "api_keys": {}},
+              "deepseek": {"enabled": false, "api_keys": {}}
+            },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
@@ -276,38 +292,42 @@ export const userService = {
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
       console.log('Fetching profile for user ID:', userId);
-      
+
       if (!userId) {
         console.error('getUserProfile called with no userId');
         return null;
       }
-      
-      const { data, error } = await supabase
+
+      // First try to get all profiles for this user to handle potential duplicates
+      const { data: allProfiles, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no rows found
-      
+        .order('updated_at', { ascending: false }); // Get most recent first
+
       // Log detailed response for debugging
-      console.log('Profile query response:', { data, error });
-      
+      console.log('Profile query response:', { data: allProfiles, error });
+
       if (error) {
-        // If there's an error other than "no rows returned", log it
-        if (error.code !== 'PGSQL_TGRM_NO_QUERY_PATTERNS' && error.code !== 'PGRST116') {
-          console.error('Error details:', error.code, error.message, error.details);
-          console.error('Error fetching profile:', error);
-        } else {
-          console.log('No existing profile found, will create new profile');
-        }
-        
-        // Create new profile if none exists or there was a "not found" error
+        console.error('Error fetching profile:', error);
+        console.error('Error details:', error.code, error.message, error.details);
+
+        // Create new profile if there was an error
         return this.createInitialProfile(userId);
       }
-      
-      if (!data) {
+
+      if (!allProfiles || allProfiles.length === 0) {
         console.log('No profile found, creating a new one');
         return this.createInitialProfile(userId);
       }
+
+      // If we have multiple profiles (shouldn't happen after cleanup), use the most recent one
+      if (allProfiles.length > 1) {
+        console.warn(`Found ${allProfiles.length} profiles for user ${userId}, using most recent`);
+        // TODO: Consider cleaning up duplicates here in the future
+      }
+
+      const data = allProfiles[0]; // Use the most recent profile
       
       console.log('Successfully retrieved profile:', data);
       return data as UserProfile;
@@ -335,6 +355,38 @@ export const userService = {
         console.error('Error in fallback getUserProfile:', fallbackError);
         return null;
       }
+    }
+  },
+
+  // Update Supabase Auth user metadata to sync with dashboard
+  async updateAuthUserMetadata(userId: string, profile: UserProfile): Promise<void> {
+    try {
+      console.log('Syncing profile to Supabase Auth metadata for user:', userId);
+
+      // Call API route to sync profile data to auth metadata
+      const response = await fetch('/api/profile/sync-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          profile
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error syncing profile to auth metadata:', errorData);
+        // Don't throw error as this is supplementary - profile table update is primary
+      } else {
+        const result = await response.json();
+        console.log('Successfully synced profile to auth metadata:', result.message);
+        console.log('✅ Profile data should now be visible in Supabase dashboard at: https://supabase.com/dashboard/project/oybdzbyqormgynyjwyyc/auth/users');
+      }
+    } catch (error) {
+      console.error('Exception syncing profile to auth metadata:', error);
+      // Don't throw error as this is supplementary
     }
   },
 
@@ -375,21 +427,29 @@ export const userService = {
     try {
       console.log('Attempting to upsert profile for user:', userId);
       console.log('Profile data:', JSON.stringify(profile, null, 2));
-      
+
       // First check if profile exists to determine if we're updating or creating
-      const { data: existingProfile, error: fetchError } = await supabase
+      // Use the same approach as getUserProfile to handle potential duplicates
+      const { data: allProfiles, error: fetchError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (fetchError && fetchError.code !== 'PGRST116') {
+        .order('updated_at', { ascending: false }); // Get most recent first
+
+      if (fetchError) {
         console.error('Error checking for existing profile:', {
           code: fetchError.code,
           message: fetchError.message,
           details: fetchError.details || 'No details'
         });
         throw fetchError;
+      }
+
+      const existingProfile = allProfiles && allProfiles.length > 0 ? allProfiles[0] : null;
+
+      // If we have multiple profiles, log a warning
+      if (allProfiles && allProfiles.length > 1) {
+        console.warn(`Found ${allProfiles.length} profiles for user ${userId} during upsert, using most recent`);
       }
       
       // If we have an existing profile, update it
@@ -425,6 +485,10 @@ export const userService = {
         }
         
         console.log('Successfully updated profile:', data);
+
+        // Also update Supabase Auth user metadata to sync with dashboard
+        await this.updateAuthUserMetadata(userId, data);
+
         return data as UserProfile;
       } 
       // Otherwise create a new profile
@@ -468,6 +532,10 @@ export const userService = {
         }
         
         console.log('Successfully created profile:', data);
+
+        // Also update Supabase Auth user metadata to sync with dashboard
+        await this.updateAuthUserMetadata(userId, data);
+
         return data as UserProfile;
       }
     } catch (error) {
@@ -1028,7 +1096,7 @@ export const userService = {
 
       const response = await supabase
         .from('user_preferences')
-        .select('preferences')
+        .select('theme, language, api_keys, ai_providers')
         .eq('user_id', userId as any)
         .order('updated_at', { ascending: false }) // Get the most recently updated record
         .limit(1);
@@ -1107,8 +1175,8 @@ export const userService = {
   ): Promise<string | null> {
     try {
       console.log('Saving chat with user info');
-      
-      // Call the Supabase function
+
+      // Try the RPC function first
       const { data, error } = await supabase.rpc('save_chat_with_user_info', {
         p_user_id: userId,
         p_title: title,
@@ -1116,10 +1184,14 @@ export const userService = {
         p_user_email: userEmail,
         p_user_name: userName
       });
-      
+
       if (error) {
-        console.error('Error saving chat with RPC:', error);
-        
+        // Create safe error object for logging
+        const safeError = error instanceof Error
+          ? { message: error.message, name: error.name, code: (error as any).code }
+          : { message: String(error), code: (error as any)?.code };
+        console.error('Error saving chat with RPC:', JSON.stringify(safeError));
+
         // Fallback to direct insert
         const { data: chatData, error: chatError } = await supabase
           .from('chats')
@@ -1134,19 +1206,27 @@ export const userService = {
           })
           .select('id')
           .single();
-          
+
         if (chatError) {
-          console.error('Fallback chat insert also failed:', chatError);
+          // Create safe error object for logging
+          const safeChatError = chatError instanceof Error
+            ? { message: chatError.message, name: chatError.name, code: (chatError as any).code }
+            : { message: String(chatError), code: (chatError as any)?.code };
+          console.error('Fallback chat insert also failed:', JSON.stringify(safeChatError));
           return null;
         }
-        
+
         return chatData.id;
       }
-      
+
       console.log('Successfully saved chat with user info');
       return data;
     } catch (error) {
-      console.error('Error in saveChatWithUserInfo:', error);
+      // Create safe error object for logging
+      const safeError = error instanceof Error
+        ? { message: error.message, name: error.name, stack: error.stack }
+        : { message: String(error) };
+      console.error('Error in saveChatWithUserInfo:', JSON.stringify(safeError));
       return null;
     }
   },
@@ -1176,19 +1256,13 @@ export const userService = {
         // Create a preferences object merging existing with new settings
         let updatedPreferences = {};
         
-        // Handle existing preferences based on its type
-        if (userPrefs.preferences) {
-          if (typeof userPrefs.preferences === 'string') {
-            try {
-              updatedPreferences = JSON.parse(userPrefs.preferences);
-            } catch (e) {
-              console.error('Failed to parse preferences string:', e);
-              updatedPreferences = {};
-            }
-          } else {
-            updatedPreferences = {...userPrefs.preferences};
-          }
-        }
+        // Handle existing preferences - use theme and language from individual columns
+        updatedPreferences = {
+          theme: userPrefs.theme || 'light',
+          language: userPrefs.language || 'en',
+          api_keys: userPrefs.api_keys || {},
+          ai_providers: userPrefs.ai_providers || {}
+        };
         
         // Merge with new settings
         updatedPreferences = {
@@ -1202,7 +1276,10 @@ export const userService = {
         const { data, error } = await supabase
           .from('user_preferences')
           .update({
-            preferences: updatedPreferences,
+            theme: updatedPreferences.theme || settings.theme || 'light',
+            language: updatedPreferences.language || settings.language || 'en',
+            api_keys: updatedPreferences.api_keys || {},
+            ai_providers: updatedPreferences.ai_providers || {},
             updated_at: new Date().toISOString()
           })
           .eq('id', userPrefs.id)
@@ -1227,7 +1304,10 @@ export const userService = {
         const newRecord = {
           id: uuidv4(),
           user_id: userId,
-          preferences: { settings },
+          theme: settings.theme || 'light',
+          language: settings.language || 'en',
+          api_keys: settings.api_keys || {},
+          ai_providers: settings.ai_providers || {},
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };

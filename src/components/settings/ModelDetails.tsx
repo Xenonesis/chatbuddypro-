@@ -89,17 +89,6 @@ const MODEL_INFO: Record<AIProvider, ProviderModels> = {
     }
   },
   'gemini': {
-    'gemini-pro': {
-      name: 'Gemini Pro',
-      description: 'Balanced model for everyday tasks and reasoning.',
-      contextWindow: '32K tokens',
-      strengths: ['Good reasoning', 'Fast responses', 'Strong at following instructions'],
-      features: [
-        { name: 'Code Generation', icon: <FileText className="h-4 w-4" />, supported: true },
-        { name: 'Function Calling', icon: <Shapes className="h-4 w-4" />, supported: true },
-        { name: 'Image Processing', icon: <Sparkles className="h-4 w-4" />, supported: false },
-      ]
-    },
     'gemini-pro-vision': {
       name: 'Gemini Pro Vision',
       description: 'Includes image understanding capabilities.',

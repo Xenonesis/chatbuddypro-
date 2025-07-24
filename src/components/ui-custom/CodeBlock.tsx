@@ -26,11 +26,35 @@ export default function CodeBlock({ language, value, className, ...props }: Code
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // Check if clipboard API is available
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = value;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          document.execCommand('copy');
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (fallbackError) {
+          console.warn('Copy to clipboard not supported in this browser');
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
     } catch (error) {
-      console.error('Failed to copy: ', error);
+      console.warn('Failed to copy to clipboard:', error);
+      // Don't show error to user, just silently fail
     }
   };
 

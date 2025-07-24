@@ -82,7 +82,7 @@ export default function AdminPage() {
     const modelMap: Record<string, string> = {
       'gpt-4': 'GPT-4 (OpenAI)',
       'gpt-3.5-turbo': 'GPT-3.5 Turbo (OpenAI)',
-      'gemini-pro': 'Gemini Pro (Google)',
+      'gemini-2.0-flash': 'Gemini 2.0 Flash (Google)',
       'claude-3-opus': 'Claude 3 Opus (Anthropic)',
       'claude-3-sonnet': 'Claude 3 Sonnet (Anthropic)',
       'mistral-medium': 'Mistral Medium',

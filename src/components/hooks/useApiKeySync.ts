@@ -41,14 +41,18 @@ export function useApiKeySync() {
   // Auto-sync when user logs in
   useEffect(() => {
     if (user?.id) {
-      // Sync on user login
-      syncApiKeys();
+      // Sync on user login (with error handling)
+      syncApiKeys().catch(error => {
+        console.error('Error during initial API key sync:', error);
+      });
       
       // Add listener for auth changes
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' && session?.user?.id) {
           console.log('User signed in, syncing API keys');
-          syncApiKeys();
+          syncApiKeys().catch(error => {
+            console.error('Error during auth state change API key sync:', error);
+          });
         }
       });
       

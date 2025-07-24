@@ -95,7 +95,6 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
       }
     } else if (provider === 'gemini') {
       switch (model) {
-        case 'gemini-pro': return 'Google\'s advanced language model optimized for text and reasoning.';
         case 'gemini-pro-vision': return 'Multimodal model that can process both text and images.';
         case 'gemini-1.5-pro': return 'Advanced model: $1.25/1M input tokens (up to 128K), $5/1M output tokens. Higher rate for longer prompts.';
         case 'gemini-1.5-flash': return 'Efficient model: 7.5¢/1M input tokens (up to 128K), 30¢/1M output tokens. Higher rate for longer prompts.';
@@ -142,7 +141,7 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
   const getDefaultModelForProvider = (provider: AIProvider): string => {
     switch(provider) {
       case 'openai': return 'gpt-3.5-turbo';
-      case 'gemini': return 'gemini-pro';
+      case 'gemini': return 'gemini-2.0-flash';
       case 'mistral': return 'mistral-small';
       case 'claude': return 'claude-3-5-sonnet-20240620';
       case 'llama': return 'llama-3-8b-instruct';

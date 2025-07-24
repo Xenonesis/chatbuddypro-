@@ -66,7 +66,7 @@ export function CreateTestChat({ onChatCreated }: { onChatCreated?: (chatId: str
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
     { id: 'gpt-4', name: 'GPT-4' },
     { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet' },
-    { id: 'gemini-pro', name: 'Gemini Pro' },
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
   ];
 
   return (

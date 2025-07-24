@@ -176,12 +176,13 @@ export async function testDatabaseConnection() {
 }
 
 // Test connection on app start in development
-if (process.env.NODE_ENV === 'development') {
-  testDatabaseConnection();
-}
+// Temporarily disabled to allow app to start without database
+// if (process.env.NODE_ENV === 'development') {
+//   testDatabaseConnection();
+// }
 
-// Monitor for connection or auth issues
-supabase.auth.onAuthStateChange((event, session) => {
+// Monitor for connection or auth issues and ensure user profile creation
+supabase.auth.onAuthStateChange(async (event, session) => {
   console.log('Supabase auth event:', event);
   if (event === 'SIGNED_OUT') {
     console.log('User signed out');
@@ -192,8 +193,107 @@ supabase.auth.onAuthStateChange((event, session) => {
     testDatabaseConnection().then(success => {
       console.log('Post-login database connection test:', success ? 'passed' : 'failed');
     });
+    
+    // Ensure user profile and preferences exist for OAuth users (async but non-blocking)
+    if (session?.user?.id) {
+      ensureUserProfileExists(session.user.id, session.user).catch(error => {
+        console.error('Error ensuring user profile exists:', error);
+      });
+    }
   }
 });
+
+// Function to ensure user profile exists (especially important for OAuth users)
+async function ensureUserProfileExists(userId: string, user: any) {
+  try {
+    console.log('Ensuring user profile exists for:', userId);
+    
+    // Check if user profile already exists
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error checking existing profile:', profileError);
+      return;
+    }
+    
+    // Create profile if it doesn't exist
+    if (!existingProfile) {
+      console.log('Creating user profile for OAuth user:', userId);
+      
+      // Extract name from user metadata (common for OAuth providers)
+      const fullName = user.user_metadata?.full_name || 
+                      user.user_metadata?.name || 
+                      user.email?.split('@')[0] || 
+                      '';
+      
+      const { error: createError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: userId,
+          full_name: fullName,
+          age: null,
+          gender: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      
+      if (createError) {
+        console.error('Error creating user profile:', createError);
+      } else {
+        console.log('Successfully created user profile for OAuth user');
+      }
+    }
+    
+    // Check if user preferences exist
+    const { data: existingPrefs, error: prefsError } = await supabase
+      .from('user_preferences')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (prefsError && prefsError.code !== 'PGRST116') {
+      console.error('Error checking existing preferences:', prefsError);
+      return;
+    }
+    
+    // Create preferences if they don't exist
+    if (!existingPrefs) {
+      console.log('Creating user preferences for OAuth user:', userId);
+      
+      const { error: createPrefsError } = await supabase
+        .from('user_preferences')
+        .insert({
+          user_id: userId,
+          theme: 'light',
+          language: 'en',
+          api_keys: {},
+          ai_providers: {
+            "openai": { "enabled": false, "api_keys": {} },
+            "gemini": { "enabled": false, "api_keys": {} },
+            "mistral": { "enabled": false, "api_keys": {} },
+            "claude": { "enabled": false, "api_keys": {} },
+            "llama": { "enabled": false, "api_keys": {} },
+            "deepseek": { "enabled": false, "api_keys": {} }
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      
+      if (createPrefsError) {
+        console.error('Error creating user preferences:', createPrefsError);
+      } else {
+        console.log('Successfully created user preferences for OAuth user');
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error in ensureUserProfileExists:', error);
+  }
+}
 
 // Define the return type for schema check
 export interface SchemaCheckResult {
@@ -360,7 +460,7 @@ export type UserProfile = {
   user_id: string;
   full_name: string;
   age: number | null;
-  gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | null;
+  gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
   profession: string | null;
   organization_name: string | null;
   mobile_number: number | null;
@@ -406,25 +506,8 @@ export type Chat = {
   user_name?: string;
 };
 
-// Helper for directly executing SQL
+// Helper for directly executing SQL (deprecated - use Supabase client methods instead)
 export async function executeSql(sql: string) {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-        'X-Client-Info': 'supabase-js/2.0.0',
-      },
-      body: JSON.stringify({
-        query: sql
-      }),
-    });
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error executing SQL:', error);
-    throw error;
-  }
+  console.warn('executeSql is deprecated. Use Supabase client methods instead.');
+  throw new Error('Direct SQL execution is not supported. Use Supabase client methods instead.');
 } 
