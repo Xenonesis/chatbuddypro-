@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { userService } from '@/lib/services/userService';
 import { UserProfile } from '@/lib/supabase';
@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, User, Save, Briefcase, Building, Phone, CheckCircle, RefreshCw } from 'lucide-react';
+import { Loader2, User, Briefcase, Building, Phone, CheckCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Separator } from '@/components/ui/separator';
 import { ProfileCompletionIndicator } from '@/components/ProfileCompletionIndicator';
+import { AutoSyncIndicator } from '@/components/ui/AutoSyncIndicator';
 
 export default function ProfileSettings() {
   const { user } = useAuth();
@@ -25,6 +26,7 @@ export default function ProfileSettings() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [profileExists, setProfileExists] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [profile, setProfile] = useState<Partial<UserProfile>>({
     full_name: '',
     age: null,
@@ -34,12 +36,73 @@ export default function ProfileSettings() {
     mobile_number: null,
   });
 
+  // Auto-save timeout ref
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
+
   // Check if profile is empty or incomplete
   const isProfileIncomplete = () => {
     return !profile.full_name || 
            (!profile.age && !profile.gender && !profile.profession && 
             !profile.organization_name && !profile.mobile_number);
   };
+
+  // Auto-save profile changes
+  const autoSaveProfile = useCallback(async () => {
+    if (!user || !hasUnsavedChanges) return;
+
+    setIsSaving(true);
+    try {
+      const profileToSave = {
+        full_name: profile.full_name?.trim(),
+        age: profile.age === '' ? null : profile.age,
+        gender: profile.gender === '' ? null : profile.gender,
+        profession: profile.profession?.trim() || null,
+        organization_name: profile.organization_name?.trim() || null,
+        mobile_number: profile.mobile_number === '' ? null : profile.mobile_number,
+      };
+
+      // Basic validation
+      if (!profileToSave.full_name) {
+        setErrors({ full_name: "Full name is required" });
+        return;
+      }
+
+      const result = await userService.upsertUserProfile(user.id, profileToSave);
+      if (result) {
+        setHasUnsavedChanges(false);
+        setLastSynced(new Date());
+        setErrors({});
+        
+        toast({
+          title: "Profile auto-saved",
+          description: "Your profile changes have been automatically saved.",
+        });
+      }
+    } catch (error) {
+      console.error('Auto-save error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user, profile, hasUnsavedChanges, toast]);
+
+  // Track profile changes for auto-save
+  useEffect(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    if (hasUnsavedChanges && user) {
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        autoSaveProfile();
+      }, 2000); // Auto-save after 2 seconds of inactivity
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [hasUnsavedChanges, autoSaveProfile, user]);
 
   // Function to fetch user profile data from the database
   const fetchProfileData = useCallback(async (showToast = false) => {
@@ -538,7 +601,10 @@ export default function ProfileSettings() {
                   type="text"
                   placeholder="Enter your full name"
                   value={profile.full_name || ''}
-                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                  onChange={(e) => {
+                    setProfile({ ...profile, full_name: e.target.value });
+                    setHasUnsavedChanges(true);
+                  }}
                   className={errors.full_name ? 'border-destructive' : 'focus:border-primary'}
                 />
                 {errors.full_name && <p className="text-xs text-destructive">{errors.full_name}</p>}
@@ -551,7 +617,10 @@ export default function ProfileSettings() {
                   type="number"
                   placeholder="Enter your age"
                   value={profile.age || ''}
-                  onChange={(e) => setProfile({ ...profile, age: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) => {
+                    setProfile({ ...profile, age: e.target.value ? Number(e.target.value) : null });
+                    setHasUnsavedChanges(true);
+                  }}
                   className={errors.age ? 'border-destructive' : 'focus:border-primary'}
                 />
                 {errors.age && <p className="text-xs text-destructive">{errors.age}</p>}
@@ -563,7 +632,10 @@ export default function ProfileSettings() {
                 <Label htmlFor="gender" className="text-sm font-medium">Gender</Label>
                 <Select
                   value={profile.gender || ''}
-                  onValueChange={(value) => setProfile({ ...profile, gender: value as any })}
+                  onValueChange={(value) => {
+                    setProfile({ ...profile, gender: value as any });
+                    setHasUnsavedChanges(true);
+                  }}
                 >
                   <SelectTrigger id="gender" className={errors.gender ? 'border-destructive' : 'focus:border-primary'}>
                     <SelectValue placeholder="Select your gender" />
@@ -585,7 +657,10 @@ export default function ProfileSettings() {
                   type="tel"
                   placeholder="Enter your mobile number"
                   value={profile.mobile_number || ''}
-                  onChange={(e) => setProfile({ ...profile, mobile_number: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) => {
+                    setProfile({ ...profile, mobile_number: e.target.value ? Number(e.target.value) : null });
+                    setHasUnsavedChanges(true);
+                  }}
                   className={errors.mobile_number ? 'border-destructive' : 'focus:border-primary'}
                 />
                 {errors.mobile_number && <p className="text-xs text-destructive">{errors.mobile_number}</p>}
@@ -612,7 +687,10 @@ export default function ProfileSettings() {
                   type="text"
                   placeholder="Enter your profession"
                   value={profile.profession || ''}
-                  onChange={(e) => setProfile({ ...profile, profession: e.target.value })}
+                  onChange={(e) => {
+                    setProfile({ ...profile, profession: e.target.value });
+                    setHasUnsavedChanges(true);
+                  }}
                   className={errors.profession ? 'border-destructive' : 'focus:border-primary'}
                 />
                 {errors.profession && <p className="text-xs text-destructive">{errors.profession}</p>}
@@ -630,7 +708,10 @@ export default function ProfileSettings() {
                   type="text"
                   placeholder="Enter your organization name"
                   value={profile.organization_name || ''}
-                  onChange={(e) => setProfile({ ...profile, organization_name: e.target.value })}
+                  onChange={(e) => {
+                    setProfile({ ...profile, organization_name: e.target.value });
+                    setHasUnsavedChanges(true);
+                  }}
                   className={errors.organization_name ? 'border-destructive' : 'focus:border-primary'}
                 />
                 {errors.organization_name && <p className="text-xs text-destructive">{errors.organization_name}</p>}
@@ -638,13 +719,15 @@ export default function ProfileSettings() {
             </div>
           </div>
 
-          {/* Last Update Information */}
-          {lastSynced && (
-            <div className="text-xs text-muted-foreground mt-4 flex items-center gap-1.5">
-              <RefreshCw className="h-3 w-3" /> 
-              Last updated: {formatLastSynced()}
-            </div>
-          )}
+          {/* Auto-Sync Status */}
+          <AutoSyncIndicator
+            isSyncing={isSaving}
+            hasUnsavedChanges={hasUnsavedChanges}
+            lastSyncTime={lastSynced}
+            variant="compact"
+            showManualSync={false}
+            className="mt-4"
+          />
         </CardContent>
         
         <CardFooter className="flex justify-between border-t bg-muted/20 px-6 py-4">
@@ -659,15 +742,20 @@ export default function ProfileSettings() {
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
           
-          <Button
-            type="submit"
-            disabled={isSaving || isLoading || isRefreshing}
-            onClick={handleSave}
-            className="flex items-center gap-1.5"
-          >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {isSaving ? 'Saving...' : 'Save Profile'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <AutoSyncIndicator
+              isSyncing={isSaving}
+              hasUnsavedChanges={hasUnsavedChanges}
+              lastSyncTime={lastSynced}
+              variant="minimal"
+              showManualSync={false}
+            />
+            <span className="text-xs text-muted-foreground">
+              {isSaving ? 'Auto-saving...' : 
+               hasUnsavedChanges ? 'Will auto-save' : 
+               'Auto-saved'}
+            </span>
+          </div>
         </CardFooter>
       </Card>
       

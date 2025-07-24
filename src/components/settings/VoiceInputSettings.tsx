@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Mic, Volume2, Save, Loader, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { Mic, Volume2, Loader, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { useModelSettings } from '@/lib/context/ModelSettingsContext';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { AutoSyncIndicator } from '@/components/ui/AutoSyncIndicator';
 
 export default function VoiceInputSettings() {
   const { settings, updateSettings } = useModelSettings();
@@ -18,6 +19,10 @@ export default function VoiceInputSettings() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  
+  // Auto-save timeout ref
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
   const [isTesting, setIsTesting] = useState(false);
 
@@ -50,11 +55,12 @@ export default function VoiceInputSettings() {
     );
   }, [localSettings, settings]);
 
-  // Save settings
-  const handleSaveSettings = useCallback(() => {
-    setIsSaving(true);
+  // Auto-save settings
+  const autoSaveSettings = useCallback(async () => {
+    if (!hasChanges) return;
     
-    setTimeout(() => {
+    setIsSaving(true);
+    try {
       updateSettings({
         ...settings,
         voiceInputSettings: {
@@ -63,15 +69,38 @@ export default function VoiceInputSettings() {
         }
       });
       
-      setIsSaving(false);
       setHasChanges(false);
+      setLastSyncTime(new Date());
       
       toast({
-        title: "Voice settings saved",
-        description: "Your voice input preferences have been updated.",
+        title: "Voice settings auto-saved",
+        description: "Your voice input preferences have been automatically saved.",
       });
-    }, 500);
-  }, [localSettings, settings, updateSettings, toast]);
+    } catch (error) {
+      console.error('Auto-save error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [localSettings, settings, updateSettings, hasChanges, toast]);
+
+  // Auto-save when changes are detected
+  useEffect(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    if (hasChanges) {
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        autoSaveSettings();
+      }, 1500); // Auto-save after 1.5 seconds of inactivity
+    }
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [hasChanges, autoSaveSettings]);
 
   // Test microphone
   const handleTestMicrophone = useCallback(async () => {
@@ -234,23 +263,13 @@ export default function VoiceInputSettings() {
         </CardContent>
         
         <CardFooter className="border-t bg-muted/20 px-6 py-4 justify-end">
-          <Button 
-            onClick={handleSaveSettings}
-            disabled={!hasChanges || isSaving}
-            className="flex items-center gap-1.5"
-          >
-            {isSaving ? (
-              <>
-                <Loader className="h-4 w-4 animate-spin mr-1" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-1" />
-                Save Changes
-              </>
-            )}
-          </Button>
+          <AutoSyncIndicator
+            isSyncing={isSaving}
+            hasUnsavedChanges={hasChanges}
+            lastSyncTime={lastSyncTime}
+            variant="compact"
+            showManualSync={false}
+          />
         </CardFooter>
       </Card>
     </div>

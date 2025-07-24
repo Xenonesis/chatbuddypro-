@@ -24,7 +24,9 @@
     "test-frontend-auth": "node scripts/test-frontend-auth.js",
     "check-ui-errors": "node scripts/check-ui-errors.js",
     "check-auth": "node scripts/check-auth-status.js",
-    "fix-chat-rpc": "node scripts/fix-chat-rpc-error.js"
+    "fix-chat-rpc": "node scripts/fix-chat-rpc-error.js",
+    "setup-realtime": "node setup-realtime-settings.js",
+    "test-realtime": "node test-realtime-settings.js"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.8",

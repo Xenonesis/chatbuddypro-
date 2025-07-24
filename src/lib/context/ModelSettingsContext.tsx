@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { userService } from '@/lib/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, decryptApiKey } from '@/lib/supabase';
+import { useRealtimeSettings } from '@/hooks/useRealtimeSettings';
 
 export type AIProvider = 'openai' | 'gemini' | 'mistral' | 'claude' | 'llama' | 'deepseek';
 export type ChatMode = 'thoughtful' | 'quick' | 'creative' | 'technical' | 'learning';
@@ -186,6 +187,57 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   const [showAddApiKeyForm, setShowAddApiKeyForm] = useState(false);
   const { user, isAuthReady } = useAuth();
   const [loadingKeys, setLoadingKeys] = useState(false);
+
+  // Real-time settings update handlers
+  const handleRealtimeSettingsUpdate = useCallback((newSettings: ModelSettings) => {
+    console.log('Applying real-time settings update');
+    setSettings(prevSettings => {
+      const mergedSettings = { ...prevSettings, ...newSettings };
+      
+      // Update localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(mergedSettings));
+      }
+      
+      // Update current provider if default provider changed
+      if (newSettings.defaultProvider && newSettings.defaultProvider !== prevSettings.defaultProvider) {
+        setCurrentProvider(newSettings.defaultProvider);
+      }
+      
+      return mergedSettings;
+    });
+  }, []);
+
+  const handleRealtimeApiKeysUpdate = useCallback((newApiKeys: Record<string, string>) => {
+    console.log('Applying real-time API keys update');
+    setApiKeys(prevKeys => ({ ...prevKeys, ...newApiKeys }));
+    
+    // Update settings with new API keys
+    setSettings(prevSettings => {
+      const updatedSettings = { ...prevSettings };
+      
+      Object.entries(newApiKeys).forEach(([provider, apiKey]) => {
+        const typedProvider = provider as AIProvider;
+        if (updatedSettings[typedProvider]) {
+          updatedSettings[typedProvider].apiKey = apiKey;
+          updatedSettings[typedProvider].enabled = true;
+        }
+      });
+      
+      // Update localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(updatedSettings));
+      }
+      
+      return updatedSettings;
+    });
+  }, []);
+
+  // Set up real-time subscription
+  useRealtimeSettings({
+    onSettingsUpdate: handleRealtimeSettingsUpdate,
+    onApiKeysUpdate: handleRealtimeApiKeysUpdate
+  });
 
   useEffect(() => {
     // Load settings from localStorage on client side
