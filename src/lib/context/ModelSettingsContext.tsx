@@ -77,6 +77,11 @@ export type ModelSettings = {
     language: string;
     continuous: boolean;
   };
+  chatManagementSettings: {
+    autoDeleteEnabled: boolean;
+    retentionPeriodDays: number;
+    lastCleanupDate?: string;
+  };
   defaultProvider: AIProvider;
   chatMode: ChatMode;
   showThinking: boolean;
@@ -146,6 +151,11 @@ const defaultSettings: ModelSettings = {
     language: 'en-US',
     continuous: true
   },
+  chatManagementSettings: {
+    autoDeleteEnabled: false,
+    retentionPeriodDays: 30,
+    lastCleanupDate: undefined
+  },
   defaultProvider: 'openai',
   chatMode: 'thoughtful',
   showThinking: false
@@ -171,6 +181,9 @@ interface ModelSettingsContextType {
   toggleVoiceInput: () => void;
   setVoiceLanguage: (language: string) => void;
   toggleContinuousListening: () => void;
+  toggleAutoDeleteChats: () => void;
+  setRetentionPeriod: (days: number) => void;
+  updateLastCleanupDate: (date: string) => void;
   apiKeys: Record<string, string>;
   hasLoadedKeysFromSupabase: boolean;
   showAddApiKeyForm: boolean;
@@ -1000,6 +1013,61 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Chat Management Settings Functions
+  const toggleAutoDeleteChats = useCallback(() => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        chatManagementSettings: {
+          ...prev.chatManagementSettings,
+          autoDeleteEnabled: !prev.chatManagementSettings.autoDeleteEnabled
+        }
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+
+      return newSettings;
+    });
+  }, []);
+
+  const setRetentionPeriod = useCallback((days: number) => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        chatManagementSettings: {
+          ...prev.chatManagementSettings,
+          retentionPeriodDays: days
+        }
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+
+      return newSettings;
+    });
+  }, []);
+
+  const updateLastCleanupDate = useCallback((date: string) => {
+    setSettings((prev) => {
+      const newSettings = {
+        ...prev,
+        chatManagementSettings: {
+          ...prev.chatManagementSettings,
+          lastCleanupDate: date
+        }
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aiSettings', JSON.stringify(newSettings));
+      }
+
+      return newSettings;
+    });
+  }, []);
+
   const contextValue: ModelSettingsContextType = {
     settings,
     currentProvider,
@@ -1020,6 +1088,9 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
     toggleVoiceInput,
     setVoiceLanguage,
     toggleContinuousListening,
+    toggleAutoDeleteChats,
+    setRetentionPeriod,
+    updateLastCleanupDate,
     apiKeys,
     hasLoadedKeysFromSupabase,
     showAddApiKeyForm,

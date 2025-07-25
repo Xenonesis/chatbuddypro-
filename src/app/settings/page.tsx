@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Sliders, RefreshCw, AlertCircle } from 'lucide-react';
 import ProviderSettings from '@/components/settings/ProviderSettings';
 import ChatSettings from '@/components/settings/ChatSettings';
+import ChatManagementSettings from '@/components/settings/ChatManagementSettings';
 import SuggestionsSettings from '@/components/settings/SuggestionsSettings';
 import VoiceInputSettings from '@/components/settings/VoiceInputSettings';
 import ProfileSettings from '@/components/settings/ProfileSettings';
@@ -105,6 +106,7 @@ export default function SettingsPage() {
           <ProfileSettings />
           <ProviderSettings />
           <ChatSettings />
+          <ChatManagementSettings />
           <VoiceInputSettings />
           <SuggestionsSettings />
         </div>

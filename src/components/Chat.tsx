@@ -60,6 +60,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatService } from '@/lib/services/chatService';
 import dynamic from 'next/dynamic';
+import { toast } from '@/hooks/use-toast';
 
 // Import the Message type from our types
 import { Message } from '@/types/chat';
@@ -243,6 +244,28 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
       loadChatHistory();
     }
   }, [chatId, user]);
+
+  // Verify database sync periodically (optional)
+  useEffect(() => {
+    if (!chatId || !user || messages.length === 0) return;
+
+    const verifySyncInterval = setInterval(async () => {
+      try {
+        const dbMessages = await chatService.getChatMessages(chatId, user.id);
+        const dbMessageCount = dbMessages.length;
+        const uiMessageCount = messages.length;
+        
+        // If there's a significant discrepancy, log it (but don't auto-fix to avoid conflicts)
+        if (Math.abs(dbMessageCount - uiMessageCount) > 1) {
+          console.warn(`Message sync discrepancy detected: DB has ${dbMessageCount} messages, UI has ${uiMessageCount}`);
+        }
+      } catch (error) {
+        console.error('Error verifying message sync:', error);
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(verifySyncInterval);
+  }, [chatId, user, messages.length]);
 
   const loadChatHistory = async () => {
     if (!chatId || !user) return;
@@ -475,7 +498,7 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
             setChatId(chat.id);
             
             // Save the first message to the chat with metadata
-            await chatService.addMessage(
+            const savedUserMessage = await chatService.addMessage(
               chat.id,
               user.id,
               'user',
@@ -483,9 +506,12 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
               {
                 provider: currentProvider,
                 model: modelName,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                messageId: newUserMessage.id // Link to UI message
               }
             );
+            
+            console.log('Successfully saved user message to database:', savedUserMessage?.id);
           }
         } catch (error) {
           console.error('Error creating chat:', error);
@@ -494,15 +520,28 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
       } else if (chatId && user) {
         // Save the message to an existing chat
         try {
-          await chatService.addMessage(
+          const savedUserMessage = await chatService.addMessage(
             chatId,
             user.id,
             'user',
-            userMessage
+            userMessage,
+            {
+              provider: currentProvider,
+              model: getCurrentModelName(),
+              timestamp: new Date().toISOString(),
+              messageId: newUserMessage.id // Link to UI message
+            }
           );
+          
+          console.log('Successfully saved user message to database:', savedUserMessage?.id);
         } catch (error) {
           console.error('Error saving message:', error);
-          // Continue with the chat even if saving to DB fails
+          // Show user-friendly notification about sync issues
+          toast({
+            title: "Sync Warning",
+            description: "Message sent but may not be saved to your history. Please check your connection.",
+            variant: "destructive",
+          });
         }
       }
       
@@ -615,7 +654,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       // Save the assistant's response to the database if user is logged in
       if (chatId && user) {
         try {
-          await chatService.addMessage(
+          const savedMessage = await chatService.addMessage(
             chatId,
             user.id,
             'assistant',
@@ -626,16 +665,27 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
               thinking: thinking || undefined,
               responseTime,
               timestamp: new Date().toISOString(),
-              tokenCount: response.length // Rough estimate
+              tokenCount: response.length, // Rough estimate
+              messageId: assistantMessage.id // Link to UI message
             }
           );
 
           // Update the chat with the current model if it changed
           const modelName = DEFAULT_MODELS[currentProvider];
-          await chatService.updateChat(chatId, user.id, { model: modelName });
+          await chatService.updateChat(chatId, user.id, { 
+            model: modelName,
+            last_message: response.substring(0, 100) + (response.length > 100 ? '...' : '')
+          });
+
+          console.log('Successfully saved assistant message to database:', savedMessage?.id);
         } catch (error) {
           console.error('Error saving assistant response:', error);
-          // Continue with the chat even if saving to DB fails
+          // Show user-friendly notification about sync issues
+          toast({
+            title: "Sync Warning",
+            description: "Message sent but may not be saved to your history. Please check your connection.",
+            variant: "destructive",
+          });
         }
       }
     } catch (error) {

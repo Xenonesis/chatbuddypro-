@@ -91,7 +91,8 @@ function throttle<T extends (...args: any[]) => any>(func: T, delay: number): (.
 // Navigation links configuration
 const navLinks = [
   { href: '/chat', label: 'Chat', icon: <MessageSquare className="h-4 w-4" /> },
-  { href: '/dashboard', label: 'My Chats', icon: <User className="h-4 w-4" /> },
+  { href: '/conversations', label: 'Conversations', icon: <MessageSquare className="h-4 w-4" /> },
+  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
   { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
 ];
 

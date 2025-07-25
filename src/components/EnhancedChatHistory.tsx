@@ -282,49 +282,57 @@ export default function EnhancedChatHistory({ refreshKey = 0 }: EnhancedChatHist
     <div className="h-full flex flex-col space-y-6">
       {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 flex-shrink-0">
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 border-blue-200/50 dark:border-blue-800/50">
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <MessageSquare className="h-4 w-4 text-blue-500" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Total Chats</p>
-                <p className="text-2xl font-bold">{stats.totalChats}</p>
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Chats</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.totalChats}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 border-emerald-200/50 dark:border-emerald-800/50">
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-green-500" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Recent</p>
-                <p className="text-2xl font-bold">{stats.recentChats}</p>
+                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Recent</p>
+                <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.recentChats}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50 border-amber-200/50 dark:border-amber-800/50">
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Archive className="h-4 w-4 text-orange-500" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Archived</p>
-                <p className="text-2xl font-bold">{stats.archivedChats}</p>
+                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Archived</p>
+                <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.archivedChats}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                <Archive className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 border-purple-200/50 dark:border-purple-800/50">
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <MessageSquare className="h-4 w-4 text-purple-500" />
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Messages</p>
-                <p className="text-2xl font-bold">{stats.totalMessages}</p>
+                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Messages</p>
+                <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.totalMessages}</p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </CardContent>
@@ -332,15 +340,15 @@ export default function EnhancedChatHistory({ refreshKey = 0 }: EnhancedChatHist
       </div>
 
       {/* Filters and Search */}
-      <Card className="flex-shrink-0">
+      <Card className="flex-shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200/50 dark:border-slate-700/50">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
+              <MessageSquare className="h-5 w-5 text-blue-600" />
               Chat History
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Button onClick={loadData} variant="outline" size="sm">
+              <Button onClick={loadData} variant="outline" size="sm" className="hover:bg-slate-50 dark:hover:bg-slate-800">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
@@ -351,11 +359,11 @@ export default function EnhancedChatHistory({ refreshKey = 0 }: EnhancedChatHist
                 }}
                 variant="outline"
                 size="sm"
-                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:border-blue-800 dark:text-blue-300"
               >
                 📜 View All ({filteredAndSortedChats.length})
               </Button>
-              <Button onClick={() => router.push('/chat')} size="sm">
+              <Button onClick={() => router.push('/chat')} size="sm" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-200">
                 <Plus className="h-4 w-4 mr-2" />
                 New Chat
               </Button>
