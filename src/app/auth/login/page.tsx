@@ -193,7 +193,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)] flex flex-col justify-center items-center p-4 bg-gradient-to-br from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
+    <div className="relative min-h-[calc(100vh-64px)] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
       {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-100/40 dark:bg-blue-900/10 rounded-full blur-3xl"></div>
@@ -244,7 +244,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
+        className="relative z-10 w-full max-w-md mx-auto"
       >
         <Card className="border-slate-200/70 dark:border-slate-800/70 shadow-xl dark:shadow-slate-900/20 backdrop-blur-sm glass-light dark:glass-dark overflow-hidden">
           <CardHeader className="space-y-1">

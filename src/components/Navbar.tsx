@@ -241,7 +241,7 @@ export function Navbar() {
           : "bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
       )}
     >
-      <div className="container flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4 navbar-container">
+      <div className="container flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 lg:px-8 navbar-container max-w-7xl mx-auto">
         {/* Logo and app title */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <Link href="/" className="flex items-center gap-1 sm:gap-1.5 font-bold text-lg text-slate-900 dark:text-white transition-transform hover:scale-105">

@@ -14,6 +14,7 @@ import ResponsiveContainer, { ResponsiveSection } from '@/components/Layout/Resp
 import { EnhancedTooltip } from '@/components/ui/enhanced-tooltip';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { ModernFooter } from '@/components/ui-custom/ModernFooter';
 
 export default function Home() {
   const [showWelcome, setShowWelcome] = useState(true);
@@ -24,16 +25,14 @@ export default function Home() {
   const howItWorksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Always show welcome on the landing page
-    // but skip for returning users who are logged in
-    const hasVisited = localStorage.getItem('hasVisitedBefore');
-    if (hasVisited && user) {
-      // Navigate to dashboard if user is logged in
+    // If user is logged in, redirect to dashboard (middleware should handle this, but double-check)
+    if (user) {
       router.push('/dashboard');
-      setShowWelcome(false);
-    } else {
-      localStorage.setItem('hasVisitedBefore', 'true');
+      return;
     }
+    
+    // Always show welcome on the landing page for unauthenticated users
+    localStorage.setItem('hasVisitedBefore', 'true');
     setMounted(true);
     
     // Add JS detection class to prevent hydration mismatches
@@ -109,7 +108,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center min-h-[calc(100vh-64px)]">
+    <div className="flex-1 flex flex-col items-center min-h-[calc(100vh-64px)] pb-20 md:pb-0">
       {showWelcome ? (
         <motion.div
           initial="hidden"
@@ -118,7 +117,7 @@ export default function Home() {
           className="w-full mx-auto space-y-20 pb-8"
         >
           {/* Hero Section */}
-          <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-white dark:from-slate-900 dark:via-[#0f172a] dark:to-[#0c1222] py-20 sm:py-28 md:py-32">
+          <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-white dark:from-slate-900 dark:via-[#0f172a] dark:to-[#0c1222] py-12 sm:py-20 md:py-28 lg:py-32">
             {/* Enhanced Background elements with improved visual depth */}
             <div className="absolute inset-0 bg-grid-slate-100/50 dark:bg-grid-white/[0.02] [mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.1))]"></div>
             
@@ -139,7 +138,7 @@ export default function Home() {
             }}></div>
             
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
                 <motion.div 
                   variants={itemVariants} 
                   className="space-y-8"
@@ -160,7 +159,7 @@ export default function Home() {
                     </motion.div>
                     
                     <div className="space-y-4">
-                      <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-none">
+                      <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight leading-none">
                         <motion.span 
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -263,7 +262,7 @@ export default function Home() {
 
                 <motion.div 
                   variants={itemVariants} 
-                  className="relative hidden md:block h-[500px]"
+                  className="relative hidden lg:block h-[400px] sm:h-[500px]"
                 >
                   <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-gradient-to-br from-slate-800/90 via-slate-900/95 to-slate-950/90 backdrop-blur-xl">
                     {/* Enhanced window header */}
@@ -421,7 +420,7 @@ export default function Home() {
           </section>
 
           {/* Enhanced Features Section */}
-          <section ref={featuresRef} className="relative py-20 sm:py-28 overflow-hidden">
+          <section ref={featuresRef} className="relative py-12 sm:py-20 md:py-28 overflow-hidden">
             {/* Enhanced background with animated elements */}
             <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/50 to-white dark:from-slate-950 dark:via-slate-900/50 dark:to-slate-950"></div>
             
@@ -957,184 +956,8 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Enhanced Footer */}
-          <footer className="relative w-full py-16 border-t border-slate-200/50 dark:border-slate-800/50 bg-gradient-to-b from-white via-slate-50/50 to-slate-100/30 dark:from-slate-950 dark:via-slate-900/50 dark:to-slate-800/30 overflow-hidden">
-            {/* Background elements */}
-            <div className="absolute inset-0">
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-300/40 dark:via-blue-500/30 to-transparent"></div>
-              <div className="absolute bottom-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-blue-400/5 via-indigo-400/3 to-purple-400/5 rounded-full blur-3xl"></div>
-              <div className="absolute top-1/4 right-1/4 w-48 h-48 bg-gradient-to-r from-emerald-400/5 via-teal-400/3 to-cyan-400/5 rounded-full blur-2xl"></div>
-            </div>
-            
-            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {/* Main footer content */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-                {/* Brand section */}
-                <div className="md:col-span-1">
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5 }}
-                    className="flex items-center mb-4"
-                  >
-                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg mr-3">
-                      <Bot className="h-5 w-5" />
-                    </div>
-                    <span className="text-xl font-bold text-slate-900 dark:text-white">ChatBuddy</span>
-                  </motion.div>
-                  <motion.p 
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                    className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6"
-                  >
-                    The future of AI collaboration with quantum-secure encryption and context-aware intelligence.
-                  </motion.p>
-                  
-                  {/* Social links */}
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                    className="flex gap-3"
-                  >
-                    {[
-                      { icon: "🐦", label: "Twitter", href: "#" },
-                      { icon: "💼", label: "LinkedIn", href: "#" },
-                      { icon: "🐙", label: "GitHub", href: "#" },
-                      { icon: "📧", label: "Email", href: "#" }
-                    ].map((social, index) => (
-                      <a
-                        key={index}
-                        href={social.href}
-                        aria-label={social.label}
-                        className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300/50 dark:hover:border-blue-500/30 transition-all duration-300 hover:scale-110"
-                      >
-                        <span className="text-sm">{social.icon}</span>
-                      </a>
-                    ))}
-                  </motion.div>
-                </div>
-
-                {/* Navigation sections */}
-                {[
-                  {
-                    title: "Product",
-                    links: [
-                      { name: "Features", href: "#features" },
-                      { name: "How it Works", href: "#how-it-works" },
-                      { name: "Pricing", href: "/pricing" },
-                      { name: "API Docs", href: "/docs" }
-                    ]
-                  },
-                  {
-                    title: "Company",
-                    links: [
-                      { name: "About", href: "/about" },
-                      { name: "Blog", href: "/blog" },
-                      { name: "Careers", href: "/careers" },
-                      { name: "Contact", href: "/contact" }
-                    ]
-                  },
-                  {
-                    title: "Legal",
-                    links: [
-                      { name: "Privacy Policy", href: "/privacy" },
-                      { name: "Terms of Service", href: "/terms" },
-                      { name: "Security", href: "/security" },
-                      { name: "Compliance", href: "/compliance" }
-                    ]
-                  }
-                ].map((section, sectionIndex) => (
-                  <motion.div 
-                    key={section.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.1 + sectionIndex * 0.1 }}
-                    className="md:col-span-1"
-                  >
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wide mb-4">
-                      {section.title}
-                    </h3>
-                    <ul className="space-y-3">
-                      {section.links.map((link, linkIndex) => (
-                        <li key={linkIndex}>
-                          <Link 
-                            href={link.href}
-                            className="text-sm text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 hover:underline"
-                          >
-                            {link.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Newsletter signup */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="border-t border-slate-200/50 dark:border-slate-700/50 pt-8 mb-8"
-              >
-                <div className="max-w-md mx-auto text-center">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                    Stay Updated
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                    Get the latest updates on new features and AI advancements.
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="email"
-                      placeholder="Enter your email"
-                      className="flex-1 px-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    />
-                    <Button 
-                      size="sm" 
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl px-6 transition-all duration-300 hover:scale-105"
-                    >
-                      Subscribe
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Bottom section */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="border-t border-slate-200/50 dark:border-slate-700/50 pt-8"
-              >
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                  <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
-                    <span>© 2025 ChatBuddy. All rights reserved.</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                      <span className="text-xs">All systems operational</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-500">
-                    <span>Made with ❤️ for the future</span>
-                    <div className="flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      <span>SOC 2 Compliant</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </footer>
+          {/* Modern Footer */}
+          <ModernFooter />
         </motion.div>
       ) : (
         <div className="w-full max-w-5xl mx-auto h-full p-2 md:p-4">

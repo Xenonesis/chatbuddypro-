@@ -163,8 +163,12 @@ export function ModelCard({
   const [showModelDetails, setShowModelDetails] = useState(false);
   
   useEffect(() => {
-    // Reset status when API key changes
-    setApiKeyStatus('unchecked');
+    // Reset status when API key changes, but mark as valid if key exists
+    if (apiKey && apiKey.trim() !== '') {
+      setApiKeyStatus('valid');
+    } else {
+      setApiKeyStatus('unchecked');
+    }
   }, [apiKey]);
   
   const getApiKeyStatusIcon = () => {
@@ -206,11 +210,15 @@ export function ModelCard({
             {getProviderIcon(provider)}
             <CardTitle className={cn(
               "text-base font-semibold capitalize",
+              isEnabled && apiKeyStatus === 'valid' ? "text-green-600 dark:text-green-400" : 
               isEnabled ? getProviderTextColor(provider) : "text-muted-foreground"
             )}>
               {formatProviderName(provider)}
               {isDefault && (
                 <Badge className="ml-2 text-xs bg-blue-500 dark:bg-blue-600">Default</Badge>
+              )}
+              {apiKeyStatus === 'valid' && (
+                <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
               )}
             </CardTitle>
           </div>
@@ -637,14 +645,19 @@ export default function ProviderSettings() {
               <div className="flex items-center gap-2">
                 <h3 className={cn(
                   "font-medium",
-                  localSettings[provider].enabled 
-                    ? getProviderTextColor(provider) 
-                    : "text-muted-foreground"
+                  localSettings[provider].enabled && localSettings[provider].apiKey && localSettings[provider].apiKey.trim() !== '' 
+                    ? "text-green-600 dark:text-green-400" 
+                    : localSettings[provider].enabled 
+                      ? getProviderTextColor(provider) 
+                      : "text-muted-foreground"
                 )}>
                   {formatProviderName(provider)}
                 </h3>
                 {localSettings.defaultProvider === provider && (
                   <Badge className="ml-1 text-xs bg-blue-500 dark:bg-blue-600">Default</Badge>
+                )}
+                {localSettings[provider].apiKey && localSettings[provider].apiKey.trim() !== '' && (
+                  <CheckCircle className="ml-1 h-4 w-4 text-green-500" />
                 )}
               </div>
               

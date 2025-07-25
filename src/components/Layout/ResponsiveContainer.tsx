@@ -152,4 +152,100 @@ export function ResponsiveGrid({
       {children}
     </div>
   );
+}
+
+/**
+ * A responsive flex component for better mobile layouts
+ */
+export function ResponsiveFlex({
+  children,
+  direction = 'col',
+  align = 'start',
+  justify = 'start',
+  gap = 'md',
+  wrap = true,
+  className,
+}: {
+  children: React.ReactNode;
+  direction?: 'row' | 'col' | 'row-reverse' | 'col-reverse';
+  align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
+  justify?: 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly';
+  gap?: 'sm' | 'md' | 'lg' | 'xl';
+  wrap?: boolean;
+  className?: string;
+}) {
+  const gapClass = {
+    sm: 'gap-2',
+    md: 'gap-4',
+    lg: 'gap-6',
+    xl: 'gap-8',
+  }[gap];
+
+  const alignClass = {
+    start: 'items-start',
+    center: 'items-center',
+    end: 'items-end',
+    stretch: 'items-stretch',
+    baseline: 'items-baseline',
+  }[align];
+
+  const justifyClass = {
+    start: 'justify-start',
+    center: 'justify-center',
+    end: 'justify-end',
+    between: 'justify-between',
+    around: 'justify-around',
+    evenly: 'justify-evenly',
+  }[justify];
+
+  return (
+    <div 
+      className={cn(
+        'flex',
+        `flex-${direction}`,
+        alignClass,
+        justifyClass,
+        gapClass,
+        wrap && 'flex-wrap',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * A responsive stack component for vertical layouts
+ */
+export function ResponsiveStack({
+  children,
+  spacing = 'md',
+  align = 'stretch',
+  className,
+}: {
+  children: React.ReactNode;
+  spacing?: 'sm' | 'md' | 'lg' | 'xl';
+  align?: 'start' | 'center' | 'end' | 'stretch';
+  className?: string;
+}) {
+  const spacingClass = {
+    sm: 'space-y-2',
+    md: 'space-y-4',
+    lg: 'space-y-6',
+    xl: 'space-y-8',
+  }[spacing];
+
+  const alignClass = {
+    start: 'items-start',
+    center: 'items-center',
+    end: 'items-end',
+    stretch: 'items-stretch',
+  }[align];
+
+  return (
+    <div className={cn('flex flex-col', spacingClass, alignClass, className)}>
+      {children}
+    </div>
+  );
 } 

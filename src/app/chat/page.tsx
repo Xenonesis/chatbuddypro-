@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { userService } from '@/lib/services/userService';
 import Chat from '@/components/Chat';
 import EnhancedLoading from '@/components/ui/enhanced-loading';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 function ChatPageContent() {
   const router = useRouter();
@@ -70,14 +71,16 @@ function ChatPageContent() {
   }
 
   return (
-    <div className="container mx-auto py-4 px-4 flex flex-col min-h-[calc(100vh-64px)]">
-      <Chat 
-        initialMessages={messages} 
-        initialTitle={chatTitle}
-        initialModel={chatModel}
-        chatId={chatId || undefined}
-      />
-    </div>
+    <ProtectedRoute>
+      <div className="container mx-auto py-2 sm:py-4 px-2 sm:px-4 lg:px-8 flex flex-col min-h-[calc(100vh-64px)] max-w-7xl pb-20 md:pb-4">
+        <Chat 
+          initialMessages={messages} 
+          initialTitle={chatTitle}
+          initialModel={chatModel}
+          chatId={chatId || undefined}
+        />
+      </div>
+    </ProtectedRoute>
   );
 }
 

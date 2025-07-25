@@ -15,11 +15,15 @@ type ApiDiagnosticsProps = {
 };
 
 export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
-  const { settings } = useModelSettings();
+  const { settings, apiKeys } = useModelSettings();
   const [diagnostics, setDiagnostics] = useState<ReturnType<typeof validateApiConfiguration> | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const providerSettings = settings[provider];
-  const hasApiKey = Boolean(providerSettings?.apiKey);
+  
+  // Check both local settings and database API keys
+  const hasApiKeyInSettings = Boolean(providerSettings?.apiKey && providerSettings.apiKey.trim() !== '');
+  const hasApiKeyInDatabase = Boolean(apiKeys && apiKeys[provider] && apiKeys[provider].trim() !== '');
+  const hasApiKey = hasApiKeyInSettings || hasApiKeyInDatabase;
   
   useEffect(() => {
     // Run validation on mount
@@ -28,7 +32,10 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
     
     // Log to console for debugging
     console.log('API Configuration Diagnostics:', config);
-  }, []);
+    console.log('Provider settings API key:', hasApiKeyInSettings);
+    console.log('Database API keys:', apiKeys);
+    console.log('Has API key for provider:', provider, hasApiKey);
+  }, [hasApiKeyInSettings, hasApiKeyInDatabase, apiKeys, provider, hasApiKey]);
   
   if (!diagnostics) {
     return null;
@@ -36,7 +43,8 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
   
   // If a specific provider is specified, only show a simplified status for that provider
   if (provider) {
-    const isConfigured = diagnostics[provider]?.configured;
+    // Use the actual API key status instead of just environment variables
+    const isConfigured = hasApiKey;
     
     // Return a minimal indicator
     return (
@@ -46,9 +54,9 @@ export default function ApiDiagnostics({ provider }: ApiDiagnosticsProps) {
           size="sm" 
           className={`h-8 px-2 text-xs sm:text-sm flex items-center gap-1.5 ${
             isConfigured 
-              ? 'text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300' 
-              : 'text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300'
-          } dark:hover:bg-slate-700`}
+              ? 'text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-800' 
+              : 'text-orange-500 hover:text-orange-600 dark:text-orange-400 dark:hover:text-orange-300 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border border-orange-200 dark:border-orange-800'
+          }`}
         >
           {isConfigured ? (
             <>

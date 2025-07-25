@@ -19,6 +19,7 @@ import { usePathname } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
 import { userService } from '@/lib/services/userService';
 import { testSupabaseConnection } from '@/lib/utils';
+import { withErrorHandling, handleError, createEnhancedError } from '@/lib/errorHandler';
 
 export function UserMenu() {
   const { user, signOut } = useAuth();
@@ -74,39 +75,101 @@ export function UserMenu() {
 
   // Handle export data action
   const handleExportData = async () => {
-    if (!user) return;
+    if (!user) {
+      handleError(
+        createEnhancedError('No user found', { 
+          category: 'authentication',
+          severity: 'high',
+          userMessage: 'Please log in to export data'
+        }),
+        { context: 'UserMenu.handleExportData', debugMode: isDebugMode }
+      );
+      return;
+    }
     
     setIsExporting(true);
     setIsOpen(false);
     setDebugInfo('');
     
-    try {
-      // First test the connection
-      if (isDebugMode) {
-        setDebugInfo('Testing Supabase connection...');
-        const connectionTest = await testSupabaseConnection();
-        setDebugInfo(prev => prev + `\nConnection test: ${connectionTest.success ? 'SUCCESS' : 'FAILED'}`);
-        if (connectionTest.latency) setDebugInfo(prev => prev + `\nLatency: ${connectionTest.latency}ms`);
-        if (connectionTest.error) setDebugInfo(prev => prev + `\nError: ${connectionTest.error}`);
+    const result = await withErrorHandling(
+      async () => {
+        // First test the connection
+        if (isDebugMode) {
+          setDebugInfo('Testing Supabase connection...');
+          const connectionTest = await testSupabaseConnection();
+          setDebugInfo(prev => prev + `\nConnection test: ${connectionTest.success ? 'SUCCESS' : 'FAILED'}`);
+          if (connectionTest.latency) setDebugInfo(prev => prev + `\nLatency: ${connectionTest.latency}ms`);
+          if (connectionTest.error) {
+            setDebugInfo(prev => prev + `\nError: ${connectionTest.error}`);
+            throw createEnhancedError(connectionTest.error, {
+              category: 'network',
+              severity: 'high',
+              retryable: true
+            });
+          }
+        }
+        
+        // Proceed with export
+        const exportData = await userService.exportUserData(user.id);
+        
+        // Create and download the file
+        const blob = new Blob([exportData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `chatbuddy-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        return exportData;
+      },
+      {
+        context: 'UserMenu.handleExportData',
+        debugMode: isDebugMode,
+        showToast: false, // We'll handle toast manually
+        onError: (error, analysis) => {
+          const errorMessage = error.message;
+          setDebugInfo(prev => prev + `\nEXPORT ERROR: ${errorMessage}`);
+          
+          if (isDebugMode) {
+            // Show technical error in debug mode
+            toast({
+              title: 'Export Failed (Debug)',
+              description: (
+                <div className="mt-2 max-h-[200px] overflow-auto rounded bg-slate-950 p-4 text-xs text-white">
+                  <p className="font-bold text-red-400">Error Details:</p>
+                  <pre className="mt-1 whitespace-pre-wrap">{errorMessage}</pre>
+                  <p className="mt-2 font-bold text-amber-400">Debug Info:</p>
+                  <pre className="mt-1 whitespace-pre-wrap">{debugInfo}</pre>
+                  <p className="mt-2 font-bold text-blue-400">Suggestions:</p>
+                  <ul className="mt-1 list-disc list-inside">
+                    {analysis.suggestions.map((suggestion, index) => (
+                      <li key={index}>{suggestion}</li>
+                    ))}
+                  </ul>
+                </div>
+              ),
+              variant: 'destructive',
+              duration: 15000,
+            });
+          } else {
+            toast({
+              title: analysis.userMessage,
+              description: analysis.suggestions[0] || 'Try enabling debug mode for more details.',
+              variant: 'destructive',
+              duration: 8000,
+            });
+          }
+        }
       }
-      
-      // Proceed with export
-      const exportData = await userService.exportUserData(user.id);
-      
-      // Create and download the file
-      const blob = new Blob([exportData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `chatbuddy-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
+    );
+    
+    // Show success message if export completed
+    if (result) {
       if (isDebugMode) {
         setDebugInfo(prev => prev + '\nExport successful! Data downloaded.');
-        // Show full debug info toast
         toast({
           title: 'Debug Info',
           description: debugInfo,
@@ -116,39 +179,12 @@ export function UserMenu() {
         toast({
           title: 'Data exported successfully',
           description: 'Your data has been downloaded as a JSON file',
+          duration: 5000,
         });
       }
-    } catch (error) {
-      console.error('Export error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      setDebugInfo(prev => prev + `\nEXPORT ERROR: ${errorMessage}`);
-      
-      if (isDebugMode) {
-        // Show technical error in debug mode
-        toast({
-          title: 'Export Failed (Debug)',
-          description: (
-            <div className="mt-2 max-h-[200px] overflow-auto rounded bg-slate-950 p-4 text-xs text-white">
-              <p className="font-bold text-red-400">Error Details:</p>
-              <pre className="mt-1 whitespace-pre-wrap">{errorMessage}</pre>
-              <p className="mt-2 font-bold text-amber-400">Debug Info:</p>
-              <pre className="mt-1 whitespace-pre-wrap">{debugInfo}</pre>
-            </div>
-          ),
-          variant: 'destructive',
-          duration: 10000,
-        });
-      } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to export data. Try enabling debug mode for details.',
-          variant: 'destructive',
-        });
-      }
-    } finally {
-      setIsExporting(false);
     }
+    
+    setIsExporting(false);
   };
 
   // Toggle debug mode

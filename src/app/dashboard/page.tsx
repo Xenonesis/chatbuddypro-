@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import ChatHistory from '@/components/ChatHistory';
 import { Button } from '@/components/ui/button';
 import { Plus, MessageSquare, Settings, LogOut, RefreshCw, CheckCircle } from 'lucide-react';
@@ -76,106 +77,108 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Dashboard</h1>
-        <div className="flex gap-2">
-          <Link href="/chat">
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              <span>New Chat</span>
-            </Button>
-          </Link>
-          <Link href="/settings">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        <div className="md:col-span-8">
-          <div className="bg-card p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Recent Conversations
-              </h2>
-              <div className="flex items-center gap-2">
-                <Link href="/chat">
-                  <Button variant="ghost" size="sm">View All</Button>
-                </Link>
-                {process.env.NODE_ENV === 'development' && dbStatus.includes('connected') && (
-                  <div className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-green-100/10 text-green-600 dark:bg-green-900/30 dark:text-green-300">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    {dbStatus}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="h-[70vh] overflow-hidden">
-              <ChatHistory />
-            </div>
+    <ProtectedRoute>
+      <div className="container mx-auto py-4 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl pb-20 md:pb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold">My Dashboard</h1>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Link href="/chat" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 sm:h-10">
+                <Plus className="h-4 w-4" />
+                <span>New Chat</span>
+              </Button>
+            </Link>
+            <Link href="/settings" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 sm:h-10">
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
+              </Button>
+            </Link>
           </div>
         </div>
-        
-        <div className="md:col-span-4">
-          <div className="bg-card p-6 rounded-lg shadow-sm border mb-6">
-            <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-            <div className="space-y-3">
-              <Link href="/chat" className="w-full">
-                <Button className="w-full justify-start" variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Conversation
-                </Button>
-              </Link>
-              <Link href="/settings" className="w-full">
-                <Button className="w-full justify-start" variant="outline">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Profile Settings
-                </Button>
-              </Link>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+          <div className="lg:col-span-8">
+            <div className="bg-card p-4 sm:p-6 rounded-lg shadow-sm border">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Recent Conversations
+                </h2>
+                <div className="flex items-center gap-2">
+                  <Link href="/chat">
+                    <Button variant="ghost" size="sm" className="text-sm">View All</Button>
+                  </Link>
+                  {process.env.NODE_ENV === 'development' && dbStatus.includes('connected') && (
+                    <div className="hidden sm:flex items-center gap-1 text-xs px-2 py-1 rounded bg-green-100/10 text-green-600 dark:bg-green-900/30 dark:text-green-300">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      {dbStatus}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="h-[60vh] sm:h-[70vh] overflow-hidden">
+                <ChatHistory />
+              </div>
             </div>
           </div>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Account</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {user && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Signed in as:</p>
-                  <p className="font-medium">{user.email}</p>
-                  <div className="mt-4 flex flex-col gap-2">
-                    <Link href="/settings">
-                      <Button variant="outline" size="sm" className="w-full justify-start">
-                        Manage Profile
+          <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+            <div className="bg-card p-4 sm:p-6 rounded-lg shadow-sm border">
+              <h2 className="text-lg sm:text-xl font-semibold mb-4">Quick Actions</h2>
+              <div className="space-y-3">
+                <Link href="/chat" className="w-full">
+                  <Button className="w-full justify-start h-10 sm:h-10" variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Conversation
+                  </Button>
+                </Link>
+                <Link href="/settings" className="w-full">
+                  <Button className="w-full justify-start h-10 sm:h-10" variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Profile Settings
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg sm:text-xl">Account</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {user && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Signed in as:</p>
+                    <p className="font-medium text-sm sm:text-base break-all">{user.email}</p>
+                    <div className="mt-4 flex flex-col gap-2">
+                      <Link href="/settings">
+                        <Button variant="outline" size="sm" className="w-full justify-start h-9">
+                          Manage Profile
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-700 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 w-full justify-start h-9"
+                        disabled={isSigningOut}
+                        onClick={handleSignOut}
+                      >
+                        {isSigningOut ? (
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
+                        ) : (
+                          <LogOut className="h-4 w-4 mr-2" />
+                        )}
+                        Sign Out
                       </Button>
-                    </Link>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="text-red-700 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/30 w-full justify-start"
-                      disabled={isSigningOut}
-                      onClick={handleSignOut}
-                    >
-                      {isSigningOut ? (
-                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2"></div>
-                      ) : (
-                        <LogOut className="h-4 w-4 mr-2" />
-                      )}
-                      Sign Out
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 } 

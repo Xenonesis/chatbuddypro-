@@ -98,7 +98,20 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
   const { settings, currentProvider, setCurrentProvider, setChatMode, toggleShowThinking, updateSettings, apiKeys } = useModelSettings();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const [showProviderMenu, setShowProviderMenu] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);

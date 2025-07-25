@@ -14,6 +14,7 @@ import ProfileSettings from '@/components/settings/ProfileSettings';
 import { RealtimeStatusIndicator } from '@/components/settings/RealtimeStatusIndicator';
 import { useSettingsSync } from '@/hooks/useSettingsSync';
 import { AutoSyncBanner } from '@/components/ui/AutoSyncIndicator';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function SettingsPage() {
   const { settings, updateSettings, getDefaultSettings } = useModelSettings();
@@ -44,78 +45,80 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="container mx-auto py-4 sm:py-8 px-2 sm:px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-8 gap-3">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-              <Sliders className="h-5 w-5 sm:h-6 sm:w-6 text-slate-700 dark:text-slate-300" />
-              Settings
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Your changes are automatically saved and synced across devices
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/" className="flex-1 sm:flex-initial">
+    <ProtectedRoute>
+      <div className="container mx-auto py-4 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl pb-20 md:pb-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 sm:mb-8 gap-4">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2">
+                <Sliders className="h-5 w-5 sm:h-6 sm:w-6 text-slate-700 dark:text-slate-300" />
+                Settings
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Your changes are automatically saved and synced across devices
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              <Link href="/dashboard" className="w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 dark:border-slate-700 dark:text-slate-300 h-10"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back</span>
+                </Button>
+              </Link>
               <Button 
                 variant="outline" 
-                className="w-full flex items-center justify-center gap-2 dark:border-slate-700 dark:text-slate-300 h-10 sm:h-10"
+                className="w-full sm:w-auto border-red-300 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-10"
+                onClick={() => {
+                  if (window.confirm('Reset all settings to default values? This will clear your API keys and preferences.')) {
+                    localStorage.removeItem('aiSettings');
+                    localStorage.removeItem('NEXT_PUBLIC_OPENAI_API_KEY');
+                    localStorage.removeItem('NEXT_PUBLIC_GEMINI_API_KEY');
+                    localStorage.removeItem('NEXT_PUBLIC_MISTRAL_API_KEY');
+                    localStorage.removeItem('NEXT_PUBLIC_CLAUDE_API_KEY');
+                    localStorage.removeItem('NEXT_PUBLIC_LLAMA_API_KEY');
+                    localStorage.removeItem('NEXT_PUBLIC_DEEPSEEK_API_KEY');
+                    updateSettings(getDefaultSettings());
+                  }
+                }}
               >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back</span>
+                <span>Reset</span>
               </Button>
-            </Link>
-            <Button 
-              variant="outline" 
-              className="border-red-300 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-10 sm:h-10 flex-1 sm:flex-initial"
-              onClick={() => {
-                if (window.confirm('Reset all settings to default values? This will clear your API keys and preferences.')) {
-                  localStorage.removeItem('aiSettings');
-                  localStorage.removeItem('NEXT_PUBLIC_OPENAI_API_KEY');
-                  localStorage.removeItem('NEXT_PUBLIC_GEMINI_API_KEY');
-                  localStorage.removeItem('NEXT_PUBLIC_MISTRAL_API_KEY');
-                  localStorage.removeItem('NEXT_PUBLIC_CLAUDE_API_KEY');
-                  localStorage.removeItem('NEXT_PUBLIC_LLAMA_API_KEY');
-                  localStorage.removeItem('NEXT_PUBLIC_DEEPSEEK_API_KEY');
-                  updateSettings(getDefaultSettings());
-                }
-              }}
-            >
-              <span>Reset</span>
-            </Button>
+            </div>
+          </div>
+
+          {/* Auto-Sync Status Banner */}
+          {user && (
+            <AutoSyncBanner
+              isSyncing={isSyncing}
+              hasUnsavedChanges={hasUnsavedChanges}
+              lastSyncTime={lastSyncTime}
+              syncError={syncError}
+              onManualSync={forceSyncFromDatabase}
+              className="mb-4 sm:mb-6"
+            />
+          )}
+
+          {/* Settings Tabs - Optimized for mobile */}
+          <div className="space-y-4 sm:space-y-6">
+            <ProfileSettings />
+            <ProviderSettings />
+            <ChatSettings />
+            <VoiceInputSettings />
+            <SuggestionsSettings />
+          </div>
+
+          <div className="mt-6 border-t dark:border-slate-700 pt-4 text-center">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+              {user ? 
+                "Your settings and API keys are automatically saved to your account and synced across all devices." : 
+                "Your settings are stored locally on your device. Sign in to sync across devices."}
+            </p>
           </div>
         </div>
-
-        {/* Auto-Sync Status Banner */}
-        {user && (
-          <AutoSyncBanner
-            isSyncing={isSyncing}
-            hasUnsavedChanges={hasUnsavedChanges}
-            lastSyncTime={lastSyncTime}
-            syncError={syncError}
-            onManualSync={forceSyncFromDatabase}
-            className="mb-4 sm:mb-6"
-          />
-        )}
-
-        {/* Settings Tabs - Optimized for mobile */}
-        <div className="space-y-4 sm:space-y-6">
-          <ProfileSettings />
-          <ProviderSettings />
-          <ChatSettings />
-          <VoiceInputSettings />
-          <SuggestionsSettings />
-        </div>
-
-        <div className="mt-6 border-t dark:border-slate-700 pt-4 text-center">
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-            {user ? 
-              "Your settings and API keys are automatically saved to your account and synced across all devices." : 
-              "Your settings are stored locally on your device. Sign in to sync across devices."}
-          </p>
-        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 } 

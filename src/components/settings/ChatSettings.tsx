@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useModelSettings, ModelSettings, ChatMode } from '@/lib/context/ModelSettingsContext';
+import { useChatSettings } from '@/hooks/useChatSettings';
+import { ChatMode } from '@/lib/services/chatSettingsService';
 import { 
   Eye, EyeOff, MessageSquare, Brain, Zap, Lightbulb, Code, GraduationCap, 
-  Info, LayoutGrid, AlignJustify, Check, Bot, Save
+  Info, LayoutGrid, AlignJustify, Check, Bot, Save, Loader2
 } from 'lucide-react';
 import { getChatModeIcon, getChatModeColor, getChatModeDescription, getChatModeButtonColor } from './SettingsUtils';
 import { cn } from '@/lib/utils';
@@ -19,7 +20,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useToast } from '@/components/ui/use-toast';
 
 // Add keyframe animation at the top of the file after the imports
 const styles = `
@@ -46,32 +46,26 @@ const styles = `
 `;
 
 export default function ChatSettings() {
-  const { settings, updateSettings } = useModelSettings();
-  const { toast } = useToast();
-  const [localSettings, setLocalSettings] = useState<ModelSettings>(settings);
-  const [showPreview, setShowPreview] = useState(false);
-  const [activeView, setActiveView] = useState('grid');
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
+  const {
+    settings,
+    localSettings,
+    isLoading,
+    isSaving,
+    hasChanges,
+    updateChatMode,
+    updateShowThinking,
+    updateShowPreview,
+    updateViewMode,
+    saveSettings,
+    resetChanges
+  } = useChatSettings();
+  
+  const [activeView, setActiveView] = useState(localSettings.viewMode || 'grid');
 
+  // Update active view when settings change
   useEffect(() => {
-    setLocalSettings(settings);
-  }, [settings]);
-
-  // Check for changes
-  useEffect(() => {
-    const settingsJSON = JSON.stringify({
-      chatMode: settings.chatMode,
-      showThinking: settings.showThinking
-    });
-    
-    const localSettingsJSON = JSON.stringify({
-      chatMode: localSettings.chatMode,
-      showThinking: localSettings.showThinking
-    });
-    
-    setHasChanges(settingsJSON !== localSettingsJSON);
-  }, [settings, localSettings]);
+    setActiveView(localSettings.viewMode || 'grid');
+  }, [localSettings.viewMode]);
 
   // Add the styles to the document head
   useEffect(() => {
@@ -85,37 +79,24 @@ export default function ChatSettings() {
   }, []);
 
   const handleChatModeChange = (mode: ChatMode) => {
-    setLocalSettings(prev => ({
-      ...prev,
-      chatMode: mode
-    }));
+    updateChatMode(mode);
   };
 
   const handleToggleShowThinking = () => {
-    setLocalSettings(prev => ({
-      ...prev,
-      showThinking: !prev.showThinking
-    }));
+    updateShowThinking(!localSettings.showThinking);
   };
 
-  const handleSaveSettings = () => {
-    setIsSaving(true);
-    
-    setTimeout(() => {
-      updateSettings(localSettings);
-      
-      setIsSaving(false);
-      setHasChanges(false);
-      
-      toast({
-        title: "Chat settings saved",
-        description: "Your chat preferences have been updated.",
-      });
-    }, 500);
+  const handleViewChange = (view: 'grid' | 'list' | 'sidebar') => {
+    setActiveView(view);
+    updateViewMode(view);
   };
 
-  const resetChanges = () => {
-    setLocalSettings(settings);
+  const handleToggleShowPreview = () => {
+    updateShowPreview(!localSettings.showPreview);
+  };
+
+  const handleSaveSettings = async () => {
+    await saveSettings();
   };
 
   // Render a chat bubble to preview the current mode
@@ -203,11 +184,29 @@ export default function ChatSettings() {
                 size="sm"
                 className={cn(
                   "px-2.5 text-xs",
+                  activeView === 'sidebar' 
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm" 
+                    : "text-slate-600 dark:text-slate-400"
+                )}
+                onClick={() => handleViewChange('sidebar')}
+              >
+                <div className="h-3.5 w-3.5 mr-1 flex flex-col gap-0.5">
+                  <div className="h-1 w-1 bg-current rounded-full"></div>
+                  <div className="h-1 w-1 bg-current rounded-full"></div>
+                  <div className="h-1 w-1 bg-current rounded-full"></div>
+                </div>
+                Sidebar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "px-2.5 text-xs",
                   activeView === 'grid' 
                     ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm" 
                     : "text-slate-600 dark:text-slate-400"
                 )}
-                onClick={() => setActiveView('grid')}
+                onClick={() => handleViewChange('grid')}
               >
                 <LayoutGrid className="h-3.5 w-3.5 mr-1" />
                 Grid
@@ -221,7 +220,7 @@ export default function ChatSettings() {
                     ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm" 
                     : "text-slate-600 dark:text-slate-400"
                 )}
-                onClick={() => setActiveView('list')}
+                onClick={() => handleViewChange('list')}
               >
                 <AlignJustify className="h-3.5 w-3.5 mr-1" />
                 List
@@ -293,6 +292,120 @@ export default function ChatSettings() {
             </div>
           )}
           
+          {/* Chat Mode Selection - Sidebar View */}
+          {activeView === 'sidebar' && (
+            <div className="flex items-start gap-6">
+              {/* Vertical Sidebar */}
+              <div className="flex flex-col bg-slate-900 dark:bg-slate-800 rounded-2xl p-3 space-y-3 min-w-[80px]">
+                {/* Active mode indicator at top */}
+                <div className="relative">
+                  <div className="h-12 w-12 rounded-full bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white shadow-lg ring-4 ring-blue-500/20">
+                    {localSettings.chatMode === 'thoughtful' && <Brain className="h-6 w-6" />}
+                    {localSettings.chatMode === 'quick' && <Zap className="h-6 w-6" />}
+                    {localSettings.chatMode === 'creative' && <Lightbulb className="h-6 w-6" />}
+                    {localSettings.chatMode === 'technical' && <Code className="h-6 w-6" />}
+                    {localSettings.chatMode === 'learning' && <GraduationCap className="h-6 w-6" />}
+                  </div>
+                </div>
+                
+                {/* Separator */}
+                <div className="h-px bg-slate-700 dark:bg-slate-600 mx-2"></div>
+                
+                {/* Mode options */}
+                <div className="space-y-2">
+                  {(['thoughtful', 'quick', 'creative', 'technical', 'learning'] as ChatMode[]).map(mode => (
+                    <TooltipProvider key={mode} delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleChatModeChange(mode)}
+                            className={cn(
+                              "h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95",
+                              localSettings.chatMode === mode
+                                ? "bg-blue-500 dark:bg-blue-600 text-white shadow-lg ring-2 ring-blue-400/50"
+                                : "bg-slate-700 dark:bg-slate-600 text-slate-300 hover:bg-slate-600 dark:hover:bg-slate-500 hover:text-white"
+                            )}
+                            aria-label={`Select ${mode} mode`}
+                          >
+                            {mode === 'thoughtful' && <Brain className="h-5 w-5" />}
+                            {mode === 'quick' && <Zap className="h-5 w-5" />}
+                            {mode === 'creative' && <Lightbulb className="h-5 w-5" />}
+                            {mode === 'technical' && <Code className="h-5 w-5" />}
+                            {mode === 'learning' && <GraduationCap className="h-5 w-5" />}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" sideOffset={10}>
+                          <div className="text-center">
+                            <p className="font-medium">{mode.charAt(0).toUpperCase() + mode.slice(1)}</p>
+                            <p className="text-xs text-slate-400 mt-1 max-w-[200px]">
+                              {getChatModeDescription(mode)}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Content Area */}
+              <div className="flex-1 space-y-4">
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                    {localSettings.chatMode === 'thoughtful' && <Brain className="h-5 w-5 text-blue-500" />}
+                    {localSettings.chatMode === 'quick' && <Zap className="h-5 w-5 text-yellow-500" />}
+                    {localSettings.chatMode === 'creative' && <Lightbulb className="h-5 w-5 text-orange-500" />}
+                    {localSettings.chatMode === 'technical' && <Code className="h-5 w-5 text-slate-500" />}
+                    {localSettings.chatMode === 'learning' && <GraduationCap className="h-5 w-5 text-emerald-500" />}
+                    {localSettings.chatMode.charAt(0).toUpperCase() + localSettings.chatMode.slice(1)} Mode
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+                    {getChatModeDescription(localSettings.chatMode)}
+                  </p>
+                  
+                  {/* Mode-specific details */}
+                  <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                    {localSettings.chatMode === 'thoughtful' && (
+                      <div className="space-y-1">
+                        <p>• Provides comprehensive, well-researched responses</p>
+                        <p>• Takes time to consider multiple perspectives</p>
+                        <p>• Includes relevant context and background information</p>
+                      </div>
+                    )}
+                    {localSettings.chatMode === 'quick' && (
+                      <div className="space-y-1">
+                        <p>• Delivers concise, direct answers</p>
+                        <p>• Focuses on key points without elaboration</p>
+                        <p>• Perfect for quick questions and fast responses</p>
+                      </div>
+                    )}
+                    {localSettings.chatMode === 'creative' && (
+                      <div className="space-y-1">
+                        <p>• Uses imaginative language and storytelling</p>
+                        <p>• Explores creative solutions and ideas</p>
+                        <p>• Engages with metaphors and vivid descriptions</p>
+                      </div>
+                    )}
+                    {localSettings.chatMode === 'technical' && (
+                      <div className="space-y-1">
+                        <p>• Provides precise, structured information</p>
+                        <p>• Uses technical terminology appropriately</p>
+                        <p>• Focuses on accuracy and detailed specifications</p>
+                      </div>
+                    )}
+                    {localSettings.chatMode === 'learning' && (
+                      <div className="space-y-1">
+                        <p>• Breaks down complex topics into digestible parts</p>
+                        <p>• Provides examples and analogies for clarity</p>
+                        <p>• Encourages understanding through explanation</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Chat Mode Selection - List View */}
           {activeView === 'list' && (
             <div className="space-y-2.5">
@@ -361,10 +474,10 @@ export default function ChatSettings() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => setShowPreview(!showPreview)}
+                onClick={handleToggleShowPreview}
                 className="text-xs h-8 px-3"
               >
-                {showPreview ? 'Hide Preview' : 'Show Preview'}
+                {localSettings.showPreview ? 'Hide Preview' : 'Show Preview'}
               </Button>
               <span className="text-xs text-slate-500 dark:text-slate-400">
                 See how responses will look
@@ -396,7 +509,7 @@ export default function ChatSettings() {
           </div>
           
           {/* Preview area */}
-          {showPreview && (
+          {localSettings.showPreview && (
             <div className="mt-4 animate-fadeIn">
               {renderPreview()}
             </div>

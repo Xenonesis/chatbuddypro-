@@ -10,6 +10,7 @@ import { EnhancedUIProvider } from '@/lib/context/EnhancedUIContext';
 import './globals.css';
 import { AppInitializer } from '@/components/app/AppInitializer';
 import { ErrorBoundary, ErrorFallback, LoadingIndicator } from '@/components/app/ErrorComponents';
+import { MobileNavigation } from '@/components/ui/mobile-navigation';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
@@ -68,7 +69,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://gphdrsfbypnckxbdjjap.supabase.co" />
       </head>
       <body 
-        className={`${GeistSans.variable} ${GeistMono.variable} min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950`}
+        className={`${GeistSans.variable} ${GeistMono.variable} min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950 overflow-x-hidden`}
         suppressHydrationWarning
       >
         <ErrorBoundary>
@@ -90,6 +91,7 @@ export default function RootLayout({
                             </Suspense>
                           </ErrorBoundary>
                         </main>
+                        <MobileNavigation />
                         <Toaster />
                       </EnhancedUIProvider>
                     </ErrorBoundary>

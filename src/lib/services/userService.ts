@@ -1,5 +1,6 @@
 import { supabase, UserPreferences, UserProfile, encryptApiKey, decryptApiKey } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
+import { createEnhancedError, withErrorHandling } from '@/lib/errorHandler';
 
 // Interface for API key information
 export interface ApiKeyInfo {
@@ -23,14 +24,19 @@ export interface AIProviderInfo {
 export const userService = {
   // Get user preferences
   async getUserPreferences(userId: string): Promise<UserPreferences | null> {
-    try {
-      // Log user ID for tracing purposes
-      console.debug(`Fetching preferences for user: ${userId}`);
+    return withErrorHandling(
+      async () => {
+        // Log user ID for tracing purposes
+        console.debug(`Fetching preferences for user: ${userId}`);
 
-      if (!userId) {
-        console.error('Cannot get user preferences: userId is missing');
-        return null;
-      }
+        if (!userId) {
+          throw createEnhancedError('User ID is required', {
+            category: 'validation',
+            severity: 'high',
+            userMessage: 'User identification missing',
+            retryable: false
+          });
+        }
 
       // Try to get user preferences - getting all matching records to handle duplicates
       console.debug(`Querying user_preferences for user_id: ${userId}`);
@@ -104,15 +110,8 @@ export const userService = {
 
       console.debug(`Successfully fetched preferences for user: ${userId}`);
       return userPrefs;
-    } catch (error) {
-      // Handle any unexpected errors
-      const safeError = error instanceof Error 
-        ? { message: error.message, name: error.name, stack: error.stack } 
-        : { message: String(error) };
-      
-      console.error(`Exception in getUserPreferences: ${JSON.stringify(safeError)}`);
-      return null;
-    }
+      }
+    );
   },
   
   // Legacy method for fetching preferences when preferences column doesn't exist
@@ -1418,9 +1417,6 @@ export const userService = {
           error: `Connection error: ${connectionTest.error.message}`,
         };
       }
-      
-      // Check if we can access the schema information
-      const tablesResponse = await supabase.rpc('get_schema_info');
       
       // Get table info using a simple query to each table
       const tables = {

@@ -331,14 +331,61 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Add this effect to load API keys when the user state is ready
+  // Add this effect to load API keys and chat settings when the user state is ready
   useEffect(() => {
     if (user && isAuthReady) {
       loadAPIKeysFromSupabase().catch(error => {
         console.error('Error loading API keys from Supabase:', error);
       });
+      
+      // Also load chat settings from the new system
+      loadChatSettingsFromSupabase().catch(error => {
+        console.error('Error loading chat settings from Supabase:', error);
+      });
     }
   }, [user, isAuthReady]);
+
+  // Load chat settings from the new chat settings system
+  const loadChatSettingsFromSupabase = async () => {
+    if (!user?.id) {
+      console.log('Cannot load chat settings: No user ID available');
+      return;
+    }
+
+    try {
+      console.log('Loading chat settings from Supabase for user:', user.id.substring(0, 8) + '...');
+      
+      const { chatSettingsService } = await import('@/lib/services/chatSettingsService');
+      const chatSettings = await chatSettingsService.getChatSettings(user.id);
+      
+      if (chatSettings) {
+        console.log('Loaded chat settings from database:', chatSettings);
+        
+        // Update the ModelSettings with the chat settings
+        setSettings(prev => ({
+          ...prev,
+          chatMode: chatSettings.chatMode,
+          showThinking: chatSettings.showThinking
+        }));
+        
+        // Also update localStorage to keep both systems in sync
+        if (typeof window !== 'undefined') {
+          const currentAiSettings = JSON.parse(localStorage.getItem('aiSettings') || '{}');
+          const updatedAiSettings = {
+            ...currentAiSettings,
+            chatMode: chatSettings.chatMode,
+            showThinking: chatSettings.showThinking
+          };
+          localStorage.setItem('aiSettings', JSON.stringify(updatedAiSettings));
+          
+          // Update the chat settings localStorage as well
+          localStorage.setItem('chatSettings', JSON.stringify(chatSettings));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading chat settings from Supabase:', error);
+    }
+  };
 
   // Load API keys from Supabase
   const loadAPIKeysFromSupabase = async () => {
@@ -679,15 +726,27 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
         ...settings,
         chatMode: mode
       }));
+      
+      // Also update the chat settings localStorage
+      const chatSettings = JSON.parse(localStorage.getItem('chatSettings') || '{}');
+      localStorage.setItem('chatSettings', JSON.stringify({
+        ...chatSettings,
+        chatMode: mode
+      }));
     }
     
     // Save to database if user is logged in
     if (user) {
       try {
+        // Save to the old location for backward compatibility
         await userService.saveUserSettings(user.id, {
           ...settings,
           chatMode: mode
         });
+        
+        // Also save to the new chat settings location
+        const { chatSettingsService } = await import('@/lib/services/chatSettingsService');
+        await chatSettingsService.saveChatSettings(user.id, { chatMode: mode });
       } catch (error) {
         console.error('Error saving chatMode setting:', error);
       }
@@ -707,15 +766,27 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
         ...settings,
         showThinking: newShowThinking
       }));
+      
+      // Also update the chat settings localStorage
+      const chatSettings = JSON.parse(localStorage.getItem('chatSettings') || '{}');
+      localStorage.setItem('chatSettings', JSON.stringify({
+        ...chatSettings,
+        showThinking: newShowThinking
+      }));
     }
     
     // Save to database if user is logged in
     if (user) {
       try {
+        // Save to the old location for backward compatibility
         await userService.saveUserSettings(user.id, {
           ...settings,
           showThinking: newShowThinking
         });
+        
+        // Also save to the new chat settings location
+        const { chatSettingsService } = await import('@/lib/services/chatSettingsService');
+        await chatSettingsService.saveChatSettings(user.id, { showThinking: newShowThinking });
       } catch (error) {
         console.error('Error saving showThinking setting:', error);
       }
