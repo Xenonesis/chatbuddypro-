@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom AI model integration
 - Team collaboration features
 
+## [2.7.0] - 2025-07-25
+
+### Added
+- New script: `verify-supabase.js` for Supabase verification and diagnostics.
+
 ## [2.6.0] - 2025-07-25
 
 ### Changed
