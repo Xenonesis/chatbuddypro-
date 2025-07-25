@@ -1354,11 +1354,45 @@ export const userService = {
       // Log request details for debugging
       console.log(`Making Supabase query to 'chats' table for user_id=${userId}`);
       
-      const response = await supabase
-        .from('chats')
-        .select('id, title, model, created_at, updated_at, last_message')
-        .eq('user_id', userId as any)
-        .order('updated_at', { ascending: false });
+      // Try with enhanced columns first, fallback to basic columns if migration not run
+      let response;
+      try {
+        response = await supabase
+          .from('chats')
+          .select(`
+            id,
+            title,
+            model,
+            created_at,
+            updated_at,
+            last_message,
+            user_email,
+            user_name,
+            last_message_at,
+            message_count,
+            is_archived,
+            tags
+          `)
+          .eq('user_id', userId as any)
+          .order('updated_at', { ascending: false });
+      } catch (enhancedError) {
+        console.log('Enhanced columns not available, falling back to basic columns');
+        response = await supabase
+          .from('chats')
+          .select('id, title, model, created_at, updated_at, last_message, user_email, user_name')
+          .eq('user_id', userId as any)
+          .order('updated_at', { ascending: false });
+      }
+
+      // If enhanced query failed due to missing columns, try basic query
+      if (response.error && response.error.message.includes('column')) {
+        console.log('Enhanced columns not available, falling back to basic columns');
+        response = await supabase
+          .from('chats')
+          .select('id, title, model, created_at, updated_at, last_message, user_email, user_name')
+          .eq('user_id', userId as any)
+          .order('updated_at', { ascending: false });
+      }
       
       // Log the raw response for debugging
       console.log('Supabase response status:', response.status);

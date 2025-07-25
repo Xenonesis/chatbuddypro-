@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import ChatHistory from '@/components/ChatHistory';
+import EnhancedChatHistory from '@/components/EnhancedChatHistory';
 import { Button } from '@/components/ui/button';
 import { Plus, MessageSquare, Settings, LogOut, RefreshCw, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -115,8 +115,8 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-            <div className="h-[60vh] sm:h-[70vh] overflow-hidden">
-              <ChatHistory />
+            <div className="h-[60vh] sm:h-[70vh]">
+              <EnhancedChatHistory />
             </div>
           </div>
         </div>

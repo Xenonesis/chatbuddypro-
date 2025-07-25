@@ -1,70 +1,110 @@
 import { supabase, createServiceClient, Chat, ChatMessage } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { userService } from '@/lib/services/userService';
+import { createEnhancedError, withErrorHandling } from '@/lib/errorHandler';
 
+// Enhanced chat service with comprehensive error handling and metadata management
 export const chatService = {
-  // Create a new chat
+  // Create a new chat with enhanced error handling and metadata
   async createChat(
-    userId: string, 
-    title: string, 
+    userId: string,
+    title: string,
     model?: string,
     userEmail?: string,
-    userName?: string
+    userName?: string,
+    tags?: string[]
   ): Promise<Chat | null> {
-    try {
-      console.log('Creating new chat with user info:', { userId, userEmail, userName });
-      
-      // Try using the new function first
-      if (userEmail && userName) {
-        const chatId = await userService.saveChatWithUserInfo(
-          userId,
-          title,
-          model || '',
-          userEmail,
-          userName
-        );
-        
-        if (chatId) {
-          // Get the created chat
-          const { data, error } = await supabase
-            .from('chats')
-            .select()
-            .eq('id', chatId as any as any)
-            .single();
-            
-            if (!error) {
-              return data as unknown as Chat;
-            }
+    return withErrorHandling(
+      async () => {
+        if (!userId) {
+          throw createEnhancedError('User ID is required', {
+            category: 'validation',
+            severity: 'high',
+            userMessage: 'User identification missing',
+            retryable: false
+          });
         }
-      }
+
+        if (!title?.trim()) {
+          throw createEnhancedError('Chat title is required', {
+            category: 'validation',
+            severity: 'medium',
+            userMessage: 'Please provide a chat title',
+            retryable: false
+          });
+        }
+
+        console.log('Creating new chat with user info:', { userId, userEmail, userName, model, tags });
+
+        // Try using the enhanced function first
+        if (userEmail && userName) {
+          const chatId = await userService.saveChatWithUserInfo(
+            userId,
+            title.trim(),
+            model || '',
+            userEmail,
+            userName
+          );
+
+          if (chatId) {
+            // Update with additional metadata if provided
+            if (tags && tags.length > 0) {
+              await this.updateChatMetadata(chatId, userId, { tags });
+            }
+
+            // Get the created chat with all fields
+            const { data, error } = await supabase
+              .from('chats')
+              .select('*')
+              .eq('id', chatId)
+              .single();
+
+              if (!error && data) {
+                return data as Chat;
+              }
+          }
+        }
       
-      // Fallback to original method
-      const chatId = uuidv4();
-      const { data, error } = await supabase
-        .from('chats')
-        .insert({
-          id: chatId,
-          user_id: userId,
-          title,
-          model,
-          user_email: userEmail,
-          user_name: userName,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as any)
-        .select()
-        .single();
+        // Fallback to direct insert with enhanced metadata
+        const chatId = uuidv4();
+        const now = new Date().toISOString();
 
-      if (error) {
-        console.error('Error creating chat:', error);
-        return null;
+        const { data, error } = await supabase
+          .from('chats')
+          .insert({
+            id: chatId,
+            user_id: userId,
+            title: title.trim(),
+            model: model || '',
+            user_email: userEmail,
+            user_name: userName,
+            tags: tags || [],
+            is_archived: false,
+            message_count: 0,
+            created_at: now,
+            updated_at: now,
+          })
+          .select('*')
+          .single();
+
+        if (error) {
+          throw createEnhancedError(`Failed to create chat: ${error.message}`, {
+            category: 'database',
+            severity: 'high',
+            userMessage: 'Failed to create new chat. Please try again.',
+            retryable: true,
+            originalError: error
+          });
+        }
+
+        console.log('Successfully created chat:', chatId);
+        return data as Chat;
+      },
+      {
+        context: 'createChat',
+        fallback: null
       }
-
-      return data as unknown as Chat;
-    } catch (error) {
-      console.error('Unexpected error in createChat:', error);
-      return null;
-    }
+    );
   },
 
   // Get all chats for a user
@@ -148,56 +188,354 @@ export const chatService = {
     return true;
   },
 
-  // Add a message to a chat
+  // Add a message to a chat with enhanced error handling and metadata
   async addMessage(
     chatId: string,
     userId: string,
     role: 'user' | 'assistant' | 'system',
-    content: string
+    content: string,
+    metadata?: Record<string, any>
   ): Promise<ChatMessage | null> {
-    const messageId = uuidv4();
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .insert({
-        id: messageId,
-        chat_id: chatId,
-        user_id: userId,
-        role,
-        content,
-        created_at: new Date().toISOString(),
-      } as any)
-      .select()
-      .single();
+    return withErrorHandling(
+      async () => {
+        if (!chatId) {
+          throw createEnhancedError('Chat ID is required', {
+            category: 'validation',
+            severity: 'high',
+            userMessage: 'Invalid chat session',
+            retryable: false
+          });
+        }
 
-    if (error) {
-      console.error('Error adding message:', error);
-      return null;
-    }
+        if (!userId) {
+          throw createEnhancedError('User ID is required', {
+            category: 'validation',
+            severity: 'high',
+            userMessage: 'User identification missing',
+            retryable: false
+          });
+        }
 
-    // Update the chat's last_message and updated_at
-    await this.updateChat(chatId, userId, {
-      last_message: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
-      updated_at: new Date().toISOString(),
-    });
+        if (!content?.trim()) {
+          throw createEnhancedError('Message content is required', {
+            category: 'validation',
+            severity: 'medium',
+            userMessage: 'Please enter a message',
+            retryable: false
+          });
+        }
 
-    return data as unknown as ChatMessage;
+        const messageId = uuidv4();
+        const now = new Date().toISOString();
+
+        // Insert message with automatic ordering (handled by database trigger)
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .insert({
+            id: messageId,
+            chat_id: chatId,
+            user_id: userId,
+            role,
+            content: content.trim(),
+            metadata: metadata || {},
+            created_at: now,
+          })
+          .select('*')
+          .single();
+
+        if (error) {
+          throw createEnhancedError(`Failed to add message: ${error.message}`, {
+            category: 'database',
+            severity: 'high',
+            userMessage: 'Failed to send message. Please try again.',
+            retryable: true,
+            originalError: error
+          });
+        }
+
+        console.log('Successfully added message:', messageId);
+
+        // The chat metadata (last_message, message_count, etc.) is automatically
+        // updated by database triggers, but we can also update manually if needed
+        const lastMessagePreview = content.length > 100
+          ? content.substring(0, 100) + '...'
+          : content;
+
+        await this.updateChat(chatId, userId, {
+          last_message: lastMessagePreview,
+          updated_at: now,
+        });
+
+        return data as ChatMessage;
+      },
+      {
+        context: 'addMessage',
+        fallback: null
+      }
+    );
   },
 
-  // Get all messages for a chat
-  async getChatMessages(chatId: string, userId: string): Promise<ChatMessage[]> {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('chat_id', chatId as any as any)
-      .eq('user_id', userId as any as any)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching chat messages:', error);
-      return [];
+  // Get messages for a specific chat with enhanced ordering and pagination
+  async getChatMessages(
+    chatId: string,
+    userId: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+      orderBy?: 'created_at' | 'message_order';
+      ascending?: boolean;
     }
+  ): Promise<ChatMessage[]> {
+    return withErrorHandling(
+      async () => {
+        if (!chatId || !userId) {
+          throw createEnhancedError('Chat ID and User ID are required', {
+            category: 'validation',
+            severity: 'high',
+            userMessage: 'Invalid chat or user identification',
+            retryable: false
+          });
+        }
 
-    return data as unknown as ChatMessage[];
+        const {
+          limit = 1000,
+          offset = 0,
+          orderBy = 'message_order',
+          ascending = true
+        } = options || {};
+
+        // Try with the requested orderBy first, fallback to created_at if column doesn't exist
+        let query = supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('chat_id', chatId)
+          .eq('user_id', userId)
+          .range(offset, offset + limit - 1);
+
+        // Try to order by the requested column, fallback to created_at
+        try {
+          query = query.order(orderBy, { ascending });
+        } catch (orderError) {
+          console.log('Falling back to created_at ordering due to:', orderError);
+          query = query.order('created_at', { ascending });
+        }
+
+        const { data, error } = await query;
+
+        // If we get a column error, try again with created_at ordering
+        if (error && error.message.includes('column') && orderBy !== 'created_at') {
+          console.log('Retrying with created_at ordering due to column error:', error.message);
+
+          const fallbackQuery = supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('chat_id', chatId)
+            .eq('user_id', userId)
+            .order('created_at', { ascending })
+            .range(offset, offset + limit - 1);
+
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+
+          if (fallbackError) {
+            throw createEnhancedError(`Failed to fetch chat messages: ${fallbackError.message}`, {
+              category: 'database',
+              severity: 'high',
+              userMessage: 'Failed to load chat messages. Please try again.',
+              retryable: true,
+              originalError: fallbackError
+            });
+          }
+
+          console.log(`Successfully fetched ${fallbackData?.length || 0} messages for chat (fallback):`, chatId);
+          return (fallbackData || []) as ChatMessage[];
+        }
+
+        if (error) {
+          throw createEnhancedError(`Failed to fetch chat messages: ${error.message}`, {
+            category: 'database',
+            severity: 'high',
+            userMessage: 'Failed to load chat messages. Please try again.',
+            retryable: true,
+            originalError: error
+          });
+        }
+
+        console.log(`Successfully fetched ${data?.length || 0} messages for chat:`, chatId);
+        return (data || []) as ChatMessage[];
+      },
+      {
+        context: 'getChatMessages',
+        fallback: []
+      }
+    );
+  },
+
+  // Delete a chat with enhanced error handling
+  async deleteChat(chatId: string, userId: string): Promise<boolean> {
+    return withErrorHandling(
+      async () => {
+        if (!chatId || !userId) {
+          throw createEnhancedError('Chat ID and User ID are required', {
+            category: 'validation',
+            severity: 'high',
+            userMessage: 'Invalid chat or user identification',
+            retryable: false
+          });
+        }
+
+        const { error } = await supabase
+          .from('chats')
+          .delete()
+          .eq('id', chatId)
+          .eq('user_id', userId);
+
+        if (error) {
+          throw createEnhancedError(`Failed to delete chat: ${error.message}`, {
+            category: 'database',
+            severity: 'high',
+            userMessage: 'Failed to delete chat. Please try again.',
+            retryable: true,
+            originalError: error
+          });
+        }
+
+        console.log('Successfully deleted chat:', chatId);
+        return true;
+      },
+      {
+        operation: 'deleteChat',
+        fallbackValue: false
+      }
+    );
+  },
+
+  // Archive/unarchive a chat
+  async archiveChat(chatId: string, userId: string, archived: boolean = true): Promise<boolean> {
+    return withErrorHandling(
+      async () => {
+        const { error } = await supabase
+          .from('chats')
+          .update({
+            is_archived: archived,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', chatId)
+          .eq('user_id', userId);
+
+        if (error) {
+          throw createEnhancedError(`Failed to ${archived ? 'archive' : 'unarchive'} chat: ${error.message}`, {
+            category: 'database',
+            severity: 'medium',
+            userMessage: `Failed to ${archived ? 'archive' : 'unarchive'} chat. Please try again.`,
+            retryable: true,
+            originalError: error
+          });
+        }
+
+        console.log(`Successfully ${archived ? 'archived' : 'unarchived'} chat:`, chatId);
+        return true;
+      },
+      {
+        operation: 'archiveChat',
+        fallbackValue: false
+      }
+    );
+  },
+
+  // Update chat metadata (tags, title, etc.)
+  async updateChatMetadata(
+    chatId: string,
+    userId: string,
+    metadata: Partial<Pick<Chat, 'title' | 'tags' | 'is_archived'>>
+  ): Promise<boolean> {
+    return withErrorHandling(
+      async () => {
+        const updateData = {
+          ...metadata,
+          updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+          .from('chats')
+          .update(updateData)
+          .eq('id', chatId)
+          .eq('user_id', userId);
+
+        if (error) {
+          throw createEnhancedError(`Failed to update chat metadata: ${error.message}`, {
+            category: 'database',
+            severity: 'medium',
+            userMessage: 'Failed to update chat. Please try again.',
+            retryable: true,
+            originalError: error
+          });
+        }
+
+        console.log('Successfully updated chat metadata:', chatId);
+        return true;
+      },
+      {
+        operation: 'updateChatMetadata',
+        fallbackValue: false
+      }
+    );
+  },
+
+  // Get chat statistics
+  async getChatStats(userId: string): Promise<{
+    totalChats: number;
+    totalMessages: number;
+    archivedChats: number;
+    recentChats: number;
+  }> {
+    return withErrorHandling(
+      async () => {
+        // Get total chats
+        const { count: totalChats } = await supabase
+          .from('chats')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+
+        // Get archived chats
+        const { count: archivedChats } = await supabase
+          .from('chats')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('is_archived', true);
+
+        // Get recent chats (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const { count: recentChats } = await supabase
+          .from('chats')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .gte('created_at', sevenDaysAgo.toISOString());
+
+        // Get total messages
+        const { count: totalMessages } = await supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+
+        return {
+          totalChats: totalChats || 0,
+          totalMessages: totalMessages || 0,
+          archivedChats: archivedChats || 0,
+          recentChats: recentChats || 0,
+        };
+      },
+      {
+        operation: 'getChatStats',
+        fallbackValue: {
+          totalChats: 0,
+          totalMessages: 0,
+          archivedChats: 0,
+          recentChats: 0,
+        }
+      }
+    );
   },
 
   // Export chat history as JSON

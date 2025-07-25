@@ -100,6 +100,7 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
   const [input, setInput] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Mobile detection
   useEffect(() => {
@@ -235,6 +236,57 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
       requestMicrophonePermission();
     }
   }, [voiceInputSettings.enabled, microphoneAvailable, micPermissionDenied, requestMicrophonePermission]);
+
+  // Enhanced chat loading for continuation
+  useEffect(() => {
+    if (chatId && chatId !== initialChatId && user && messages.length === 0) {
+      loadChatHistory();
+    }
+  }, [chatId, user]);
+
+  const loadChatHistory = async () => {
+    if (!chatId || !user) return;
+
+    setIsLoadingHistory(true);
+    try {
+      console.log('Loading chat history for chat:', chatId);
+
+      // Use the enhanced chatService to get messages with proper ordering
+      // Fallback to created_at if message_order doesn't exist yet
+      const chatMessages = await chatService.getChatMessages(chatId, user.id, {
+        orderBy: 'created_at',
+        ascending: true
+      });
+
+      if (chatMessages && chatMessages.length > 0) {
+        // Convert ChatMessage to Message format
+        const formattedMessages: Message[] = chatMessages.map(msg => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content,
+          timestamp: new Date(msg.created_at)
+        }));
+
+        console.log('Loaded chat messages:', formattedMessages.length);
+        setMessages(formattedMessages);
+        setMessageHasBeenSent(true);
+
+        // Scroll to bottom after loading
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load chat history. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -422,12 +474,17 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
             console.log('Created new chat:', chat);
             setChatId(chat.id);
             
-            // Save the first message to the chat
+            // Save the first message to the chat with metadata
             await chatService.addMessage(
               chat.id,
               user.id,
               'user',
-              userMessage
+              userMessage,
+              {
+                provider: currentProvider,
+                model: modelName,
+                timestamp: new Date().toISOString()
+              }
             );
           }
         } catch (error) {
@@ -562,9 +619,17 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             chatId,
             user.id,
             'assistant',
-            response
+            response,
+            {
+              provider: currentProvider,
+              model: getCurrentModelName(),
+              thinking: thinking || undefined,
+              responseTime,
+              timestamp: new Date().toISOString(),
+              tokenCount: response.length // Rough estimate
+            }
           );
-          
+
           // Update the chat with the current model if it changed
           const modelName = DEFAULT_MODELS[currentProvider];
           await chatService.updateChat(chatId, user.id, { model: modelName });
@@ -1473,7 +1538,22 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
         className="flex-1 overflow-y-auto px-2 sm:px-4 bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-950 chat-scroll"
         style={{ paddingBottom: "calc(var(--input-height, 90px) + 20px)" }}
       >
-        {messages.length === 0 ? (
+        {isLoadingHistory ? (
+          <div className="h-full flex flex-col items-center justify-center text-center p-4 sm:p-6">
+            <div className="relative">
+              <div className="absolute -inset-2 bg-gradient-to-r from-blue-400/20 to-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
+              <div className="relative bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full p-4 shadow-lg">
+                <Loader2 className="h-8 w-8 text-white animate-spin" />
+              </div>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold mt-6 mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Loading Chat History
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base max-w-md">
+              Retrieving your conversation...
+            </p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-4 sm:p-6">
             {/* Enhanced circular animation */}
             <div className="relative">

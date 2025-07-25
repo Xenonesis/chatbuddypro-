@@ -6,10 +6,8 @@ import { userService } from '@/lib/services/userService';
 import ChatHistory from '@/components/ChatHistory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CreateTestChat } from '@/components/debug/CreateTestChat';
 import { Database, Lock, RefreshCw, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
-import { ApiKeyDiagnostics } from '@/components/debug/ApiKeyDiagnostics';
 
 export default function DebugPage() {
   const { user } = useAuth();
@@ -123,19 +121,12 @@ export default function DebugPage() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Create Test Chat</CardTitle>
+              <CardTitle>Debug Tools</CardTitle>
             </CardHeader>
             <CardContent>
-              <CreateTestChat onChatCreated={handleChatCreated} />
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>API Diagnostics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ApiKeyDiagnostics />
+              <p className="text-muted-foreground">
+                Debug tools have been temporarily disabled. Use the chat history above to test functionality.
+              </p>
             </CardContent>
           </Card>
         </div>

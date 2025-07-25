@@ -5,7 +5,26 @@ All notable changes to ChatBuddy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.8.0] - 2025-07-25
+
+### Fixed
+- **Supabase URL Configuration**: Fixed hardcoded Supabase URL causing connection failures
+  - Added `fix-supabase-url.js` script to clear cache and verify configuration
+  - Added `start-fresh.js` script for complete environment reset
+  - Updated Next.js config to use correct Supabase domain
+  - Added connection testing utilities
+- **Database Diagnostics**: Added simplified database health checking
+  - Created `simple-db-check.js` for basic table accessibility verification
+  - Bypassed missing database functions that were causing diagnostic errors
+
+### Removed
+- **Demo and Test Code Cleanup**: Removed all demo and test files
+  - Deleted test scripts from `/scripts/` directory
+  - Removed demo components from `/src/components/demo/`
+  - Removed debug components from `/src/components/debug/`
+  - Removed test API routes and setup files
+  - Cleaned up package.json scripts
+  - Removed verification and setup utilities
 
 ### Planned
 - Social authentication providers (Google, GitHub)
@@ -16,8 +35,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.7.0] - 2025-07-25
 
+### Changed
+- Updated Next.js config, package files, and Supabase integration.
+- Improved dashboard, debug, and chat components for better reliability and user experience.
+- Refined chat and user service logic.
+
 ### Added
-- New script: `verify-supabase.js` for Supabase verification and diagnostics.
+- New components: `ChatManagement.tsx`, `EnhancedChatHistory.tsx`, and `ui/alert-dialog.tsx` for advanced chat management and UI dialogs.
+- Migration and implementation guides: `CHAT_PERSISTENCE_IMPLEMENTATION.md`, `MIGRATION_GUIDE.md`.
+- Database migration: `003_enhance_chat_schema.sql` for chat schema improvements.
+- Utility and migration scripts: `manual-migration-sql.sql`, `run-chat-schema-migration.js`, `simple-verify.js`, `test-basic.js`, `test-migration.js`, `verify-migration.js`.
+
+### Removed
+- Deleted test and demo scripts: `test-auth-flow.js`, `test-auth-sync.js`, `test-columns-exist.js`, `test-frontend-auth.js`, `test-profile-functionality.js`, `test-profile-operations.js`, `test-profile-update.js`.
+- Removed debug/demo components: `ApiKeyDiagnostics.tsx`, `CreateTestChat.tsx`.
+- Deleted verification and test utilities: `verify-supabase.js`, `test-direct-access.html`.
 
 ## [2.6.0] - 2025-07-25
 

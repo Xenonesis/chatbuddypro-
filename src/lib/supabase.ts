@@ -440,6 +440,8 @@ export type ChatMessage = {
   role: 'user' | 'assistant' | 'system';
   content: string;
   created_at: string;
+  message_order?: number; // For ensuring proper message ordering
+  metadata?: Record<string, any>; // For storing additional message metadata
 };
 
 export type Chat = {
@@ -449,9 +451,13 @@ export type Chat = {
   created_at: string;
   updated_at: string;
   last_message?: string;
+  last_message_at?: string; // Timestamp of last message for better sorting
   model?: string;
   user_email?: string;
   user_name?: string;
+  message_count?: number; // Total number of messages in the chat
+  is_archived?: boolean; // For archiving old chats
+  tags?: string[]; // For categorizing chats
 };
 
 // Helper for directly executing SQL (deprecated - use Supabase client methods instead)

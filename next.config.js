@@ -17,7 +17,7 @@ const nextConfig = {
   // Disable image optimization for Netlify compatibility
   images: {
     unoptimized: true,
-    domains: ['gphdrsfbypnckxbdjjap.supabase.co'],
+    domains: ['oybdzbyqormgynyjwyyc.supabase.co'],
     remotePatterns: [
       {
         protocol: 'https',
