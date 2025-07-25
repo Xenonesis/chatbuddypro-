@@ -25,14 +25,16 @@ export default function Home() {
   const howItWorksRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // If user is logged in, redirect to dashboard (middleware should handle this, but double-check)
-    if (user) {
+    // Always show welcome on the landing page
+    // but skip for returning users who are logged in
+    const hasVisited = localStorage.getItem('hasVisitedBefore');
+    if (hasVisited && user) {
+      // Navigate to dashboard if user is logged in
       router.push('/dashboard');
-      return;
+      setShowWelcome(false);
+    } else {
+      localStorage.setItem('hasVisitedBefore', 'true');
     }
-    
-    // Always show welcome on the landing page for unauthenticated users
-    localStorage.setItem('hasVisitedBefore', 'true');
     setMounted(true);
     
     // Add JS detection class to prevent hydration mismatches

@@ -26,9 +26,6 @@ export const userService = {
   async getUserPreferences(userId: string): Promise<UserPreferences | null> {
     return withErrorHandling(
       async () => {
-        // Log user ID for tracing purposes
-        console.debug(`Fetching preferences for user: ${userId}`);
-
         if (!userId) {
           throw createEnhancedError('User ID is required', {
             category: 'validation',

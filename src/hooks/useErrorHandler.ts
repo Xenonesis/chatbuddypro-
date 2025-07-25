@@ -14,23 +14,22 @@ import {
 } from '@/lib/errorHandler';
 
 export interface UseErrorHandlerOptions {
-  debugMode?: boolean;
   showToast?: boolean;
   context?: string;
 }
 
 export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
   const { toast } = useToast();
-  const { debugMode = false, showToast = true, context = 'unknown' } = options;
+  const { showToast = true, context = 'unknown' } = options;
 
   // Handle a single error
   const handleSingleError = useCallback((
     error: Error,
     customOptions?: Partial<UseErrorHandlerOptions>
   ): ErrorAnalysis => {
-    const mergedOptions = { debugMode, showToast, context, ...customOptions };
+    const mergedOptions = { showToast, context, ...customOptions };
     return handleError(error, mergedOptions);
-  }, [debugMode, showToast, context]);
+  }, [showToast, context]);
 
   // Create enhanced error
   const createError = useCallback((
@@ -62,10 +61,9 @@ export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
     return withErrorHandling(operation, {
       context,
       showToast,
-      debugMode,
       ...customOptions
     });
-  }, [context, showToast, debugMode]);
+  }, [context, showToast]);
 
   // Wrap operations with retry logic
   const withRetryWrapper = useCallback(<T>(
@@ -78,10 +76,9 @@ export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
     return withRetry(operation, {
       context,
       showToast,
-      debugMode,
       ...customOptions
     });
-  }, [context, showToast, debugMode]);
+  }, [context, showToast]);
 
   // Show error toast manually
   const showErrorToast = useCallback((

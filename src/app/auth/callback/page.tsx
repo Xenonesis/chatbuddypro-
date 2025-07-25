@@ -30,16 +30,14 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     const code = searchParams.get('code');
-    const redirectTo = searchParams.get('redirectTo');
     
     async function handleCallback() {
       if (code) {
         try {
           // Exchange the code for a session
           await supabase.auth.exchangeCodeForSession(code);
-          // Redirect to the specified path or dashboard after successful authentication
-          const destination = redirectTo && redirectTo !== '/' ? redirectTo : '/dashboard';
-          router.push(destination);
+          // Redirect to the dashboard after successful authentication
+          router.push('/dashboard');
         } catch (error) {
           console.error('Error in auth callback:', error);
           router.push('/auth/login?error=callback_error');

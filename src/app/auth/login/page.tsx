@@ -129,11 +129,17 @@ export default function LoginPage() {
         return;
       }
       
-      if (data) {
+      if (data && data.user) {
+        console.log('Login successful, user:', data.user.id);
         // Check for redirectTo parameter in URL
         const urlParams = new URLSearchParams(window.location.search);
-        const redirectTo = urlParams.get('redirectTo') || '/chat';
-        router.push(redirectTo);
+        const redirectTo = urlParams.get('redirectTo') || '/dashboard';
+        console.log('Redirecting to:', redirectTo);
+        
+        // Small delay to ensure auth state is updated
+        setTimeout(() => {
+          router.push(redirectTo);
+        }, 100);
       }
     } catch (err) {
       console.error('Unexpected error during sign in:', err);

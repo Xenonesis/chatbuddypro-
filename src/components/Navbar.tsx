@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { MessageSquare, Settings, MoonIcon, SunIcon, Sparkles, Menu, X, User, LogOut, LogIn, UserPlus, Bell, Calendar, CheckCircle, AlertCircle, LayoutDashboard, Shield } from 'lucide-react';
+import { MessageSquare, Settings, MoonIcon, SunIcon, Sparkles, Menu, X, User, LogOut, LogIn, UserPlus, Bell, Calendar, CheckCircle, AlertCircle, LayoutDashboard, Shield, Home, ChevronDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { BrandLogo } from "@/components/ui-custom/BrandLogo";
@@ -177,10 +177,11 @@ export function Navbar() {
         animation: fadeIn 0.3s ease-out forwards;
       }
       
-      /* Optimize for mobile */
+      /* Mobile optimizations */
       @media (max-width: 640px) {
         .navbar-logo-text {
           font-size: 1rem;
+          font-weight: 700;
         }
         .navbar-icon {
           width: 2rem;
@@ -189,6 +190,43 @@ export function Navbar() {
         .navbar-container {
           padding-left: 0.75rem;
           padding-right: 0.75rem;
+        }
+      }
+      
+      /* Prevent horizontal scroll on mobile */
+      @media (max-width: 768px) {
+        body {
+          overflow-x: hidden;
+        }
+        
+        /* Ensure buttons don't overflow */
+        .mobile-auth-buttons {
+          min-width: 0;
+          flex-shrink: 1;
+        }
+        
+        /* Better touch targets */
+        .mobile-nav-item {
+          min-height: 44px;
+          min-width: 44px;
+        }
+      }
+      
+      /* Improve text readability on small screens */
+      @media (max-width: 480px) {
+        .hero-title {
+          font-size: 1.75rem;
+          line-height: 1.2;
+        }
+        
+        .hero-subtitle {
+          font-size: 1.125rem;
+          line-height: 1.3;
+        }
+        
+        .hero-description {
+          font-size: 0.95rem;
+          line-height: 1.5;
         }
       }
     `;
@@ -241,12 +279,12 @@ export function Navbar() {
           : "bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
       )}
     >
-      <div className="container flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 lg:px-8 navbar-container max-w-7xl mx-auto">
+      <div className="container flex items-center justify-between h-16 px-3 sm:px-4 lg:px-8 navbar-container max-w-7xl mx-auto">
         {/* Logo and app title */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-          <Link href="/" className="flex items-center gap-1 sm:gap-1.5 font-bold text-lg text-slate-900 dark:text-white transition-transform hover:scale-105">
-            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white shadow-md navbar-icon">
-              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <Link href="/" className="flex items-center gap-1 sm:gap-1.5 font-bold text-base sm:text-lg text-slate-900 dark:text-white transition-transform hover:scale-105">
+            <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white shadow-md navbar-icon">
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <span className="transition-colors navbar-logo-text">ChatBuddy</span>
             {appConfig.showEnvLabel && (
@@ -257,9 +295,9 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Nav Links - Only visible when logged in */}
+        {/* Nav Links - Only visible when logged in on desktop */}
         {user && !isHomePage && (
-          <div className="hidden md:flex items-center justify-center">
+          <div className="hidden lg:flex items-center justify-center">
             <div className="flex items-center gap-1">
               {navLinks.map(({ href, label, icon }) => (
                 <Link key={href} href={href}>
@@ -286,8 +324,8 @@ export function Navbar() {
         )}
 
         {/* Actions area */}
-        <div className="flex items-center gap-0 xs:gap-1 sm:gap-2 flex-shrink-0">
-          {/* Suggestions button - Only when logged in */}
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {/* Suggestions button - Only when logged in on desktop */}
           {user && !isHomePage && settings.suggestionsSettings.enabled && (
             <TooltipProvider delayDuration={300}>
               <Tooltip>
@@ -295,7 +333,7 @@ export function Navbar() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="hidden sm:flex items-center"
+                    className="hidden lg:flex items-center"
                     onClick={handleToggleSuggestions}
                   >
                     <Sparkles className="h-4 w-4 mr-1.5 text-amber-500" /> Suggestions
@@ -308,23 +346,23 @@ export function Navbar() {
             </TooltipProvider>
           )}
 
-          {/* Notifications Dropdown - Only when logged in */}
+          {/* Notifications Dropdown - Only when logged in on desktop */}
           {user && !isHomePage && mounted && (
-            <div ref={notificationsRef}>
+            <div ref={notificationsRef} className="hidden sm:block">
               <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative h-8 w-8 sm:h-9 sm:w-9"
+                    className="relative h-9 w-9"
                     onClick={handleNotificationClick}
                     aria-label="Notifications"
                   >
-                    <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Bell className="h-5 w-5" />
                     {hasNewNotification && !notificationsRead && (
                       <Badge 
                         variant="destructive" 
-                        className="absolute -top-1 -right-1 h-3 w-3 sm:h-4 sm:w-4 p-0 flex items-center justify-center animate-pulse-slow"
+                        className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center animate-pulse-slow"
                       />
                     )}
                   </Button>
@@ -381,16 +419,16 @@ export function Navbar() {
                   size="icon" 
                   onClick={toggleTheme} 
                   aria-label="Toggle theme"
-                  className="transition-transform hover:scale-110 h-8 w-8 sm:h-9 sm:w-9"
+                  className="transition-transform hover:scale-110 h-9 w-9"
                 >
                   {mounted ? (
                     resolvedTheme === 'dark' ? (
-                      <SunIcon className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                      <SunIcon className="h-5 w-5 text-yellow-500" />
                     ) : (
-                      <MoonIcon className="h-4 w-4 sm:h-5 sm:w-5 text-slate-700" />
+                      <MoonIcon className="h-5 w-5 text-slate-700" />
                     )
                   ) : (
-                    <div className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <div className="h-5 w-5" />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -400,125 +438,168 @@ export function Navbar() {
             </Tooltip>
           </TooltipProvider>
 
-          {/* Mobile menu for smaller screens - Only when logged in */}
-          {user && !isHomePage && (
+          {/* Mobile hamburger menu - Always visible on mobile when user is logged in OR for unauthenticated users */}
+          {((user && !isHomePage) || !user) && (
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="sm:hidden h-8 w-8">
-                  <Menu className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-64 sm:w-72">
+              <SheetContent side="right" className="w-72 sm:w-80">
                 <SheetHeader className="pb-4 border-b">
-                  <SheetTitle>Menu</SheetTitle>
+                  <SheetTitle className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white">
+                      <MessageSquare className="h-3 w-3" />
+                    </div>
+                    ChatBuddy Menu
+                  </SheetTitle>
                 </SheetHeader>
                 
-                <div className="py-4 space-y-3">
-                  {/* Mobile Nav Links */}
-                  {navLinks.map(({ href, label, icon }) => (
-                    <Link 
-                      key={href} 
-                      href={href} 
-                      className="w-full block" 
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <Button 
-                        variant={isActiveLink(href) ? "default" : "ghost"} 
-                        size="sm" 
-                        className={cn(
-                          "w-full justify-start",
-                          isActiveLink(href) && "bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20"
-                        )}
-                      >
-                        <span className="mr-1.5">{icon}</span>
-                        {label}
-                        {isActiveLink(href) && (
-                          <Badge variant="outline" className="ml-auto text-xs bg-primary/20 border-primary/30">
-                            Current
-                          </Badge>
-                        )}
-                      </Button>
-                    </Link>
-                  ))}
-                  
-                  {/* Mobile Suggestions */}
-                  {settings.suggestionsSettings.enabled && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => {
-                        handleToggleSuggestions();
-                        setMobileMenuOpen(false);
-                      }}
-                    >
-                      <Sparkles className="h-4 w-4 mr-1.5 text-amber-500" /> Suggestions
-                    </Button>
-                  )}
-                  
-                  {/* Mobile Theme Toggle - Only use Switch after mounted */}
-                  {mounted && (
-                    <div className="flex items-center justify-between px-1 py-1.5">
-                      <span className="text-sm flex items-center">
-                        <MoonIcon className="h-4 w-4 mr-1.5" /> Dark Mode
-                      </span>
-                      <Switch 
-                        checked={resolvedTheme === 'dark'} 
-                        onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} 
-                      />
+                <div className="py-6 space-y-4">
+                  {/* Mobile Nav Links - Only when logged in */}
+                  {user && !isHomePage && (
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 px-2">Navigation</h3>
+                      {navLinks.map(({ href, label, icon }) => (
+                        <Link 
+                          key={href} 
+                          href={href} 
+                          className="w-full block" 
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <Button 
+                            variant={isActiveLink(href) ? "default" : "ghost"} 
+                            size="sm" 
+                            className={cn(
+                              "w-full justify-start h-12",
+                              isActiveLink(href) && "bg-primary/10 text-primary hover:bg-primary/20 dark:bg-primary/20"
+                            )}
+                          >
+                            <span className="mr-3">{icon}</span>
+                            {label}
+                            {isActiveLink(href) && (
+                              <Badge variant="outline" className="ml-auto text-xs bg-primary/20 border-primary/30">
+                                Current
+                              </Badge>
+                            )}
+                          </Button>
+                        </Link>
+                      ))}
                     </div>
                   )}
-                </div>
-
-                {/* Auth section in mobile menu */}
-                <div className="pt-4 border-t">
-                  {user ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 mr-2">
-                          <User className="h-4 w-4" />
-                        </div>
-                        <div className="text-sm overflow-hidden">
-                          <div className="font-medium truncate">{user?.email || 'User'}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">Signed in</div>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full justify-start text-red-600 dark:text-red-400"
+                  
+                  {/* Mobile Suggestions - Only when logged in */}
+                  {user && !isHomePage && settings.suggestionsSettings.enabled && (
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 px-2">Features</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start h-12"
                         onClick={() => {
-                          signOut();
+                          handleToggleSuggestions();
                           setMobileMenuOpen(false);
                         }}
                       >
-                        <LogOut className="h-4 w-4 mr-1.5" /> Sign Out
+                        <Sparkles className="h-4 w-4 mr-3 text-amber-500" /> AI Suggestions
                       </Button>
                     </div>
-                  ) : (
+                  )}
+
+                  {/* Mobile Notifications - Only when logged in */}
+                  {user && !isHomePage && (
                     <div className="space-y-2">
-                      <Link href="/auth/login" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="default" size="sm" className="w-full">
-                          <LogIn className="h-4 w-4 mr-1.5" /> Sign In
-                        </Button>
-                      </Link>
-                      <Link href="/auth/signup" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="outline" size="sm" className="w-full">
-                          <UserPlus className="h-4 w-4 mr-1.5" /> Sign Up
-                        </Button>
-                      </Link>
+                      <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 px-2">Updates</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start h-12 relative"
+                        onClick={() => {
+                          handleNotificationClick();
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <Bell className="h-4 w-4 mr-3" />
+                        Recent Updates
+                        {hasNewNotification && !notificationsRead && (
+                          <Badge 
+                            variant="destructive" 
+                            className="ml-auto h-2 w-2 p-0 animate-pulse-slow"
+                          />
+                        )}
+                      </Button>
                     </div>
                   )}
+                  
+                  {/* Mobile Theme Toggle */}
+                  {mounted && (
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 px-2">Preferences</h3>
+                      <div className="flex items-center justify-between px-3 py-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                        <span className="text-sm flex items-center font-medium">
+                          <MoonIcon className="h-4 w-4 mr-3" /> Dark Mode
+                        </span>
+                        <Switch 
+                          checked={resolvedTheme === 'dark'} 
+                          onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} 
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Auth section in mobile menu */}
+                  <div className="pt-4 border-t space-y-2">
+                    {user ? (
+                      <>
+                        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 px-2">Account</h3>
+                        <div className="flex items-center p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-700 dark:text-blue-300 mr-3">
+                            <User className="h-5 w-5" />
+                          </div>
+                          <div className="text-sm overflow-hidden flex-1">
+                            <div className="font-medium truncate">{user?.email || 'User'}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">Signed in</div>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start text-red-600 dark:text-red-400 h-12"
+                          onClick={() => {
+                            signOut();
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <LogOut className="h-4 w-4 mr-3" /> Sign Out
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 px-2">Get Started</h3>
+                        <div className="space-y-3">
+                          <Link href="/auth/login" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
+                            <Button variant="default" size="sm" className="w-full h-12">
+                              <LogIn className="h-4 w-4 mr-3" /> Sign In
+                            </Button>
+                          </Link>
+                          <Link href="/auth/signup" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
+                            <Button variant="outline" size="sm" className="w-full h-12">
+                              <UserPlus className="h-4 w-4 mr-3" /> Create Account
+                            </Button>
+                          </Link>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
           )}
           
-          {/* User menu or Sign In/Sign Up buttons */}
-          {user ? (
-            !isHomePage && <UserMenu />
-          ) : (
-            <div className="flex items-center gap-2">
+          {/* Desktop auth buttons - Only when not logged in */}
+          {!user && (
+            <div className="hidden sm:flex items-center gap-2 ml-2">
               <Link href="/auth/login">
                 <Button 
                   variant="default" 
@@ -541,47 +622,15 @@ export function Navbar() {
               </Link>
             </div>
           )}
+
+          {/* User menu - Only when logged in and not on home page */}
+          {user && !isHomePage && (
+            <div className="hidden sm:block">
+              <UserMenu />
+            </div>
+          )}
         </div>
       </div>
-      
-      {/* Mobile menu trigger - Only when not logged in on mobile */}
-      {!user && (
-        <div className="fixed bottom-8 right-8 sm:hidden z-50">
-          <Button 
-            variant="default" 
-            size="icon"
-            className="h-12 w-12 rounded-full shadow-lg"
-            onClick={() => setMobileMenuOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetContent side="bottom" className="w-full rounded-t-2xl">
-              <div className="py-4 space-y-3">
-                <div className="flex items-center justify-between px-1 py-1.5">
-                  <span className="text-sm flex items-center">
-                    <MoonIcon className="h-4 w-4 mr-1.5" /> Dark Mode
-                  </span>
-                  <Switch 
-                    checked={resolvedTheme === 'dark'} 
-                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} 
-                  />
-                </div>
-                <Link href="/auth/login" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="default" size="sm" className="w-full">
-                    <LogIn className="h-4 w-4 mr-1.5" /> Sign In
-                  </Button>
-                </Link>
-                <Link href="/auth/signup" className="w-full block" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <UserPlus className="h-4 w-4 mr-1.5" /> Sign Up
-                  </Button>
-                </Link>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-      )}
       
       {/* New Feature Banner - Only when logged in */}
       {user && !isHomePage && showNewFeature && mounted && (

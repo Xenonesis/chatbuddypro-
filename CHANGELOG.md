@@ -14,6 +14,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom AI model integration
 - Team collaboration features
 
+## [2.6.0] - 2025-07-25
+
+### Changed
+- Updated authentication and route protection logic; removed `ProtectedRoute` component.
+- Refactored middleware for improved security and session management.
+- Updated multiple pages and components for enhanced user experience and reliability.
+- Improved error handling and suggestions logic.
+- General code cleanup and optimizations.
+
+### Removed
+- Deleted legacy scripts and components no longer required (`ProtectedRoute.tsx`, `debug-profile-save.js`, `next.config.ts`).
+
+### Technical Improvements
+- Refined Supabase integration and user service logic.
+- Updated global styles and layout structure.
+
+### Bug Fixes
+- Fixed issues in authentication callback and login flows.
+- Addressed minor UI and navigation bugs.
+
 ## [2.5.0] - 2025-01-25
 
 ### Added

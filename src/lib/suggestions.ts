@@ -136,7 +136,7 @@ function getThemeSuggestions(theme: string): string[] {
       return [
         'How do I optimize my code for better performance?',
         'What design patterns would be appropriate for my project?',
-        'Can you help me debug this issue?',
+        'Can you help me fix this issue?',
         'What are modern best practices for web development?',
         'How can I implement this feature more efficiently?'
       ];

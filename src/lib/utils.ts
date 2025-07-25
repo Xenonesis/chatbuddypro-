@@ -501,7 +501,6 @@ export function isCodingQuestion(text: string): boolean {
       lowerText.includes('implement a') ||
       lowerText.includes('create a') ||
       lowerText.includes('fix this') ||
-      lowerText.includes('debug this') ||
       lowerText.includes('explain this code') ||
       lowerText.includes('what does this') ||
       lowerText.includes('error in my')) {
@@ -557,7 +556,7 @@ export const saveChatHistory = (messages: ChatHistoryItem[]) => {
       const history = JSON.stringify(messages);
       localStorage.setItem(LOCAL_STORAGE_KEYS.CHAT_HISTORY, history);
     } catch (error) {
-      console.error('Error saving chat history:', error);
+      // Handle error silently
     }
   }
 };
@@ -590,7 +589,7 @@ export const PROMPT_CATEGORIES = {
 // Popular pre-defined prompts by category
 export const RECOMMENDED_PROMPTS = {
   [PROMPT_CATEGORIES.CODING]: [
-    "Help me debug this code: [paste code]",
+    "Help me fix this code: [paste code]",
     "Explain how this algorithm works: [paste algorithm]",
     "Convert this code from [language] to [target language]",
     "Optimize this function for better performance",
@@ -697,7 +696,7 @@ export const extractTopics = (messages: ChatHistoryItem[]): string[] => {
   // Identify programming/coding context - check for common programming terms
   const programmingTerms = ['code', 'function', 'program', 'api', 'bug', 'variable', 'class', 
     'object', 'array', 'string', 'number', 'boolean', 'error', 'framework', 'library', 
-    'syntax', 'compiler', 'runtime', 'debug', 'algorithm', 'data', 'javascript', 'python', 
+    'syntax', 'compiler', 'runtime', 'algorithm', 'data', 'javascript', 'python', 
     'java', 'typescript', 'css', 'html', 'react', 'node', 'express', 'component'];
   
   const isProgrammingContext = programmingTerms.some(term => 
@@ -730,7 +729,7 @@ export const extractTopics = (messages: ChatHistoryItem[]): string[] => {
   // If we're in a specific context, add some relevant terms
   if (isProgrammingContext) {
     // Add programming-specific topics if they're not already in the list
-    const programmingTopics = ['code optimization', 'debugging', 'refactoring', 'best practices', 'clean code'];
+    const programmingTopics = ['code optimization', 'refactoring', 'best practices', 'clean code'];
     topTopics = [...new Set([...topTopics, ...programmingTopics.slice(0, 2)])];
   }
   
@@ -955,7 +954,6 @@ export const generateAISuggestions = async (
 
   // Skip if API key is missing for the provider
   if (!apiKey) {
-    console.log(`No API key available for ${apiProvider}, using rule-based suggestions instead`);
     return fallbackSuggestions;
   }
 
@@ -1023,12 +1021,10 @@ IMPORTANT: Your response must be valid JSON that can be parsed directly.`;
         }
       ];
       
-      console.log(`Calling AI with provider: ${apiProvider}`);
       const { callAI } = await import('./api');
       const result = await callAI(apiMessages, apiProvider as any, apiSettings);
       
       if (!result || typeof result !== 'string') {
-        console.error('Invalid response from AI API - not a string');
         throw new Error('Invalid response format');
       }
       
@@ -1041,7 +1037,6 @@ IMPORTANT: Your response must be valid JSON that can be parsed directly.`;
           
           // Validate response shape
           if (!suggestions || typeof suggestions !== 'object') {
-            console.error('Invalid response format - not an object');
             throw new Error('Invalid JSON object format');
           }
           
@@ -1075,13 +1070,11 @@ IMPORTANT: Your response must be valid JSON that can be parsed directly.`;
           if (validResponse.followUpQuestions.length === 0 && 
               validResponse.topicSuggestions.length === 0 && 
               validResponse.recommendedPrompts.length === 0) {
-            console.warn('No valid suggestions found in AI response');
             return fallbackSuggestions;
           }
           
           return validResponse;
         } else {
-          console.error('No JSON found in response:', result.substring(0, 200));
           throw new Error('No JSON found in response');
         }
       } catch (parseError) {
@@ -1207,7 +1200,6 @@ export const testSupabaseConnection = async (): Promise<{
       latency
     };
   } catch (error) {
-    console.error('Connection test error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown connection error'

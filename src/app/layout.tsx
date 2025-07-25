@@ -10,7 +10,8 @@ import { EnhancedUIProvider } from '@/lib/context/EnhancedUIContext';
 import './globals.css';
 import { AppInitializer } from '@/components/app/AppInitializer';
 import { ErrorBoundary, ErrorFallback, LoadingIndicator } from '@/components/app/ErrorComponents';
-import { MobileNavigation } from '@/components/ui/mobile-navigation';
+
+
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
@@ -91,7 +92,6 @@ export default function RootLayout({
                             </Suspense>
                           </ErrorBoundary>
                         </main>
-                        <MobileNavigation />
                         <Toaster />
                       </EnhancedUIProvider>
                     </ErrorBoundary>

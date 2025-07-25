@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { Shield, Database, AlertTriangle, Key, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function AdminPage() {
   const { user, isAuthReady } = useAuth();
@@ -170,28 +169,27 @@ export default function AdminPage() {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="container mx-auto py-8 px-4">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-orange-500" />
-                  Admin Panel
-                </CardTitle>
-                <CardDescription>
-                  Enable admin mode for advanced database operations
-                </CardDescription>
-              </div>
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              </Link>
+    <div className="container mx-auto py-8 px-4">
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Shield className="h-5 w-5 text-orange-500" />
+                Admin Panel
+              </CardTitle>
+              <CardDescription>
+                Enable admin mode for advanced database operations
+              </CardDescription>
             </div>
-          </CardHeader>
+            <Link href="/">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-md border border-amber-200 dark:border-amber-900/50">
             <div className="flex items-start">
@@ -346,6 +344,5 @@ export default function AdminPage() {
         )}
       </div>
     </div>
-    </ProtectedRoute>
   );
 } 

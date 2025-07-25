@@ -19,7 +19,6 @@
     "test-profile-db": "node scripts/test-profile-operations.js",
     "fix-database": "node scripts/fix-database-with-supabase.js",
     "test-columns": "node scripts/test-columns-exist.js",
-    "debug-profile": "node scripts/debug-profile-save.js",
     "cleanup-profiles": "node scripts/cleanup-duplicate-profiles.js",
     "test-frontend-auth": "node scripts/test-frontend-auth.js",
     "check-ui-errors": "node scripts/check-ui-errors.js",
@@ -87,6 +86,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@netlify/plugin-nextjs": "5.10.3",
+    "@next/bundle-analyzer": "15.4.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

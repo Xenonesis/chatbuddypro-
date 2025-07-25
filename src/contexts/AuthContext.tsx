@@ -10,6 +10,7 @@ type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
   isAuthReady: boolean;
+  refreshAuth: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<{
     error: Error | null;
     data: any | null;
@@ -75,7 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   useEffect(() => {
-    // Log that auth provider has mounted
     console.log('AuthProvider mounted, initializing auth state');
     
     if (authInitializedRef.current) {
@@ -85,67 +85,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     authInitializedRef.current = true;
     
-    // Get initial session
     const initializeAuth = async () => {
       try {
         console.log('Starting auth initialization');
         
-        // Try to get the session, with error handling
-        let sessionResult;
-        try {
-          sessionResult = await supabase.auth.getSession();
-        } catch (error) {
-          console.error('Error during getSession:', error);
-          handleAuthError(error);
-          setIsLoading(false);
-          setIsAuthReady(true);
-          return;
-        }
-        
-        const { data, error } = sessionResult;
+        const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
-          handleAuthError(error);
-          setIsLoading(false);
-          setIsAuthReady(true);
-          return;
-        }
-        
-        if (data.session) {
-          console.log('Session found on initialization:', data.session.user.id);
+          setUser(null);
+          setSession(null);
+        } else if (data.session) {
+          console.log('✅ Session found:', data.session.user.id);
           setSession(data.session);
           setUser(data.session.user);
-          
-          // Test by getting the user object
-          try {
-            const { data: userData, error: userError } = await supabase.auth.getUser();
-            
-            if (userError) {
-              console.error('Error fetching user:', userError);
-              handleAuthError(userError);
-              // Clear session if user fetch fails
-              setUser(null);
-              setSession(null);
-            } else {
-              console.log('User from getUser:', userData?.user?.id);
-              // Make sure we have the most up-to-date user
-              setUser(userData?.user || null);
-            }
-          } catch (userFetchError) {
-            console.error('Unexpected error fetching user:', userFetchError);
-            handleAuthError(userFetchError);
-          }
         } else {
-          console.log('No active session found');
+          console.log('No session found');
+          setUser(null);
+          setSession(null);
         }
       } catch (error) {
-        console.error('Unexpected error in auth initialization:', error);
-        handleAuthError(error);
+        console.error('Auth initialization error:', error);
+        setUser(null);
+        setSession(null);
       } finally {
         setIsLoading(false);
         setIsAuthReady(true);
-        console.log('Auth initialization complete');
+        console.log('✅ Auth initialization complete');
       }
     };
     
@@ -170,15 +136,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
         
+        // Always update session and user state
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setIsLoading(false);
+        
+        // Ensure auth is marked as ready
+        if (!isAuthReady) {
+          setIsAuthReady(true);
+        }
         
         if (event === 'SIGNED_IN') {
           toast({
             title: 'Signed in',
             description: `Welcome back, ${currentSession?.user?.email}`,
           });
+          
+          // Force redirect to dashboard on sign in
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 100);
           
           // Ensure user profile exists for OAuth users (async but non-blocking)
           if (currentSession?.user?.id) {
@@ -415,11 +392,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshAuth = async () => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error refreshing auth:', error);
+        setUser(null);
+        setSession(null);
+      } else {
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+      }
+    } catch (error) {
+      console.error('Unexpected error refreshing auth:', error);
+      setUser(null);
+      setSession(null);
+    }
+  };
+
   const value = {
     user,
     session,
     isLoading,
     isAuthReady,
+    refreshAuth,
     signUp,
     signIn,
     signOut,

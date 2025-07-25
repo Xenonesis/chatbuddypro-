@@ -5,19 +5,13 @@ import CryptoJS from 'crypto-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Log configuration for debugging
-console.log('Supabase configuration:', { 
-  urlConfigured: Boolean(supabaseUrl), 
-  keyConfigured: Boolean(supabaseAnonKey),
-  urlLength: supabaseUrl.length,
-  keyLength: supabaseAnonKey.length
-});
+
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase URL or Anon Key is missing. Authentication features will not work properly.');
+  throw new Error('Supabase URL or Anon Key is missing. Authentication features will not work properly.');
 }
 
-console.log('Initializing Supabase client with URL:', supabaseUrl);
+
 
 // Helper function to clean up potentially corrupted auth tokens
 const cleanupAuthTokens = () => {
@@ -28,7 +22,6 @@ const cleanupAuthTokens = () => {
     const storageKeys = Object.keys(localStorage);
     for (const key of storageKeys) {
       if (key.startsWith('sb-') && key.includes('-auth-token')) {
-        console.log(`Cleaning up potentially corrupted token: ${key}`);
         localStorage.removeItem(key);
       }
     }
@@ -37,7 +30,7 @@ const cleanupAuthTokens = () => {
     sessionStorage.clear();
     
   } catch (error) {
-    console.error('Error cleaning up auth tokens:', error);
+    // Silently handle cleanup errors
   }
 };
 
@@ -45,7 +38,6 @@ const cleanupAuthTokens = () => {
 if (typeof window !== 'undefined') {
   const hasRefreshTokenError = sessionStorage.getItem('auth_refresh_error');
   if (hasRefreshTokenError) {
-    console.log('Previous refresh token error detected, cleaning up auth state');
     cleanupAuthTokens();
     sessionStorage.removeItem('auth_refresh_error');
   }
@@ -53,10 +45,7 @@ if (typeof window !== 'undefined') {
 
 // Enhanced fetch implementation with retry logic for token issues
 const enhancedFetch = async (...args: Parameters<typeof fetch>) => {
-  // Log request in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Supabase Fetch:', args[0]);
-  }
+
   
   try {
     const response = await fetch(...args);
@@ -67,8 +56,6 @@ const enhancedFetch = async (...args: Parameters<typeof fetch>) => {
       
       if (responseData?.error?.includes('refresh token') || 
           responseData?.message?.includes('Refresh Token')) {
-        console.error('Refresh token error detected in API response');
-        
         // Mark that we've encountered a refresh token error
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('auth_refresh_error', 'true');
@@ -80,9 +67,6 @@ const enhancedFetch = async (...args: Parameters<typeof fetch>) => {
     
     return response;
   } catch (error) {
-    // Log network errors
-    console.error('Supabase network error:', 
-      error instanceof Error ? error.message : String(error));
     
     // Check if it's a refresh token error
     if (error instanceof Error && 
@@ -106,14 +90,13 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     // Make sure we store the session in localStorage to persist login state
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    debug: process.env.NODE_ENV === 'development',
+
     autoRefreshToken: true,
     // Add more robust error handling for token refreshes
     onAuthStateChange: (event, session) => {
       if (event === 'TOKEN_REFRESHED') {
-        console.log('Supabase token refreshed successfully');
+        // Token refreshed successfully
       } else if (event === 'SIGNED_OUT') {
-        console.log('Supabase detected sign out, cleaning up tokens');
         cleanupAuthTokens();
       }
     },
@@ -127,8 +110,6 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 // Test database connection with error recovery
 export async function testDatabaseConnection() {
   try {
-    console.log('Testing Supabase connection...');
-    
     // Attempt a simple query
     const startTime = Date.now();
     const response = await supabase
@@ -142,26 +123,16 @@ export async function testDatabaseConnection() {
     if (response.error) {
       // Check specifically for auth errors
       if (response.status === 401 || (response.error?.message?.includes('auth'))) {
-        console.error('Authentication error during database test:', response.error);
-        
         // Try to recover by cleaning tokens if it's an auth error
         cleanupAuthTokens();
         return false;
       }
       
-      console.error('Database connection test failed:', {
-        code: response.error.code,
-        message: response.error.message,
-        details: response.error.details,
-        status: response.status
-      });
       return false;
     }
     
-    console.log(`Database connection successful (${responseTime}ms), status: ${response.status}`);
     return true;
   } catch (err) {
-    console.error('Unexpected error testing database connection:', err);
     
     // If it's an auth error, try to clean up
     if (err instanceof Error && 
@@ -183,21 +154,16 @@ export async function testDatabaseConnection() {
 
 // Monitor for connection or auth issues and ensure user profile creation
 supabase.auth.onAuthStateChange(async (event, session) => {
-  console.log('Supabase auth event:', event);
   if (event === 'SIGNED_OUT') {
-    console.log('User signed out');
+    // User signed out
   } else if (event === 'SIGNED_IN') {
-    console.log('User signed in:', session?.user?.id);
-    
     // Test database access with the new session
-    testDatabaseConnection().then(success => {
-      console.log('Post-login database connection test:', success ? 'passed' : 'failed');
-    });
+    testDatabaseConnection();
     
     // Ensure user profile and preferences exist for OAuth users (async but non-blocking)
     if (session?.user?.id) {
-      ensureUserProfileExists(session.user.id, session.user).catch(error => {
-        console.error('Error ensuring user profile exists:', error);
+      ensureUserProfileExists(session.user.id, session.user).catch(() => {
+        // Handle profile creation errors silently
       });
     }
   }
@@ -206,8 +172,6 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 // Function to ensure user profile exists (especially important for OAuth users)
 async function ensureUserProfileExists(userId: string, user: any) {
   try {
-    console.log('Ensuring user profile exists for:', userId);
-    
     // Check if user profile already exists
     const { data: existingProfile, error: profileError } = await supabase
       .from('user_profiles')
@@ -216,14 +180,11 @@ async function ensureUserProfileExists(userId: string, user: any) {
       .maybeSingle();
     
     if (profileError && profileError.code !== 'PGRST116') {
-      console.error('Error checking existing profile:', profileError);
       return;
     }
     
     // Create profile if it doesn't exist
     if (!existingProfile) {
-      console.log('Creating user profile for OAuth user:', userId);
-      
       // Extract name from user metadata (common for OAuth providers)
       const fullName = user.user_metadata?.full_name || 
                       user.user_metadata?.name || 
@@ -242,9 +203,7 @@ async function ensureUserProfileExists(userId: string, user: any) {
         });
       
       if (createError) {
-        console.error('Error creating user profile:', createError);
-      } else {
-        console.log('Successfully created user profile for OAuth user');
+        // Handle error silently
       }
     }
     
@@ -256,14 +215,11 @@ async function ensureUserProfileExists(userId: string, user: any) {
       .maybeSingle();
     
     if (prefsError && prefsError.code !== 'PGRST116') {
-      console.error('Error checking existing preferences:', prefsError);
       return;
     }
     
     // Create preferences if they don't exist
     if (!existingPrefs) {
-      console.log('Creating user preferences for OAuth user:', userId);
-      
       const { error: createPrefsError } = await supabase
         .from('user_preferences')
         .insert({
@@ -284,14 +240,12 @@ async function ensureUserProfileExists(userId: string, user: any) {
         });
       
       if (createPrefsError) {
-        console.error('Error creating user preferences:', createPrefsError);
-      } else {
-        console.log('Successfully created user preferences for OAuth user');
+        // Handle error silently
       }
     }
     
   } catch (error) {
-    console.error('Error in ensureUserProfileExists:', error);
+    // Handle error silently
   }
 }
 
@@ -314,7 +268,7 @@ export const checkProfilesSchema = async (): Promise<SchemaCheckResult> => {
       return rpcData as SchemaCheckResult;
     }
     
-    console.log('RPC function not available, using fallback check');
+
     
     // Fallback: Check if user_profiles table exists
     const { data: tableData, error: tableError } = await supabase
@@ -365,7 +319,6 @@ export const checkProfilesSchema = async (): Promise<SchemaCheckResult> => {
       error: duplicateError?.message || null
     };
   } catch (error: unknown) {
-    console.error('Error checking schema:', error);
     return {
       has_table: false,
       has_unique_constraint: false,
@@ -389,11 +342,8 @@ export const createServiceClient = () => {
   }
   
   if (!serviceRoleKey) {
-    console.error('Service role key is missing');
     throw new Error('Service role key is required for admin operations');
   }
-  
-  console.log('Creating service client with elevated privileges');
   
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: {
@@ -448,8 +398,6 @@ export const decryptApiKey = async (encryptedKey: string, userId?: string) => {
     
     return new TextDecoder().decode(decryptedBytes);
   } catch (error) {
-    console.error('Error decrypting API key:', 
-      error instanceof Error ? error.message : String(error));
     throw new Error(`Failed to decrypt API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };

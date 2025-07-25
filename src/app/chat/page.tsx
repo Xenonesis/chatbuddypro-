@@ -71,16 +71,14 @@ function ChatPageContent() {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="container mx-auto py-2 sm:py-4 px-2 sm:px-4 lg:px-8 flex flex-col min-h-[calc(100vh-64px)] max-w-7xl pb-20 md:pb-4">
-        <Chat 
-          initialMessages={messages} 
-          initialTitle={chatTitle}
-          initialModel={chatModel}
-          chatId={chatId || undefined}
-        />
-      </div>
-    </ProtectedRoute>
+    <div className="container mx-auto py-2 sm:py-4 px-2 sm:px-4 lg:px-8 flex flex-col min-h-[calc(100vh-64px)] max-w-7xl pb-20 md:pb-4">
+      <Chat 
+        initialMessages={messages} 
+        initialTitle={chatTitle}
+        initialModel={chatModel}
+        chatId={chatId || undefined}
+      />
+    </div>
   );
 }
 
