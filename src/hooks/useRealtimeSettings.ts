@@ -13,6 +13,12 @@ interface UseRealtimeSettingsProps {
 export function useRealtimeSettings({ onSettingsUpdate, onApiKeysUpdate }: UseRealtimeSettingsProps) {
   const { user } = useAuth();
   const cleanupRef = useRef<(() => void) | null>(null);
+  const callbacksRef = useRef({ onSettingsUpdate, onApiKeysUpdate });
+  
+  // Update callbacks ref without causing re-subscription
+  useEffect(() => {
+    callbacksRef.current = { onSettingsUpdate, onApiKeysUpdate };
+  }, [onSettingsUpdate, onApiKeysUpdate]);
 
   const handleRealtimeUpdate = useCallback(async (data: any) => {
     console.log('Real-time settings update received:', data);
@@ -23,7 +29,7 @@ export function useRealtimeSettings({ onSettingsUpdate, onApiKeysUpdate }: UseRe
       // Handle settings updates
       if (data.preferences?.settings) {
         console.log('Settings updated in real-time');
-        onSettingsUpdate(data.preferences.settings);
+        callbacksRef.current.onSettingsUpdate(data.preferences.settings);
       }
 
       // Handle API keys updates
@@ -60,13 +66,13 @@ export function useRealtimeSettings({ onSettingsUpdate, onApiKeysUpdate }: UseRe
         }
         
         if (Object.keys(apiKeys).length > 0) {
-          onApiKeysUpdate(apiKeys);
+          callbacksRef.current.onApiKeysUpdate(apiKeys);
         }
       }
     } catch (error) {
       console.error('Error processing real-time settings update:', error);
     }
-  }, [user?.id, onSettingsUpdate, onApiKeysUpdate]);
+  }, [user?.id]); // Only depend on user ID
 
   useEffect(() => {
     if (!user?.id) {

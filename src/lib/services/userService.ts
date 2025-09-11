@@ -40,8 +40,9 @@ export const userService = {
       const response = await supabase
         .from('user_preferences')
         .select('id, user_id, theme, language, api_keys, ai_providers, created_at, updated_at')
-        .eq('user_id', userId as any)
-        .order('updated_at', { ascending: false }); // Get most recent first
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false }) // Get most recent first
+        .limit(1); // Limit to 1 to reduce response size
 
       // Log raw response status for debugging
       console.debug(`Supabase response status: ${response.status}`);
