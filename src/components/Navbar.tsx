@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { BrandLogo } from "@/components/ui-custom/BrandLogo";
 import { SuggestionDrawer } from '@/components/ui-custom/SuggestionDrawer';
+import { RealNotifications } from '@/components/ui-custom/RealNotifications';
 import { usePathname } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -347,67 +348,10 @@ export function Navbar() {
             </TooltipProvider>
           )}
 
-          {/* Notifications Dropdown - Only when logged in on desktop */}
+          {/* Real Notifications - Only when logged in on desktop */}
           {user && !isHomePage && mounted && (
-            <div ref={notificationsRef} className="hidden sm:block">
-              <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative h-9 w-9"
-                    onClick={handleNotificationClick}
-                    aria-label="Notifications"
-                  >
-                    <Bell className="h-5 w-5" />
-                    {hasNewNotification && !notificationsRead && (
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center animate-pulse-slow"
-                      />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-80" align="end">
-                  <DropdownMenuLabel className="flex justify-between items-center">
-                    <span>Recent Updates</span>
-                    <Badge variant="outline" className="ml-auto">
-                      {recentUpdates.length}
-                    </Badge>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <div className="max-h-[300px] overflow-y-auto">
-                    <DropdownMenuGroup>
-                      {recentUpdates.map((update) => (
-                        <DropdownMenuItem key={update.id} className="flex flex-col items-start p-3 cursor-default">
-                          <div className="flex w-full">
-                            <div className="mr-2 mt-0.5">
-                              {getNotificationIcon(update.type)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium">{update.title}</div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                                {update.description}
-                              </p>
-                              <div className="flex items-center text-xs text-gray-400 mt-1.5">
-                                <Calendar className="h-3 w-3 mr-1" />
-                                {format(update.date, 'MMM d, yyyy')}
-                              </div>
-                            </div>
-                          </div>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuGroup>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    className="justify-center text-xs text-muted-foreground"
-                    onClick={() => setHasNewNotification(false)}
-                  >
-                    Mark all as read
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="hidden sm:block">
+              <RealNotifications />
             </div>
           )}
 
@@ -512,24 +456,16 @@ export function Navbar() {
                   {user && !isHomePage && (
                     <div className="space-y-2">
                       <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 px-2">Updates</h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start h-12 relative"
-                        onClick={() => {
-                          handleNotificationClick();
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <Bell className="h-4 w-4 mr-3" />
-                        Recent Updates
-                        {hasNewNotification && !notificationsRead && (
-                          <Badge 
-                            variant="destructive" 
-                            className="ml-auto h-2 w-2 p-0 animate-pulse-slow"
-                          />
-                        )}
-                      </Button>
+                      <Link href="/settings" onClick={() => setMobileMenuOpen(false)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start h-12"
+                        >
+                          <Bell className="h-4 w-4 mr-3" />
+                          Notifications
+                        </Button>
+                      </Link>
                     </div>
                   )}
                   

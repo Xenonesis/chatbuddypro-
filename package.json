@@ -23,6 +23,8 @@
     "verify-chat-persistence": "node scripts/verify-chat-persistence.js",
     "verify-supabase": "node scripts/simple-verify.js",
     "setup-vercel": "node scripts/setup-vercel.js",
+    "setup-pwa": "node scripts/setup-pwa.js",
+    "generate-vapid": "node scripts/generate-vapid-keys.js",
     "deploy:vercel": "vercel --prod",
     "deploy:vercel-preview": "vercel",
     "analyze": "ANALYZE=true npm run build"
@@ -39,6 +41,7 @@
     "@radix-ui/react-popover": "^1.1.6",
     "@radix-ui/react-progress": "1.1.4",
     "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "1.2.10",
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-separator": "^1.1.2",
     "@radix-ui/react-slider": "^1.2.3",
@@ -82,6 +85,7 @@
     "tailwindcss-animate": "^1.0.7",
     "url": "^0.11.4",
     "uuid": "^11.1.0",
+    "web-push": "3.6.7",
     "web-speech-cognitive-services": "^8.1.1"
   },
   "devDependencies": {
@@ -92,6 +96,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/web-push": "3.6.4",
     "autoprefixer": "^10.4.21",
     "canvas": "3.1.0",
     "eslint": "^9",

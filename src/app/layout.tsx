@@ -10,6 +10,7 @@ import { EnhancedUIProvider } from '@/lib/context/EnhancedUIContext';
 import './globals.css';
 import { AppInitializer } from '@/components/app/AppInitializer';
 import { ErrorBoundary, ErrorFallback, LoadingIndicator } from '@/components/app/ErrorComponents';
+import { PWAInitializer } from '@/components/app/PWAInitializer';
 
 
 import { Suspense } from 'react';
@@ -83,6 +84,7 @@ export default function RootLayout({
                       <EnhancedUIProvider>
                         <ErrorBoundary>
                           <AppInitializer />
+                          <PWAInitializer />
                         </ErrorBoundary>
                         <Navbar />
                         <main className="flex-1 flex flex-col">
