@@ -72,10 +72,10 @@ export default function SignupPage() {
       
       toast({
         title: 'Success',
-        description: 'Please check your email to confirm your account',
+        description: 'Account created successfully! Redirecting to dashboard...',
       });
       
-      router.push('/auth/verify');
+      router.push('/dashboard');
     } catch (error) {
       toast({
         title: 'Error',

@@ -57,7 +57,7 @@ export default function SecurityPage() {
     {
       icon: UserCheck,
       title: "Supabase Authentication",
-      description: "Secure email/password authentication with JWT tokens. Built-in support for password reset, email verification, and session management with automatic token refresh.",
+      description: "Secure email/password authentication with JWT tokens. Built-in support for password reset and session management with automatic token refresh.",
       status: "Active",
       technical: "JWT with RS256 signing, automatic refresh, and secure httpOnly cookies",
       category: "Authentication"
@@ -144,7 +144,7 @@ export default function SecurityPage() {
         "JWT-based authentication with RS256 signing", 
         "Automatic token refresh and secure rotation", 
         "Session timeout with configurable duration", 
-        "Email verification and password reset flows", 
+        "Password reset flows and secure session management", 
         "Real-time profile synchronization across devices", 
         "Brute force protection and rate limiting"
       ]

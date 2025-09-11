@@ -284,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('Signup error:', error);
       } else {
-        console.log('Signup successful, verification needed:', data);
+        console.log('Signup successful:', data);
       }
 
       return { data, error };

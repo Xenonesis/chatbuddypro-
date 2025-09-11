@@ -24,7 +24,7 @@ This guide walks you through setting up Supabase for your ChatBuddy application.
 3. Configure any additional settings as needed:
    - Customize email templates
    - Set up password policies
-   - Configure redirect URLs for confirmation emails
+   - Configure authentication settings as needed
 
 ## Step 3: Set Up Database Schema
 
@@ -60,7 +60,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 ### 1. User Authentication
 - Sign up with email and password
-- Email verification
+- Secure user authentication
 - Sign in with email and password
 - Password reset functionality
 
@@ -100,7 +100,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ### Authentication Issues
 - Verify your Supabase URL and anon key are correctly set
 - Check browser console for errors
-- Ensure email provider is working correctly for verification emails
+- Ensure authentication flow is working correctly
 
 ### Database Issues
 - Check RLS policies are correctly applied

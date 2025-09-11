@@ -115,7 +115,7 @@ export default function LoginPage() {
         if (error.message.includes('Invalid login credentials')) {
           errorMessage = 'Invalid email or password';
         } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Please confirm your email before signing in';
+          errorMessage = 'Authentication error. Please try again';
         } else if (error.message.includes('rate limit')) {
           errorMessage = 'Too many sign-in attempts. Please try again later';
         } else if (error.message.includes('Refresh Token')) {

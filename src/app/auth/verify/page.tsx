@@ -54,8 +54,8 @@ export default function VerifyPage() {
                 <span className="text-xs font-medium text-green-600 dark:text-green-400">2025 Edition</span>
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold text-center mt-4">Check Your Email</CardTitle>
-            <CardDescription className="text-center">We've sent a verification link to your email</CardDescription>
+            <CardTitle className="text-2xl font-bold text-center mt-4">Account Ready!</CardTitle>
+            <CardDescription className="text-center">Your account has been created and is ready to use</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="bg-gradient-to-b from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-900/10 p-6 rounded-xl border border-green-100 dark:border-green-800/30 flex flex-col items-center">
@@ -63,35 +63,42 @@ export default function VerifyPage() {
                 <MailCheck className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <p className="text-center text-slate-700 dark:text-slate-300 font-medium">
-                Please check your email inbox and click the verification link to complete your signup.
+                Your account is now active and ready to use. You can start chatting right away!
               </p>
             </div>
             <div className="text-sm text-slate-600 dark:text-slate-400 space-y-3 bg-slate-50/80 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200/70 dark:border-slate-800/50">
-              <p className="font-medium">If you don't see the email:</p>
+              <p className="font-medium">What you can do now:</p>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-slate-500 dark:text-slate-400 mt-0.5 flex-shrink-0" />
-                  <span>Check your spam folder</span>
+                  <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <span>Start chatting with AI assistants</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-slate-500 dark:text-slate-400 mt-0.5 flex-shrink-0" />
-                  <span>Make sure you entered the correct email</span>
+                  <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <span>Customize your settings and preferences</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-slate-500 dark:text-slate-400 mt-0.5 flex-shrink-0" />
-                  <span>Allow a few minutes for the email to arrive</span>
+                  <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <span>Explore different AI models and features</span>
                 </li>
               </ul>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Link href="/auth/login" className="w-full">
+            <Link href="/dashboard" className="w-full">
+              <Button 
+                className="w-full h-11 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white rounded-lg shadow-md transition-all duration-200"
+              >
+                <Bot className="mr-2 h-5 w-5" />
+                Go to Dashboard
+              </Button>
+            </Link>
+            <Link href="/chat" className="w-full">
               <Button 
                 variant="outline" 
                 className="w-full h-11 border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300"
               >
-                <ArrowLeft className="mr-2 h-5 w-5" />
-                Return to Login
+                Start Chatting
               </Button>
             </Link>
           </CardFooter>

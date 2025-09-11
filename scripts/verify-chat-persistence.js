@@ -82,7 +82,7 @@ async function testChatOperations() {
     const { data: authUserData, error: authError } = await supabase.auth.admin.createUser({
       email: testEmail,
       password: 'test-password-123',
-      email_confirm: true
+      email_confirm: true  // Auto-confirm for testing purposes
     });
     
     authUser = authUserData;

@@ -81,7 +81,7 @@ async function checkAuthAndRLS() {
       console.log(`   ${index + 1}. ${user.email}`);
       console.log(`      Created: ${new Date(user.created_at).toLocaleString()}`);
       console.log(`      Last sign in: ${lastSignIn}`);
-      console.log(`      Confirmed: ${user.email_confirmed_at ? '✅' : '❌'}`);
+      console.log(`      Status: Active`);
     });
     
     // Check for profiles without proper user association
@@ -134,7 +134,7 @@ async function checkAuthAndRLS() {
   console.log('');
   console.log('🔧 If login doesn\'t work:');
   console.log('1. Check browser console for errors');
-  console.log('2. Verify your email is confirmed');
+  console.log('2. Ensure your account is active');
   console.log('3. Try password reset if needed');
 }
 

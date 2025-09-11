@@ -64,7 +64,7 @@ ChatBuddy is a comprehensive AI chat platform with advanced features designed fo
 - **Profile Management**: Comprehensive user profiles
 - **Session Handling**: Secure session management
 - **Password Reset**: Self-service password recovery
-- **Account Verification**: Email verification system
+- **Account Management**: Secure account creation and management
 
 ### Data Security
 - **Encrypted Storage**: API keys encrypted at rest
