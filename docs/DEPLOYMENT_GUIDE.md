@@ -56,11 +56,17 @@ The included `netlify.toml` provides:
 
 ---
 
-## 🌐 Vercel Deployment
+## ☁️ Vercel Deployment
+
+ChatBuddy is fully optimized for Vercel with automatic Next.js detection and serverless functions.
+
+### Quick Deploy
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/chatbuddy&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY)
 
 ### Prerequisites
 - Vercel account
 - GitHub repository
+- Supabase project configured
 
 ### Deployment Steps
 
@@ -68,36 +74,40 @@ The included `netlify.toml` provides:
 1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
 2. Click "New Project"
 3. Import your ChatBuddy repository
+4. Vercel auto-detects Next.js configuration
 
-#### 2. Configure Build Settings
-```bash
-# Build Command
-npm run build
+#### 2. Environment Variables
+In Vercel dashboard → Settings → Environment Variables, add:
 
-# Output Directory
-out
+```env
+# Required - Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# Install Command
-npm install
+# Optional
+NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
+NEXT_TELEMETRY_DISABLED=1
+
+# AI Provider Keys (as needed)
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+GOOGLE_API_KEY=your_google_key
 ```
 
-#### 3. Environment Variables
-Add the same environment variables as Netlify section above.
+#### 3. Automatic Configuration
+The included `vercel.json` handles:
+- Build commands
+- Function runtime (Node.js 18.x)
+- API route configuration
+- CORS headers
 
-#### 4. Deployment Configuration
-Create `vercel.json`:
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "out",
-  "framework": "nextjs",
-  "functions": {
-    "app/api/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  }
-}
-```
+#### 4. Deploy & Monitor
+- Automatic deployments on git push
+- Preview deployments for pull requests
+- Built-in analytics and monitoring
+
+> 📖 **Detailed Guide**: See [VERCEL_DEPLOYMENT.md](../VERCEL_DEPLOYMENT.md) for comprehensive instructions.
 
 ---
 

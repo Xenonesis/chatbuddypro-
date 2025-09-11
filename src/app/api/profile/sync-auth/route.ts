@@ -1,17 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Create admin client for server-side operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
+// Create admin client for server-side operations - lazy initialization
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing required Supabase environment variables');
+  }
+  
+  return createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
     }
-  }
-);
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +45,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Update user metadata using admin client
+    const supabaseAdmin = getSupabaseAdmin();
     const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       user_metadata: userMetadata
     });

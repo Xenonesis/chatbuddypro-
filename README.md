@@ -72,6 +72,12 @@ A modern, intelligent chat application with multi-provider AI support, built wit
 
 ## 🚀 Quick Start
 
+### One-Click Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/chatbuddy&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY&envDescription=Required%20environment%20variables%20for%20Supabase%20integration&envLink=https://github.com/your-username/chatbuddy/blob/main/SUPABASE_SETUP.md)
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/your-username/chatbuddy)
+
 ### Prerequisites
 
 - Node.js 18+ (recommended: use `.nvmrc` file)
