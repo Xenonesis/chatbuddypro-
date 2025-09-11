@@ -5,12 +5,13 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Get environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('Missing Supabase credentials!');
   console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓' : '✗');
-  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? '✓' : '✗');
+  console.error('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✓' : '✗');
+  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓' : '✗');
   process.exit(1);
 }
 
@@ -30,11 +31,11 @@ async function testConnection() {
   console.log('Testing database connection...');
   try {
     // Try a simple query to test connection
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from('user_preferences')
-      .select('count(*)', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true });
     
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error testing connection:', error);
       return false;
     }

@@ -23,8 +23,8 @@ class ChatSettingsService {
     try {
       const { data, error } = await supabase
         .from('user_preferences')
-        .select('*')
-        .eq('user_id', userId)
+        .select('id, user_id, preferences, created_at, updated_at')
+        .eq('user_id', userId as any)
         .single();
 
       if (error) {
