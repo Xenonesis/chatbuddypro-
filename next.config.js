@@ -12,11 +12,22 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   // Use standalone for Netlify to support API routes
-  output: 'standalone',
+  // output: 'standalone', // Commented out for Vercel deployment
   
   // Disable image optimization for Netlify compatibility
+  // images: {
+  //   unoptimized: true, // Commented out for Vercel deployment
+  //   domains: ['oybdzbyqormgynyjwyyc.supabase.co'],
+  //   remotePatterns: [
+  //     {
+  //       protocol: 'https',
+  //       hostname: '**',
+  //     },
+  //   ],
+  // },
+
+  // Enable image optimization for Vercel
   images: {
-    unoptimized: true,
     domains: ['oybdzbyqormgynyjwyyc.supabase.co'],
     remotePatterns: [
       {
