@@ -1,8 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, vs, tomorrow, atomDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vs2015 as vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/hljs';
+// Register only the languages we actually use
+import javascript from 'react-syntax-highlighter/dist/cjs/languages/hljs/javascript';
+import typescript from 'react-syntax-highlighter/dist/cjs/languages/hljs/typescript';
+import python from 'react-syntax-highlighter/dist/cjs/languages/hljs/python';
+import css from 'react-syntax-highlighter/dist/cjs/languages/hljs/css';
+import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
+
+// Register languages
+SyntaxHighlighter.registerLanguage('javascript', javascript);
+SyntaxHighlighter.registerLanguage('typescript', typescript);
+SyntaxHighlighter.registerLanguage('python', python);
+SyntaxHighlighter.registerLanguage('css', css);
+SyntaxHighlighter.registerLanguage('json', json);
 import { Copy, Check, Code, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -102,19 +115,7 @@ export default function CodeBlock({ language, value, className, ...props }: Code
   
   // Select the appropriate theme
   const getThemeStyle = () => {
-    if (theme === 'dark') {
-      // For JavaScript and TypeScript, use a more vibrant theme
-      if (['javascript', 'typescript', 'jsx', 'tsx'].includes(normalizedLanguage)) {
-        return atomDark;
-      }
-      return vscDarkPlus;
-    } else {
-      // Light theme with better JS highlighting
-      if (['javascript', 'typescript', 'jsx', 'tsx'].includes(normalizedLanguage)) {
-        return tomorrow;
-      }
-      return vs;
-    }
+    return theme === 'dark' ? vscDarkPlus : vs;
   };
 
   const codeHeight = getCodeHeight();

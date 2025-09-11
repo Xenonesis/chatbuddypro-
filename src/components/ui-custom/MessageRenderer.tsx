@@ -6,8 +6,21 @@ import { cn } from '@/lib/utils';
 import { Copy, Trash, PencilLine, MoreVertical, RotateCw, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Markdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vs2015 as vscDarkPlus, vs } from 'react-syntax-highlighter/dist/cjs/styles/hljs';
+// Register only the languages we actually use
+import javascript from 'react-syntax-highlighter/dist/cjs/languages/hljs/javascript';
+import typescript from 'react-syntax-highlighter/dist/cjs/languages/hljs/typescript';
+import python from 'react-syntax-highlighter/dist/cjs/languages/hljs/python';
+import css from 'react-syntax-highlighter/dist/cjs/languages/hljs/css';
+import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
+
+// Register languages
+SyntaxHighlighter.registerLanguage('javascript', javascript);
+SyntaxHighlighter.registerLanguage('typescript', typescript);
+SyntaxHighlighter.registerLanguage('python', python);
+SyntaxHighlighter.registerLanguage('css', css);
+SyntaxHighlighter.registerLanguage('json', json);
 import {
   DropdownMenu,
   DropdownMenuContent,

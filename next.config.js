@@ -80,19 +80,32 @@ const nextConfig = {
         // Add additional performance hints
         config.performance = {
           hints: 'warning',
-          maxEntrypointSize: 512000,
-          maxAssetSize: 512000,
+          maxEntrypointSize: 400000, // 400KB
+          maxAssetSize: 400000, // 400KB
+        };
+        
+        // Tree shaking optimizations
+        config.optimization.usedExports = true;
+        config.optimization.sideEffects = false;
+        
+        // Add module resolution optimizations
+        config.resolve.alias = {
+          ...config.resolve.alias,
+          // Use lighter alternatives where possible
+          'react-syntax-highlighter/dist/esm': 'react-syntax-highlighter/dist/cjs',
         };
         
         // Split chunks more aggressively for better caching
         if (!isServer) {
           config.optimization.splitChunks = {
             chunks: 'all',
-            maxInitialRequests: 25,
+            maxInitialRequests: 30,
             minSize: 20000,
+            maxSize: 500000, // 500KB max chunk size
             cacheGroups: {
               default: false,
               vendors: false,
+              // React framework
               framework: {
                 chunks: 'all',
                 name: 'framework',
@@ -100,17 +113,44 @@ const nextConfig = {
                 priority: 40,
                 enforce: true,
               },
+              // Large libraries that should be separate
+              syntaxHighlighter: {
+                test: /[\\/]node_modules[\\/]react-syntax-highlighter[\\/]/,
+                name: 'syntax-highlighter',
+                chunks: 'all',
+                priority: 35,
+                enforce: true,
+              },
+              framerMotion: {
+                test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+                name: 'framer-motion',
+                chunks: 'async', // Load only when needed
+                priority: 35,
+                enforce: true,
+              },
+              radixUI: {
+                test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
+                name: 'radix-ui',
+                chunks: 'all',
+                priority: 34,
+                enforce: true,
+              },
+              supabase: {
+                test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+                name: 'supabase',
+                chunks: 'all',
+                priority: 33,
+                enforce: true,
+              },
+              // Other npm packages
               lib: {
                 test: /[\\/]node_modules[\\/]/,
                 name(module) {
                   try {
-                    // Add null check with optional chaining to handle cases where module.context might be undefined
                     const match = module.context?.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/);
-                    // Only access index [1] if match exists, otherwise use a fallback value
                     const packageName = match ? match[1] : 'unknown';
                     return `npm.${packageName.replace('@', '')}`;
                   } catch (error) {
-                    // Fallback in case of any other errors
                     console.warn('Error in webpack chunk naming:', error);
                     return 'npm.vendor';
                   }
@@ -118,11 +158,13 @@ const nextConfig = {
                 priority: 30,
                 minChunks: 1,
                 reuseExistingChunk: true,
+                maxSize: 300000, // 300KB max for lib chunks
               },
               commons: {
                 name: 'commons',
                 minChunks: 2,
                 priority: 20,
+                maxSize: 200000, // 200KB max for commons
               },
               shared: {
                 name: false,
@@ -151,6 +193,15 @@ const nextConfig = {
       '@radix-ui/react-icons',
       'date-fns',
       'framer-motion',
+      'react-syntax-highlighter',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-toast',
+      '@radix-ui/react-tooltip',
     ],
   },
   
