@@ -6,10 +6,7 @@ const DYNAMIC_CACHE_NAME = 'chatbuddy-dynamic-v1';
 // Assets to cache immediately
 const STATIC_ASSETS = [
   '/',
-  '/chat',
-  '/dashboard',
   '/manifest.json',
-  '/icon-192.png',
   '/icon-512.png',
   '/maskable-icon.png'
 ];
@@ -20,16 +17,30 @@ self.addEventListener('install', (event) => {
   
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log('Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => {
-        console.log('Static assets cached successfully');
+        
+        // Cache assets one by one to handle failures gracefully
+        const cachePromises = STATIC_ASSETS.map(async (asset) => {
+          try {
+            const response = await fetch(asset);
+            if (response.ok) {
+              await cache.put(asset, response);
+              console.log(`✅ Cached: ${asset}`);
+            } else {
+              console.warn(`⚠️ Failed to fetch ${asset}: ${response.status}`);
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to cache ${asset}:`, error.message);
+          }
+        });
+        
+        await Promise.allSettled(cachePromises);
+        console.log('✅ Static assets caching completed');
         return self.skipWaiting();
       })
       .catch((error) => {
-        console.error('Failed to cache static assets:', error);
+        console.error('❌ Failed to open cache:', error);
       })
   );
 });

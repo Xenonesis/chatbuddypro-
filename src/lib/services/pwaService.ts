@@ -90,10 +90,14 @@ class PWAService {
   // Setup push notifications
   async setupPushNotifications(): Promise<void> {
     if (!this.registration) {
-      throw new Error('Service Worker not registered');
+      console.warn('Service Worker not registered, skipping push notifications setup');
+      return;
     }
 
     try {
+      // Wait for service worker to be active
+      await this.waitForServiceWorkerActive();
+
       // Check if notifications are supported and get permission
       const permission = await this.requestNotificationPermission();
       
@@ -117,6 +121,41 @@ class PWAService {
     }
   }
 
+  // Wait for service worker to be active
+  private async waitForServiceWorkerActive(): Promise<void> {
+    if (!this.registration) {
+      throw new Error('No service worker registration');
+    }
+
+    // If already active, return immediately
+    if (this.registration.active) {
+      return;
+    }
+
+    // Wait for installing service worker to become active
+    if (this.registration.installing) {
+      await new Promise<void>((resolve) => {
+        const worker = this.registration!.installing!;
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'activated') {
+            resolve();
+          }
+        });
+      });
+    } else if (this.registration.waiting) {
+      // Service worker is waiting, activate it
+      this.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      await new Promise<void>((resolve) => {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          resolve();
+        }, { once: true });
+      });
+    }
+
+    // Add a small delay to ensure service worker is fully ready
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
   // Request notification permission
   async requestNotificationPermission(): Promise<NotificationPermission> {
     if (!('Notification' in window)) {
@@ -136,12 +175,25 @@ class PWAService {
       throw new Error('Service Worker not registered');
     }
 
+    if (!this.registration.active) {
+      throw new Error('Service Worker not active');
+    }
+
     try {
       // Generate VAPID keys on the server or use environment variables
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       
       if (!vapidPublicKey) {
-        console.warn('VAPID public key not configured');
+        console.warn('VAPID public key not configured, skipping push subscription');
+        return;
+      }
+
+      // Check if already subscribed
+      const existingSubscription = await this.registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        console.log('Already subscribed to push notifications');
+        this.pushSubscription = existingSubscription;
+        await this.savePushSubscription(existingSubscription);
         return;
       }
 

@@ -66,6 +66,7 @@ const SheetContent = React.forwardRef<
         "before:absolute before:inset-0 before:z-[-1] before:bg-gradient-to-b before:from-background/80 before:to-background before:opacity-70 before:content-['']",
         className
       )}
+      aria-describedby={props["aria-describedby"] || undefined}
       {...props}
     >
       {children}

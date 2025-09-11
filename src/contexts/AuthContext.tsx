@@ -183,86 +183,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Ensuring user profile exists for:', userId);
       
-      // Check if user profile already exists
-      const { data: existingProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Extract name from user metadata (common for OAuth providers)
+      const fullName = user.user_metadata?.full_name || 
+                      user.user_metadata?.name || 
+                      user.email?.split('@')[0] || 
+                      '';
       
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error checking existing profile:', profileError);
-        return;
+      // Use the safe profile creation function
+      const { data: profileResult, error: profileError } = await supabase
+        .rpc('create_user_profile_safe', {
+          p_user_id: userId,
+          p_full_name: fullName,
+          p_age: null,
+          p_gender: null,
+          p_profession: null,
+          p_organization_name: null,
+          p_mobile_number: null
+        });
+      
+      if (profileError) {
+        console.error('Error creating user profile:', profileError);
+      } else {
+        console.log('Successfully ensured user profile exists');
       }
       
-      // Create profile if it doesn't exist
-      if (!existingProfile) {
-        console.log('Creating user profile for OAuth user:', userId);
-        
-        // Extract name from user metadata (common for OAuth providers)
-        const fullName = user.user_metadata?.full_name || 
-                        user.user_metadata?.name || 
-                        user.email?.split('@')[0] || 
-                        '';
-        
-        const { error: createError } = await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: userId,
-            full_name: fullName,
-            age: null,
-            gender: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-        
-        if (createError) {
-          console.error('Error creating user profile:', createError);
-        } else {
-          console.log('Successfully created user profile for OAuth user');
-        }
-      }
+      // Use the safe preferences creation function
+      const { data: prefsResult, error: prefsError } = await supabase
+        .rpc('create_user_preferences_safe', {
+          p_user_id: userId,
+          p_theme: 'light',
+          p_language: 'en',
+          p_api_keys: {},
+          p_ai_providers: {
+            "openai": { "enabled": false, "api_keys": {} },
+            "gemini": { "enabled": false, "api_keys": {} },
+            "mistral": { "enabled": false, "api_keys": {} },
+            "claude": { "enabled": false, "api_keys": {} },
+            "llama": { "enabled": false, "api_keys": {} },
+            "deepseek": { "enabled": false, "api_keys": {} }
+          }
+        });
       
-      // Check if user preferences exist
-      const { data: existingPrefs, error: prefsError } = await supabase
-        .from('user_preferences')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (prefsError && prefsError.code !== 'PGRST116') {
-        console.error('Error checking existing preferences:', prefsError);
-        return;
-      }
-      
-      // Create preferences if they don't exist
-      if (!existingPrefs) {
-        console.log('Creating user preferences for OAuth user:', userId);
-        
-        const { error: createPrefsError } = await supabase
-          .from('user_preferences')
-          .insert({
-            user_id: userId,
-            theme: 'light',
-            language: 'en',
-            api_keys: {},
-            ai_providers: {
-              "openai": { "enabled": false, "api_keys": {} },
-              "gemini": { "enabled": false, "api_keys": {} },
-              "mistral": { "enabled": false, "api_keys": {} },
-              "claude": { "enabled": false, "api_keys": {} },
-              "llama": { "enabled": false, "api_keys": {} },
-              "deepseek": { "enabled": false, "api_keys": {} }
-            },
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-        
-        if (createPrefsError) {
-          console.error('Error creating user preferences:', createPrefsError);
-        } else {
-          console.log('Successfully created user preferences for OAuth user');
-        }
+      if (prefsError) {
+        console.error('Error creating user preferences:', prefsError);
+      } else {
+        console.log('Successfully ensured user preferences exist');
       }
       
     } catch (error) {
