@@ -11,8 +11,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Use export for Netlify
-  output: process.env.NETLIFY ? 'export' : 'standalone',
+  // Use standalone for Netlify to support API routes
+  output: 'standalone',
   
   // Disable image optimization for Netlify compatibility
   images: {
