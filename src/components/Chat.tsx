@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -62,12 +62,10 @@ import { chatService } from '@/lib/services/chatService';
 import dynamic from 'next/dynamic';
 import { toast } from '@/hooks/use-toast';
 
-// Import the Message type from our types
-import { Message } from '@/types/chat';
-
 // Regular import for MessageRenderer instead of dynamic import for now to fix the error
 import MessageRenderer from '@/components/ui-custom/MessageRenderer';
 
+// Define local Message type for this component
 type Message = {
   id: string;
   content: string;
@@ -243,11 +241,20 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
     if (chatId && chatId !== initialChatId && user && messages.length === 0) {
       loadChatHistory();
     }
-  }, [chatId, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, user, initialChatId]);
 
   // Verify database sync periodically (optional)
+  // Store the last verified message count to avoid restarting interval unnecessarily
+  const lastVerifiedCount = useRef(0);
+  
   useEffect(() => {
     if (!chatId || !user || messages.length === 0) return;
+
+    // Only set up interval once, not on every message count change
+    if (lastVerifiedCount.current === 0) {
+      lastVerifiedCount.current = messages.length;
+    }
 
     const verifySyncInterval = setInterval(async () => {
       try {
@@ -259,13 +266,16 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
         if (Math.abs(dbMessageCount - uiMessageCount) > 1) {
           console.warn(`Message sync discrepancy detected: DB has ${dbMessageCount} messages, UI has ${uiMessageCount}`);
         }
+        
+        lastVerifiedCount.current = uiMessageCount;
       } catch (error) {
         console.error('Error verifying message sync:', error);
       }
     }, 30000); // Check every 30 seconds
 
     return () => clearInterval(verifySyncInterval);
-  }, [chatId, user, messages.length]);
+    // Only depend on chatId and user, not messages.length to avoid restarting interval
+  }, [chatId, user]);
 
   const loadChatHistory = async () => {
     if (!chatId || !user) return;
@@ -282,13 +292,15 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
       });
 
       if (chatMessages && chatMessages.length > 0) {
-        // Convert ChatMessage to Message format
-        const formattedMessages: Message[] = chatMessages.map(msg => ({
-          id: msg.id,
-          role: msg.role as 'user' | 'assistant' | 'system',
-          content: msg.content,
-          timestamp: new Date(msg.created_at)
-        }));
+        // Convert ChatMessage to Message format, filtering out system messages
+        const formattedMessages: Message[] = chatMessages
+          .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+          .map(msg => ({
+            id: msg.id,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: new Date(msg.created_at)
+          }));
 
         console.log('Loaded chat messages:', formattedMessages.length);
         setMessages(formattedMessages);
@@ -331,19 +343,21 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
     };
   }, []);
 
-  // Get available providers
-  const availableProviders = Object.entries(settings)
-    .filter(([key, value]) => 
-      key !== 'defaultProvider' && 
-      key !== 'chatMode' && 
-      key !== 'showThinking' && 
-      typeof value === 'object' && 
-      'enabled' in value && 
-      value.enabled && 
-      'apiKey' in value && 
-      value.apiKey // Only include providers with API keys configured
-    )
-    .map(([key]) => key as AIProvider);
+  // Get available providers - memoize to prevent infinite loops
+  const availableProviders = useMemo(() => {
+    return Object.entries(settings)
+      .filter(([key, value]) => 
+        key !== 'defaultProvider' && 
+        key !== 'chatMode' && 
+        key !== 'showThinking' && 
+        typeof value === 'object' && 
+        'enabled' in value && 
+        value.enabled && 
+        'apiKey' in value && 
+        value.apiKey // Only include providers with API keys configured
+      )
+      .map(([key]) => key as AIProvider);
+  }, [settings]);
 
   // Check if the current provider has an API key configured
   const hasApiKey = (provider: AIProvider): boolean => {
@@ -354,8 +368,13 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
     return settingsHasKey || envHasKey;
   };
 
-  // Effect to set initial provider
+  // Effect to set initial provider - use ref to prevent infinite loops
+  const providerCheckRef = useRef(false);
+  
   useEffect(() => {
+    // Only run this check once on mount or when settings change significantly
+    if (providerCheckRef.current) return;
+    
     // If current provider is disabled or doesn't have an API key, switch to another provider
     if (!settings[currentProvider]?.enabled || !settings[currentProvider]?.apiKey) {
       // First try to use the default provider if it's enabled and has an API key
@@ -365,12 +384,17 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
           settings[defaultProvider]?.apiKey) {
         console.log(`Current provider unavailable, using default provider: ${defaultProvider}`);
         setCurrentProvider(defaultProvider);
+        providerCheckRef.current = true;
       }
       // Otherwise use the first available provider
       else if (availableProviders.length > 0) {
         console.log(`Default provider unavailable, using first available: ${availableProviders[0]}`);
         setCurrentProvider(availableProviders[0]);
+        providerCheckRef.current = true;
       }
+    } else {
+      // Current provider is valid, mark as checked
+      providerCheckRef.current = true;
     }
   }, [settings, currentProvider, setCurrentProvider, availableProviders]);
 
@@ -1306,7 +1330,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     await toggleListening();
     
     // Reset transcript if stopping
-    if (isListening) {
+    if (!isListening) {
       resetTranscript();
     }
   };
@@ -1314,7 +1338,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
   // Get available providers with API keys in the database
   const getProvidersWithApiKeys = () => {
     const providersWithApiKeys = Object.keys(apiKeys || {}) as AIProvider[];
-    return validProviders.filter(provider => providersWithApiKeys.includes(provider));
+    return availableProviders.filter(provider => providersWithApiKeys.includes(provider));
   };
 
   // For fallback purposes, we need providers with API keys
@@ -1381,7 +1405,6 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
               <>
                 <MessageRenderer
                   message={message}
-                  content={message.content}
                   onCopy={copyToClipboard}
                 />
                 {message.role === 'assistant' && message.responseTime && (
