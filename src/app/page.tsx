@@ -3,15 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import Chat from '@/components/Chat';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { HeroSection, FAQSection, PartnersSection } from '@/components/landing';
 import { Button } from '@/components/ui/button';
-import { MotionButton } from '@/components/ui/motion-button';
-import { MessageSquare, Sparkles, Bot, Shield, Database, Key, ArrowRight, User, Zap, ChevronDown, Brain, CheckCircle, ChevronRight, CreditCard, Star, Globe, Clock, Smartphone, Monitor, Tablet, Users, Award, TrendingUp, Lock, Cpu, Layers, Rocket, Heart } from 'lucide-react';
-import Link from 'next/link';
+import { MessageSquare, Sparkles, Bot, Shield, Key, ArrowRight, User, Zap, Brain, CheckCircle, ChevronRight, CreditCard, Star, Globe, Clock, Smartphone, Monitor, Tablet, Users, TrendingUp, Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import BackToTop from '@/components/BackToTop';
-import ResponsiveContainer, { ResponsiveSection } from '@/components/Layout/ResponsiveContainer';
-import { EnhancedTooltip } from '@/components/ui/enhanced-tooltip';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { ModernFooter } from '@/components/ui-custom/ModernFooter';
@@ -59,9 +56,6 @@ export default function Home() {
     }
   };
 
-  // Add hydration error prevention by avoiding rendering SSR-incompatible elements until mounted
-  const isBrowser = typeof window !== 'undefined';
-
   if (!mounted) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -98,18 +92,6 @@ export default function Home() {
     },
   };
 
-  const heroVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        duration: 0.8,
-        ease: [0.25, 0.46, 0.45, 0.94]
-      }
-    }
-  };
-
   return (
     <div className="flex-1 flex flex-col items-center min-h-[calc(100vh-64px)] pb-20 md:pb-0">
       {showWelcome ? (
@@ -120,307 +102,16 @@ export default function Home() {
           className="w-full mx-auto space-y-20 pb-8"
         >
           {/* Hero Section */}
-          <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-white dark:from-slate-900 dark:via-[#0f172a] dark:to-[#0c1222] py-12 sm:py-20 md:py-28 lg:py-32">
-            {/* Enhanced Background elements with improved visual depth */}
-            <div className="absolute inset-0 bg-grid-slate-100/50 dark:bg-grid-white/[0.02] [mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.1))]"></div>
-            
-            {/* Animated gradient orbs */}
-            <div className="absolute h-full w-full">
-              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-blue-400/20 via-cyan-300/15 to-indigo-400/20 dark:from-blue-500/30 dark:via-cyan-400/20 dark:to-indigo-500/25 rounded-full blur-3xl animate-float"></div>
-              <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-r from-purple-400/15 via-pink-300/10 to-violet-400/15 dark:from-purple-500/25 dark:via-pink-400/15 dark:to-violet-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
-              <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-gradient-to-r from-emerald-400/10 via-teal-300/8 to-cyan-400/12 dark:from-emerald-500/20 dark:via-teal-400/12 dark:to-cyan-500/18 rounded-full blur-2xl animate-float" style={{ animationDelay: '4s' }}></div>
-            </div>
-            
-            {/* Enhanced border gradients */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-300/60 dark:via-blue-400/40 to-transparent"></div>
-            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-300/60 dark:via-purple-400/40 to-transparent"></div>
-            
-            {/* Subtle mesh pattern overlay */}
-            <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.025]" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3Ccircle cx='53' cy='7' r='1'/%3E%3Ccircle cx='7' cy='53' r='1'/%3E%3Ccircle cx='53' cy='53' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-            }}></div>
-            
-            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
-                <motion.div 
-                  variants={itemVariants} 
-                  className="space-y-8"
-                >
-                  <div className="space-y-6">
-                    <motion.div 
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.2 }}
-                      className="relative inline-flex items-center gap-3 px-6 py-3 rounded-full glass-light dark:glass-dark border border-blue-200/80 dark:border-blue-500/30 shadow-lg shadow-blue-100/50 dark:shadow-blue-900/20 overflow-hidden group hover:scale-105 transition-all duration-300"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-blue-50/80 dark:from-blue-500/10 dark:via-indigo-500/10 dark:to-blue-500/10 -z-10"></div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-100/30 to-transparent dark:via-blue-400/10 -z-10 group-hover:opacity-100 opacity-0 transition-opacity duration-700"></div>
-                      <span className="relative flex items-center justify-center w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full shadow-md">
-                        <Sparkles className="h-4 w-4 text-white animate-pulse" />
-                      </span>
-                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-200 tracking-wide">✨ New for 2025: Enhanced AI Models & Security</span>
-                    </motion.div>
-                    
-                    <div className="space-y-4">
-                      <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight leading-none">
-                        <motion.span 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.6, delay: 0.3 }}
-                          className="block bg-gradient-to-br from-slate-900 via-blue-800 to-indigo-900 dark:from-blue-400 dark:via-cyan-300 dark:to-indigo-400 bg-clip-text text-transparent font-extrabold"
-                        >
-                          ChatBuddy
-                        </motion.span>
-                        <motion.span 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.6, delay: 0.5 }}
-                          className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl mt-2 text-slate-700 dark:text-slate-200 font-semibold"
-                        >
-                          Your AI Assistant for{' '}
-                          <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-400 dark:via-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                            2025 & Beyond
-                          </span>
-                        </motion.span>
-                      </h1>
-                    </div>
-                  </div>
-                  
-                  <motion.p 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.7 }}
-                    className="text-lg sm:text-xl text-slate-600 dark:text-blue-100/90 max-w-2xl leading-relaxed font-medium"
-                  >
-                    Experience the next evolution of AI with{' '}
-                    <span className="text-blue-600 dark:text-blue-400 font-semibold">quantum-secure encryption</span>,{' '}
-                    <span className="text-indigo-600 dark:text-indigo-400 font-semibold">context-aware responses</span>, and seamless integration with the latest 2025 AI models - all in one beautiful, intuitive interface.
-                  </motion.p>
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.9 }}
-                    className="flex flex-col sm:flex-row gap-4 button-stack"
-                  >
-                    <MotionButton 
-                      onClick={handleStartChat}
-                      size="lg"
-                      animationType="scale"
-                      className="relative bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 hover:from-blue-700 hover:via-blue-800 hover:to-indigo-700 text-white shadow-xl shadow-blue-500/25 dark:shadow-blue-500/30 border-0 h-14 px-10 rounded-full transition-all duration-300 hover:scale-105 hover:shadow-blue-500/40 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-700 focus:ring-offset-2 group overflow-hidden"
-                      aria-label="Start Chatting Now"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="relative flex items-center justify-center">
-                        <MessageSquare className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-200" aria-hidden="true" />
-                        <span className="font-semibold text-base">Start Chatting Now</span>
-                        <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" aria-hidden="true" />
-                      </div>
-                    </MotionButton>
-                    {!user && (
-                      <Link href="/auth/signup" className="sm:w-auto w-full">
-                        <MotionButton 
-                          variant="outline" 
-                          size="lg"
-                          animationType="lift"
-                          className="relative glass-light dark:glass-dark text-blue-700 dark:text-blue-100 hover:bg-blue-50/80 dark:hover:bg-blue-900/30 h-14 px-10 rounded-full backdrop-blur-sm transition-all duration-300 hover:border-blue-400/60 dark:hover:border-blue-400/60 w-full focus:outline-none focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-700 focus:ring-offset-2 group border-2 border-blue-200/60 dark:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10"
-                          aria-label="Create Free Account"
-                        >
-                          <div className="relative flex items-center justify-center">
-                            <User className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-200" aria-hidden="true" />
-                            <span className="font-semibold text-base">Create Free Account</span>
-                            <Sparkles className="ml-2 h-4 w-4 group-hover:rotate-12 transition-transform duration-200" aria-hidden="true" />
-                          </div>
-                        </MotionButton>
-                      </Link>
-                    )}
-                  </motion.div>
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 1.1 }}
-                    className="flex flex-wrap gap-6 pt-6"
-                  >
-                    <button
-                      type="button"
-                      onClick={scrollToFeatures}
-                      aria-label="Scroll to features section"
-                      className="flex items-center text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-xl px-4 py-2 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 backdrop-blur-sm"
-                      tabIndex={0}
-                    >
-                      <span className="mr-2 group-hover:underline font-medium">🚀 Explore 2025 Features</span>
-                      <ChevronDown className="h-4 w-4 animate-bounce group-hover:translate-y-1 transition-transform duration-200" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={scrollToHowItWorks}
-                      aria-label="Scroll to how it works section"
-                      className="flex items-center text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-200 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-xl px-4 py-2 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 backdrop-blur-sm"
-                      tabIndex={0}
-                    >
-                      <span className="mr-2 group-hover:underline font-medium">⚡ See How It Works</span>
-                      <ChevronDown className="h-4 w-4 animate-bounce group-hover:translate-y-1 transition-transform duration-200" aria-hidden="true" />
-                    </button>
-                  </motion.div>
-                </motion.div>
+          <HeroSection 
+            onStartChat={handleStartChat}
+            onScrollToFeatures={scrollToFeatures}
+            onScrollToHowItWorks={scrollToHowItWorks}
+            showSignup={!user}
+          />
 
-                <motion.div 
-                  variants={itemVariants} 
-                  className="relative hidden lg:block h-[400px] sm:h-[500px]"
-                >
-                  <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-gradient-to-br from-slate-800/90 via-slate-900/95 to-slate-950/90 backdrop-blur-xl">
-                    {/* Enhanced window header */}
-                    <div className="absolute top-0 left-0 right-0 h-14 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-sm flex items-center px-6 border-b border-slate-700/50">
-                      <div className="flex space-x-2">
-                        <div className="h-3 w-3 rounded-full bg-red-500 shadow-sm hover:bg-red-400 transition-colors cursor-pointer"></div>
-                        <div className="h-3 w-3 rounded-full bg-yellow-500 shadow-sm hover:bg-yellow-400 transition-colors cursor-pointer"></div>
-                        <div className="h-3 w-3 rounded-full bg-green-500 shadow-sm hover:bg-green-400 transition-colors cursor-pointer"></div>
-                      </div>
-                      <div className="mx-auto flex items-center text-sm text-slate-300 font-medium">
-                        <Brain className="h-5 w-5 mr-2 text-blue-400 animate-pulse" />
-                        ChatBuddy 2025 - AI Assistant
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                        <span className="text-xs text-green-400 font-medium">Online</span>
-                      </div>
-                    </div>
-                    
-                    {/* Enhanced background gradient */}
-                    <div className="absolute top-14 bottom-0 left-0 right-0 bg-gradient-to-b from-slate-800/30 via-transparent to-slate-900/50"></div>
-                    
-                    <div className="pt-14 p-6 h-full">
-                      <div className="flex flex-col h-full overflow-hidden space-y-4">
-                        {/* User message with enhanced styling */}
-                        <motion.div 
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.5, delay: 1.2 }}
-                          className="bg-gradient-to-r from-slate-700/60 via-slate-600/50 to-slate-700/60 p-4 rounded-2xl text-white backdrop-blur-sm shadow-lg border border-slate-600/30 ml-auto max-w-[80%]"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm shadow-lg">
-                              <User className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">What's new in ChatBuddy for 2025?</p>
-                              <span className="text-xs text-slate-300 mt-1 block">Just now</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                        
-                        {/* AI response with enhanced styling and typing animation */}
-                        <motion.div 
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.5, delay: 1.5 }}
-                          className="bg-gradient-to-r from-blue-600/25 via-indigo-600/20 to-purple-600/25 p-4 rounded-2xl text-white backdrop-blur-sm shadow-xl border border-blue-500/30 mr-auto max-w-[85%]"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm shadow-lg animate-pulse">
-                              <Bot className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xs font-semibold text-blue-300">ChatBuddy AI</span>
-                                <div className="flex space-x-1">
-                                  <div className="w-1 h-1 rounded-full bg-blue-400 animate-bounce"></div>
-                                  <div className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                  <div className="w-1 h-1 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                </div>
-                              </div>
-                              <p className="text-sm leading-relaxed">
-                                🚀 We've added <span className="text-cyan-300 font-semibold">quantum-secure encryption</span>, <span className="text-green-300 font-semibold">context-aware AI responses</span>, and integration with the latest 2025 AI models including <span className="text-yellow-300 font-semibold">GPT-5</span> and <span className="text-pink-300 font-semibold">Claude 3</span>. Plus, our UI is now more intuitive than ever! ✨
-                              </p>
-                              <span className="text-xs text-slate-400 mt-2 block">Powered by Advanced AI • Just now</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                        
-                        <div className="flex-1"></div>
-                        
-                        {/* Enhanced input area */}
-                        <motion.div 
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5, delay: 1.8 }}
-                          className="border-t border-slate-700/50 pt-4"
-                        >
-                          <div className="glass-dark rounded-2xl flex items-center p-3 shadow-inner backdrop-blur-sm border border-slate-600/30 hover:border-blue-500/50 transition-all duration-300">
-                            <input 
-                              type="text" 
-                              className="bg-transparent border-0 text-white text-sm flex-1 focus:outline-none px-3 placeholder-slate-400" 
-                              placeholder="Ask me anything about 2025 features..." 
-                              disabled 
-                            />
-                            <Button size="sm" variant="ghost" className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-xl p-2 transition-all duration-200">
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </motion.div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Enhanced floating decoration elements */}
-                  <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-gradient-to-r from-blue-500/15 via-indigo-500/10 to-purple-500/15 rounded-full blur-3xl animate-float"></div>
-                  <div className="absolute -top-8 -left-8 w-40 h-40 bg-gradient-to-r from-cyan-500/15 via-blue-500/10 to-indigo-500/15 rounded-full blur-2xl animate-float" style={{ animationDelay: '1s' }}></div>
-                  <div className="absolute top-1/2 -right-4 w-32 h-32 bg-gradient-to-r from-purple-500/10 via-pink-500/8 to-violet-500/12 rounded-full blur-xl animate-float" style={{ animationDelay: '2s' }}></div>
-                </motion.div>
-              </div>
+          {/* Partners & Integrations */}
+          <PartnersSection />
 
-              <motion.div 
-                variants={itemVariants}
-                className="mt-20 flex flex-wrap justify-center items-center gap-4 sm:gap-6"
-              >
-                <EnhancedTooltip 
-                  content="Chat with OpenAI GPT-5, Claude 3, Gemini Pro and more advanced 2025 AI models" 
-                  side="top"
-                >
-                  <div className="flex items-center gap-3 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-purple-500/10 dark:from-slate-800/70 dark:to-slate-700/50 px-5 py-3 rounded-full text-sm shadow-lg backdrop-blur-sm border border-blue-200/30 dark:border-slate-600/30 hover:scale-105 hover:shadow-blue-500/20 transition-all duration-300 group">
-                    <Sparkles className="h-5 w-5 text-blue-600 dark:text-cyan-400 group-hover:rotate-12 transition-transform duration-200" />
-                    <span className="font-medium text-slate-700 dark:text-white">Multiple AI Models</span>
-                  </div>
-                </EnhancedTooltip>
-                
-                <EnhancedTooltip 
-                  content="Your data is protected with quantum-secure encryption and advanced authentication" 
-                  side="top"
-                >
-                  <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-cyan-500/10 dark:from-slate-800/70 dark:to-slate-700/50 px-5 py-3 rounded-full text-sm shadow-lg backdrop-blur-sm border border-emerald-200/30 dark:border-slate-600/30 hover:scale-105 hover:shadow-emerald-500/20 transition-all duration-300 group">
-                    <Shield className="h-5 w-5 text-emerald-600 dark:text-cyan-400 group-hover:scale-110 transition-transform duration-200" />
-                    <span className="font-medium text-slate-700 dark:text-white">Quantum Security</span>
-                  </div>
-                </EnhancedTooltip>
-                
-                <EnhancedTooltip 
-                  content="Save and access your past conversations with intelligent context awareness" 
-                  side="top"
-                >
-                  <div className="flex items-center gap-3 bg-gradient-to-r from-violet-500/10 via-purple-500/5 to-indigo-500/10 dark:from-slate-800/70 dark:to-slate-700/50 px-5 py-3 rounded-full text-sm shadow-lg backdrop-blur-sm border border-violet-200/30 dark:border-slate-600/30 hover:scale-105 hover:shadow-violet-500/20 transition-all duration-300 group">
-                    <Database className="h-5 w-5 text-violet-600 dark:text-cyan-400 group-hover:scale-110 transition-transform duration-200" />
-                    <span className="font-medium text-slate-700 dark:text-white">Smart History</span>
-                  </div>
-                </EnhancedTooltip>
-                
-                <EnhancedTooltip 
-                  content="Securely store and manage your API keys with enterprise-grade encryption" 
-                  side="top"
-                >
-                  <div className="flex items-center gap-3 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-yellow-500/10 dark:from-slate-800/70 dark:to-slate-700/50 px-5 py-3 rounded-full text-sm shadow-lg backdrop-blur-sm border border-orange-200/30 dark:border-slate-600/30 hover:scale-105 hover:shadow-orange-500/20 transition-all duration-300 group">
-                    <Key className="h-5 w-5 text-orange-600 dark:text-cyan-400 group-hover:rotate-12 transition-transform duration-200" />
-                    <span className="font-medium text-slate-700 dark:text-white">Secure Keys</span>
-                  </div>
-                </EnhancedTooltip>
-              </motion.div>
-          </div>
-
-            {/* Bottom wave decoration */}
-            <div className="absolute bottom-0 left-0 right-0">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="w-full h-auto">
-                <path fill="rgb(241 245 249)" fillOpacity="0.03" d="M0,192L48,170.7C96,149,192,107,288,112C384,117,480,171,576,186.7C672,203,768,181,864,154.7C960,128,1056,96,1152,101.3C1248,107,1344,149,1392,170.7L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-              </svg>
-            </div>
-          </section>
 
           {/* Enhanced Features Section */}
           <section ref={featuresRef} className="relative py-12 sm:py-20 md:py-28 overflow-hidden">
@@ -1307,6 +998,9 @@ export default function Home() {
               </motion.div>
             </div>
           </section>
+
+          {/* FAQ Section */}
+          <FAQSection />
 
           {/* Enhanced CTA Section */}
           <section className="relative py-20 sm:py-32 overflow-hidden">
