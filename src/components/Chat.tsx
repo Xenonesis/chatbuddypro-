@@ -1560,7 +1560,12 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             </Button>
             
             {showModelMenu && (
-              <div className="absolute z-50 top-full left-0 mt-1.5 py-1.5 px-1.5 rounded-lg shadow-lg border bg-white/95 dark:bg-slate-800/95 backdrop-blur-md dark:border-slate-700 min-w-[180px]">
+              <div
+                className="absolute z-50 top-full left-0 mt-1.5 py-1.5 px-1.5 rounded-lg shadow-lg border bg-white/95 dark:bg-slate-800/95 backdrop-blur-md dark:border-slate-700 min-w-[220px] max-h-[70vh] overflow-y-auto overscroll-contain focus:outline-none"
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                tabIndex={0}
+              >
                 {settings[currentProvider].apiKey ? (
                   currentProvider === 'openrouter' && openRouterModelsLoading ? (
                     <div className="p-2.5 text-xs text-slate-500">Loading models...</div>
@@ -1569,9 +1574,10 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
                       key={model}
                       className={`flex items-center px-2.5 py-2 rounded-md w-full text-left ${model === (settings[currentProvider]?.selectedModel || DEFAULT_MODELS[currentProvider]) ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-slate-100 dark:hover:bg-slate-700'} cursor-pointer transition-all duration-200`}
                       onClick={() => handleModelChange(model)}
+                      title={model}
                     >
                       {getProviderIcon(currentProvider)}
-                      <span className="ml-2 text-xs font-medium truncate">{model}</span>
+                      <span className="ml-2 text-xs font-medium truncate max-w-[280px]">{model}</span>
                     </button>
                   ))
                 ) : (
