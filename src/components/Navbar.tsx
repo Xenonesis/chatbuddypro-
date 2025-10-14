@@ -10,7 +10,6 @@ import {
   Sun,
   Menu,
   X,
-  User,
   LogOut,
   LogIn,
   UserPlus,
@@ -51,7 +50,7 @@ const navigation = [
 ];
 
 export function Navbar() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -62,10 +61,17 @@ export function Navbar() {
 
   useEffect(() => {
     setMounted(true);
+
+    // Ensure body has proper styling to prevent overlap
+    document.body.style.paddingTop = '0';
+
+    return () => {
+      document.body.style.paddingTop = '';
+    };
   }, []);
 
   const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
   const isActive = (href: string) => {
@@ -89,7 +95,16 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
+      <nav
+        className="fixed top-0 left-0 right-0 z-[100] backdrop-blur-md border-b shadow-sm transition-colors duration-200"
+        style={{
+          position: 'fixed',
+          top: 0,
+          zIndex: 9999,
+          backgroundColor: mounted && resolvedTheme === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          borderBottomColor: mounted && resolvedTheme === 'dark' ? 'rgba(75, 85, 99, 0.5)' : 'rgba(229, 231, 235, 0.5)'
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -143,10 +158,10 @@ export function Navbar() {
               >
                 {mounted && (
                   <>
-                    {theme === 'dark' ? (
+                    {resolvedTheme === 'dark' ? (
                       <Sun className="w-4 h-4 text-yellow-500" />
                     ) : (
-                      <Moon className="w-4 h-4 text-gray-600" />
+                      <Moon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                     )}
                   </>
                 )}
@@ -242,7 +257,13 @@ export function Navbar() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md">
+          <div
+            className="md:hidden border-t backdrop-blur-md shadow-lg transition-colors duration-200"
+            style={{
+              backgroundColor: mounted && resolvedTheme === 'dark' ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+              borderTopColor: mounted && resolvedTheme === 'dark' ? 'rgba(75, 85, 99, 0.7)' : 'rgba(229, 231, 235, 0.7)'
+            }}
+          >
             <div className="px-4 py-3 space-y-1">
               {navigation.map((item) => {
                 const Icon = item.icon;
@@ -335,11 +356,11 @@ export function Navbar() {
       </nav>
 
       {/* Spacer to prevent content from hiding behind fixed navbar */}
-      <div className="h-16"></div>
+      <div className="h-16 w-full bg-transparent" style={{ height: '64px', minHeight: '64px' }}></div>
 
       {/* Login Required Dialog */}
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md z-[9999]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5 text-blue-600" />
