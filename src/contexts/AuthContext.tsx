@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const authInitializedRef = useRef(false);
+  const isInitialSignInRef = useRef(false);
   const { toast } = useToast();
 
   // Method to handle authentication errors
@@ -147,15 +148,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         if (event === 'SIGNED_IN') {
-          toast({
-            title: 'Signed in',
-            description: `Welcome back, ${currentSession?.user?.email}`,
-          });
-          
-          // Force redirect to dashboard on sign in
-          setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 100);
+          // Only show toast for user-initiated sign-ins, not session restorations
+          if (isInitialSignInRef.current) {
+            toast({
+              title: 'Signed in',
+              description: `Welcome back, ${currentSession?.user?.email}`,
+            });
+            
+            // Reset the flag
+            isInitialSignInRef.current = false;
+          }
           
           // Ensure user profile exists for OAuth users (async but non-blocking)
           if (currentSession?.user?.id) {
@@ -262,6 +264,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     console.log('Attempting signin for:', email);
     try {
+      // Set flag to indicate this is a user-initiated sign-in
+      isInitialSignInRef.current = true;
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -269,6 +274,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Signin error:', error);
+        // Reset flag on error
+        isInitialSignInRef.current = false;
       } else {
         console.log('Signin successful:', data.user?.id);
       }
@@ -276,6 +283,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { data, error };
     } catch (error) {
       console.error('Unexpected signin error:', error);
+      // Reset flag on error
+      isInitialSignInRef.current = false;
       return { data: null, error: error as Error };
     }
   };
