@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { userService } from '@/lib/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, decryptApiKey } from '@/lib/supabase';
@@ -200,6 +200,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
   const [showAddApiKeyForm, setShowAddApiKeyForm] = useState(false);
   const { user, isAuthReady } = useAuth();
   const [loadingKeys, setLoadingKeys] = useState(false);
+  const settingsLoadedForUserRef = useRef<string | null>(null);
 
   // Real-time settings update handlers
   const handleRealtimeSettingsUpdate = useCallback((newSettings: ModelSettings) => {
@@ -346,17 +347,26 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
 
   // Add this effect to load API keys and chat settings when the user state is ready
   useEffect(() => {
-    if (user && isAuthReady) {
-      loadAPIKeysFromSupabase().catch(error => {
-        console.error('Error loading API keys from Supabase:', error);
-      });
-      
-      // Also load chat settings from the new system
-      loadChatSettingsFromSupabase().catch(error => {
-        console.error('Error loading chat settings from Supabase:', error);
-      });
+    if (user && isAuthReady && user.id) {
+      // Only load if we haven't already loaded for this user
+      if (settingsLoadedForUserRef.current !== user.id) {
+        settingsLoadedForUserRef.current = user.id;
+        
+        loadAPIKeysFromSupabase().catch(error => {
+          console.error('Error loading API keys from Supabase:', error);
+        });
+        
+        // Also load chat settings from the new system
+        loadChatSettingsFromSupabase().catch(error => {
+          console.error('Error loading chat settings from Supabase:', error);
+        });
+      }
+    } else if (!user) {
+      // Reset when user logs out
+      settingsLoadedForUserRef.current = null;
     }
-  }, [user, isAuthReady]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, isAuthReady]);
 
   // Load chat settings from the new chat settings system
   const loadChatSettingsFromSupabase = async () => {

@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const authInitializedRef = useRef(false);
   const isInitialSignInRef = useRef(false);
+  const authReadyRef = useRef(false);
   const { toast } = useToast();
 
   // Method to handle authentication errors
@@ -111,7 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(null);
       } finally {
         setIsLoading(false);
-        setIsAuthReady(true);
+        if (!authReadyRef.current) {
+          setIsAuthReady(true);
+          authReadyRef.current = true;
+        }
         console.log('✅ Auth initialization complete');
       }
     };
@@ -137,14 +141,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
         
-        // Always update session and user state
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        // Update session and user state only if they actually changed
+        setSession(prevSession => {
+          if (JSON.stringify(prevSession) !== JSON.stringify(currentSession)) {
+            return currentSession;
+          }
+          return prevSession;
+        });
+        
+        setUser(prevUser => {
+          const newUser = currentSession?.user ?? null;
+          if (prevUser?.id !== newUser?.id) {
+            return newUser;
+          }
+          return prevUser;
+        });
+        
         setIsLoading(false);
         
-        // Ensure auth is marked as ready
-        if (!isAuthReady) {
+        // Ensure auth is marked as ready (only once)
+        if (!authReadyRef.current) {
           setIsAuthReady(true);
+          authReadyRef.current = true;
         }
         
         if (event === 'SIGNED_IN') {
