@@ -139,6 +139,34 @@ ChatBuddy supports multiple AI providers, each with unique strengths and capabil
 
 **Cost**: Very competitive pricing
 
+---
+
+### OpenRouter
+**Best for**: Unified access to multiple models, flexibility, model variety
+**Models Available**:
+- `openai/gpt-3.5-turbo` - Fast OpenAI model via OpenRouter
+- `openai/gpt-4` - Advanced OpenAI model via OpenRouter
+- `anthropic/claude-3-5-sonnet` - Claude access via OpenRouter
+- `google/gemini-pro` - Gemini access via OpenRouter
+- `meta-llama/llama-3-8b-instruct` - Llama models
+- And many more models from various providers
+
+**Strengths**:
+- Access to multiple providers through one API
+- Flexible model selection
+- Pay-as-you-go pricing across all models
+- Unified billing and management
+- No need for multiple API keys
+- Automatic fallback options
+
+**API Key Setup**:
+1. Visit [openrouter.ai](https://openrouter.ai)
+2. Create account and add credits
+3. Generate API key in settings
+4. Add to ChatBuddy settings
+
+**Cost**: Pay per request, varies by model (generally competitive)
+
 ## 🎯 Choosing the Right Provider
 
 ### For Coding Tasks
@@ -227,14 +255,15 @@ ChatBuddy supports multiple AI providers, each with unique strengths and capabil
 
 ## 📊 Comparison Matrix
 
-| Provider | Speed | Cost | Coding | Creative | Analysis | Safety |
-|----------|-------|------|--------|----------|----------|--------|
-| OpenAI   | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Gemini   | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Mistral  | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Claude   | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Llama    | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| DeepSeek | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| Provider   | Speed | Cost | Coding | Creative | Analysis | Safety |
+|------------|-------|------|--------|----------|----------|--------|
+| OpenAI     | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Gemini     | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Mistral    | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Claude     | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| Llama      | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| DeepSeek   | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| OpenRouter | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
 
 ## 🔮 Future Providers
 

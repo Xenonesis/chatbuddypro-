@@ -43,7 +43,7 @@ import {
   ArrowDown
 } from 'lucide-react';
 import Link from 'next/link';
-import { callAI, ChatMessage } from '@/lib/api';
+import { callAI, ChatMessage, getOpenRouterModels } from '@/lib/api';
 import { useModelSettings, AIProvider, ChatMode } from '@/lib/context/ModelSettingsContext';
 import { containsCodeBlock, isCodingQuestion, saveChatHistory, ChatHistoryItem, getProviderBackgroundColor, getProviderDisplayName } from '@/lib/utils';
 import ApiDiagnostics from "@/components/ApiDiagnostics";
@@ -90,7 +90,8 @@ const DEFAULT_MODELS = {
   mistral: 'mistral-small',
   claude: 'claude-3-5-sonnet-20240620',
   llama: 'llama-3-8b-instruct',
-  deepseek: 'deepseek-chat'
+  deepseek: 'deepseek-chat',
+  openrouter: 'openai/gpt-3.5-turbo'
 };
 
 export default function Chat({ initialMessages = [], initialTitle = '', initialModel = '', chatId: initialChatId = null }: ChatProps) {
@@ -112,6 +113,28 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Fetch OpenRouter models when provider or API key changes
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (currentProvider !== 'openrouter') return;
+      const apiKey = settings?.openrouter?.apiKey;
+      if (!apiKey) {
+        setOpenRouterModels([]);
+        return;
+      }
+      setOpenRouterModelsLoading(true);
+      try {
+        const models = await getOpenRouterModels(apiKey);
+        setOpenRouterModels(models);
+      } catch (e) {
+        console.warn('Failed to fetch OpenRouter models', e);
+      } finally {
+        setOpenRouterModelsLoading(false);
+      }
+    };
+    fetchModels();
+  }, [currentProvider, settings?.openrouter?.apiKey]);
   const [showProviderMenu, setShowProviderMenu] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
@@ -137,6 +160,8 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
   const [title, setTitle] = useState<string>(initialTitle);
   const [selectedModel, setSelectedModel] = useState<string>(initialModel);
   const [chatId, setChatId] = useState<string | null>(initialChatId);
+  const [openRouterModels, setOpenRouterModels] = useState<string[]>([]);
+  const [openRouterModelsLoading, setOpenRouterModelsLoading] = useState<boolean>(false);
   const [activeModel, setActiveModel] = useState<string>(initialModel || DEFAULT_MODELS.openai);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
   const [lastError, setLastError] = useState<Error | null>(null);
@@ -694,8 +719,8 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             }
           );
 
-          // Update the chat with the current model if it changed
-          const modelName = DEFAULT_MODELS[currentProvider];
+          // Update the chat with the current selected model name
+          const modelName = getCurrentModelName();
           await chatService.updateChat(chatId, user.id, { 
             model: modelName,
             last_message: response.substring(0, 100) + (response.length > 100 ? '...' : '')
@@ -1468,7 +1493,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
     return false;
   };
 
-  // Replace line 1415 with a fixed set of models for each provider
+  // Get models list for each provider (OpenRouter uses live list)
   const getFixedModels = (provider: AIProvider) => {
     switch(provider) {
       case 'openai': return ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'];
@@ -1477,6 +1502,8 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       case 'claude': return ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'];
       case 'llama': return ['llama-3-8b-instruct', 'llama-3-70b-instruct', 'llama-3-8b', 'llama-3-70b'];
       case 'deepseek': return ['deepseek-coder', 'deepseek-chat', 'deepseek-llm'];
+      case 'openrouter':
+        return openRouterModels.length ? openRouterModels : ['openai/gpt-3.5-turbo'];
       default: return [];
     }
   };
@@ -1535,7 +1562,9 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             {showModelMenu && (
               <div className="absolute z-50 top-full left-0 mt-1.5 py-1.5 px-1.5 rounded-lg shadow-lg border bg-white/95 dark:bg-slate-800/95 backdrop-blur-md dark:border-slate-700 min-w-[180px]">
                 {settings[currentProvider].apiKey ? (
-                  getFixedModels(currentProvider).map((model) => (
+                  currentProvider === 'openrouter' && openRouterModelsLoading ? (
+                    <div className="p-2.5 text-xs text-slate-500">Loading models...</div>
+                  ) : getFixedModels(currentProvider).map((model) => (
                     <button
                       key={model}
                       className={`flex items-center px-2.5 py-2 rounded-md w-full text-left ${model === (settings[currentProvider]?.selectedModel || DEFAULT_MODELS[currentProvider]) ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-slate-100 dark:hover:bg-slate-700'} cursor-pointer transition-all duration-200`}

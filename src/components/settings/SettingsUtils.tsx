@@ -10,6 +10,7 @@ export const getProviderColor = (provider: AIProvider) => {
     case 'claude': return 'border-amber-400 bg-gradient-to-br from-amber-50 to-amber-100/70 dark:from-amber-900/30 dark:to-amber-800/20 dark:border-amber-700';
     case 'llama': return 'border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100/70 dark:from-orange-900/30 dark:to-orange-800/20 dark:border-orange-700';
     case 'deepseek': return 'border-teal-400 bg-gradient-to-br from-teal-50 to-teal-100/70 dark:from-teal-900/30 dark:to-teal-800/20 dark:border-teal-700';
+    case 'openrouter': return 'border-indigo-400 bg-gradient-to-br from-indigo-50 to-indigo-100/70 dark:from-indigo-900/30 dark:to-indigo-800/20 dark:border-indigo-700';
     default: return 'border-gray-300 bg-gradient-to-br from-gray-50 to-gray-100/70 dark:from-gray-800/30 dark:to-gray-700/20 dark:border-gray-600';
   }
 };
@@ -22,6 +23,7 @@ export const getProviderTextColor = (provider: AIProvider) => {
     case 'claude': return 'text-amber-700 dark:text-amber-400 font-medium';
     case 'llama': return 'text-orange-700 dark:text-orange-400 font-medium';
     case 'deepseek': return 'text-teal-700 dark:text-teal-400 font-medium';
+    case 'openrouter': return 'text-indigo-700 dark:text-indigo-400 font-medium';
     default: return 'text-gray-700 dark:text-gray-400 font-medium';
   }
 };
@@ -36,6 +38,7 @@ export const getProviderButtonColor = (provider: AIProvider, isEnabled: boolean)
     case 'claude': return 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-md shadow-amber-500/20 dark:shadow-amber-900/30';
     case 'llama': return 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md shadow-orange-500/20 dark:shadow-orange-900/30';
     case 'deepseek': return 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-md shadow-teal-500/20 dark:shadow-teal-900/30';
+    case 'openrouter': return 'bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-md shadow-indigo-500/20 dark:shadow-indigo-900/30';
     default: return 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white shadow-md shadow-gray-500/20 dark:shadow-gray-900/30';
   }
 };

@@ -82,6 +82,7 @@ const getProviderDocsUrl = (provider: string) => {
     case 'claude': return 'https://docs.anthropic.com/claude/reference/getting-started-with-the-api';
     case 'llama': return 'https://llama.meta.com/docs/';
     case 'deepseek': return 'https://platform.deepseek.com/docs';
+    case 'openrouter': return 'https://openrouter.ai/docs';
     default: return '#';
   }
 };
@@ -98,6 +99,7 @@ const getProviderIcon = (provider: AIProvider) => {
     case 'claude': return <FlaskConical className="h-5 w-5" />;
     case 'llama': return <Flame className="h-5 w-5" />;
     case 'deepseek': return <Star className="h-5 w-5" />;
+    case 'openrouter': return <ChevronRight className="h-5 w-5" />;
     default: return <Bot className="h-5 w-5" />;
   }
 };
@@ -398,6 +400,7 @@ export default function ProviderSettings() {
         key !== 'showThinking' &&
         key !== 'suggestionsSettings' &&
         key !== 'voiceInputSettings' &&
+        key !== 'chatManagementSettings' &&
         typeof (settings as Record<string, unknown>)[key] === 'object'
       )
       .forEach(provider => {
@@ -433,6 +436,7 @@ export default function ProviderSettings() {
             key !== 'showThinking' &&
             key !== 'suggestionsSettings' &&
             key !== 'voiceInputSettings' &&
+            key !== 'chatManagementSettings' &&
             typeof (newSettings as Record<string, unknown>)[key] === 'object' &&
             key !== provider &&
             (newSettings as Record<string, any>)[key].enabled
@@ -577,6 +581,7 @@ export default function ProviderSettings() {
       key !== 'showThinking' &&
       key !== 'suggestionsSettings' &&
       key !== 'voiceInputSettings' &&
+      key !== 'chatManagementSettings' &&
       typeof (localSettings as Record<string, unknown>)[key] === 'object'
     )
     .filter(provider => 
@@ -585,7 +590,8 @@ export default function ProviderSettings() {
       provider === 'mistral' || 
       provider === 'claude' || 
       provider === 'llama' || 
-      provider === 'deepseek'
+      provider === 'deepseek' ||
+      provider === 'openrouter'
     )
     .map(provider => provider as AIProvider);
 

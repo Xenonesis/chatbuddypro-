@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase, decryptApiKey } from '@/lib/supabase';
 import { useRealtimeSettings } from '@/hooks/useRealtimeSettings';
 
-export type AIProvider = 'openai' | 'gemini' | 'mistral' | 'claude' | 'llama' | 'deepseek';
+export type AIProvider = 'openai' | 'gemini' | 'mistral' | 'claude' | 'llama' | 'deepseek' | 'openrouter';
 export type ChatMode = 'thoughtful' | 'quick' | 'creative' | 'technical' | 'learning';
 
 // Provider information
@@ -16,7 +16,8 @@ export const PROVIDER_INFO: Record<AIProvider, { name: string, displayName: stri
   'mistral': { name: 'mistral', displayName: 'Mistral AI' },
   'claude': { name: 'claude', displayName: 'Anthropic Claude' },
   'llama': { name: 'llama', displayName: 'Meta Llama' },
-  'deepseek': { name: 'deepseek', displayName: 'DeepSeek' }
+  'deepseek': { name: 'deepseek', displayName: 'DeepSeek' },
+  'openrouter': { name: 'openrouter', displayName: 'OpenRouter' }
 };
 
 export type ModelSettings = {
@@ -56,6 +57,13 @@ export type ModelSettings = {
     selectedModel: string;
   };
   deepseek: {
+    enabled: boolean;
+    apiKey: string;
+    maxTokens: number;
+    temperature: number;
+    selectedModel: string;
+  };
+  openrouter: {
     enabled: boolean;
     apiKey: string;
     maxTokens: number;
@@ -135,6 +143,13 @@ const defaultSettings: ModelSettings = {
     maxTokens: 500,
     temperature: 0.7,
     selectedModel: 'deepseek-chat'
+  },
+  openrouter: {
+    enabled: true,
+    apiKey: '',
+    maxTokens: 500,
+    temperature: 0.7,
+    selectedModel: 'openai/gpt-3.5-turbo'
   },
   suggestionsSettings: {
     enabled: true,
@@ -330,8 +345,9 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
       const claudeKey = process.env.NEXT_PUBLIC_CLAUDE_API_KEY;
       const llamaKey = process.env.NEXT_PUBLIC_LLAMA_API_KEY;
       const deepseekKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
+      const openrouterKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY;
     
-      if (openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey) {
+      if (openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey || openrouterKey) {
         setSettings(prevSettings => ({
           ...prevSettings,
           openai: { ...prevSettings.openai, apiKey: openaiKey || '' },
@@ -340,6 +356,7 @@ export function ModelSettingsProvider({ children }: { children: ReactNode }) {
           claude: { ...prevSettings.claude, apiKey: claudeKey || '' },
           llama: { ...prevSettings.llama, apiKey: llamaKey || '' },
           deepseek: { ...prevSettings.deepseek, apiKey: deepseekKey || '' },
+          openrouter: { ...prevSettings.openrouter, apiKey: openrouterKey || '' },
         }));
       }
     }

@@ -605,7 +605,8 @@ export const userService = {
           "mistral": { "enabled": false, "api_keys": {} },
           "claude": { "enabled": false, "api_keys": {} },
           "llama": { "enabled": false, "api_keys": {} },
-          "deepseek": { "enabled": false, "api_keys": {} }
+          "deepseek": { "enabled": false, "api_keys": {} },
+          "openrouter": { "enabled": false, "api_keys": {} }
         };
         
         // Update the specific provider
@@ -642,7 +643,8 @@ export const userService = {
         "mistral": { "enabled": false, "api_keys": {} },
         "claude": { "enabled": false, "api_keys": {} },
         "llama": { "enabled": false, "api_keys": {} },
-        "deepseek": { "enabled": false, "api_keys": {} }
+        "deepseek": { "enabled": false, "api_keys": {} },
+        "openrouter": { "enabled": false, "api_keys": {} }
       };
       
       // Make a deep copy to prevent mutation issues

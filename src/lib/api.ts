@@ -714,6 +714,53 @@ export async function callClaude(messages: ChatMessage[], settings?: ModelSettin
   }
 }
 
+// List OpenRouter models
+export async function getOpenRouterModels(apiKey?: string): Promise<string[]> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+    const resp = await fetch('https://openrouter.ai/api/v1/models', {
+      method: 'GET',
+      headers
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.warn('OpenRouter models fetch failed:', resp.status, text);
+      // Fallback minimal list
+      return [
+        'openai/gpt-3.5-turbo',
+        'openai/gpt-4',
+        'anthropic/claude-3-5-sonnet',
+        'google/gemini-pro',
+        'meta-llama/llama-3-8b-instruct'
+      ];
+    }
+
+    const json = await resp.json();
+    const ids = Array.isArray(json?.data)
+      ? json.data.map((m: any) => m?.id).filter((x: any) => typeof x === 'string')
+      : [];
+    return ids.length ? ids : [
+      'openai/gpt-3.5-turbo',
+      'openai/gpt-4',
+      'anthropic/claude-3-5-sonnet',
+      'google/gemini-pro',
+      'meta-llama/llama-3-8b-instruct'
+    ];
+  } catch (e) {
+    console.warn('OpenRouter models fetch error:', e);
+    return [
+      'openai/gpt-3.5-turbo',
+      'openai/gpt-4',
+      'anthropic/claude-3-5-sonnet',
+      'google/gemini-pro',
+      'meta-llama/llama-3-8b-instruct'
+    ];
+  }
+}
+
 // Llama API
 export async function callLlama(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
   let apiKey = '';
@@ -877,7 +924,77 @@ export async function callDeepseek(messages: ChatMessage[], settings?: ModelSett
   }
 }
 
+// OpenRouter API
+export async function callOpenRouter(messages: ChatMessage[], settings?: ModelSettings): Promise<string> {
+  let apiKey = '';
 
+  // Priority order: Settings -> Environment variables
+  if (settings && settings.openrouter) {
+    apiKey = settings.openrouter.apiKey || '';
+  }
+
+  if (!apiKey) {
+    apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
+  }
+
+  let model = 'openai/gpt-3.5-turbo';
+  let temperature = 0.7;
+  let maxTokens = 500;
+  let finalMessages = [...messages];
+
+  if (settings) {
+    // Get parameters based on chat mode
+    const { temperature: modeTemp, maxTokens: modeMaxTokens, systemMessage } =
+      getParametersForMode(settings, 'openrouter');
+
+    temperature = modeTemp;
+    maxTokens = modeMaxTokens;
+
+    // Use selected model from settings if available
+    if (settings.openrouter && settings.openrouter.selectedModel) {
+      model = settings.openrouter.selectedModel;
+    }
+
+    // Add system message if provided
+    if (systemMessage) {
+      finalMessages = addSystemMessageIfNeeded(messages, systemMessage);
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error('OpenRouter API key is not configured');
+  }
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: finalMessages,
+        temperature,
+        max_tokens: maxTokens
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorJson: any = undefined;
+      try { errorJson = errorText ? JSON.parse(errorText) : undefined; } catch {}
+      const message = errorJson?.error?.message || errorText || 'Failed to call OpenRouter API';
+      throw new Error(message);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content ?? '';
+  } catch (error) {
+    console.error('OpenRouter API error:', error);
+    throw error;
+  }
+}
 
 // Function to validate API configuration
 export function validateApiConfiguration() {
@@ -888,6 +1005,7 @@ export function validateApiConfiguration() {
   const claudeKey = process.env.NEXT_PUBLIC_CLAUDE_API_KEY || '';
   const llamaKey = process.env.NEXT_PUBLIC_LLAMA_API_KEY || '';
   const deepseekKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY || '';
+  const openrouterKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY || '';
   
   const results = {
     openai: {
@@ -914,7 +1032,11 @@ export function validateApiConfiguration() {
       configured: Boolean(deepseekKey),
       keyPrefix: deepseekKey ? deepseekKey.substring(0, 3) + '...' : 'not set'
     },
-    anyConfigured: Boolean(openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey)
+    openrouter: {
+      configured: Boolean(openrouterKey),
+      keyPrefix: openrouterKey ? openrouterKey.substring(0, 3) + '...' : 'not set'
+    },
+    anyConfigured: Boolean(openaiKey || geminiKey || mistralKey || claudeKey || llamaKey || deepseekKey || openrouterKey)
   };
   
   return results;
@@ -983,6 +1105,11 @@ const getDemoResponse = (provider: AIProvider, userMessage: string, messages: Ch
       "Hello! Demo DeepSeek response. Your application is working excellently! Add a real DeepSeek API key to unlock full AI features.",
       "This is a simulated DeepSeek response. The chat system is functioning perfectly! Configure a real API key for actual AI conversations.",
       "Demo DeepSeek mode active. Everything looks great! Get a real API key to enable full functionality."
+    ],
+    openrouter: [
+      "Hello! Demo OpenRouter response. Your application is working perfectly! To use real OpenRouter AI, add your OpenRouter API key.",
+      "Demo mode: OpenRouter simulation. The chat interface is functioning correctly. Configure a real API key for actual AI responses.",
+      "This is a simulated OpenRouter response. Everything looks good! Add a real OpenRouter API key to enable full functionality."
     ]
   };
 
@@ -1007,6 +1134,8 @@ export async function callAI(messages: ChatMessage[], provider: AIProvider, sett
         return await callLlama(messages, settings);
       case 'deepseek':
         return await callDeepseek(messages, settings);
+      case 'openrouter':
+        return await callOpenRouter(messages, settings);
       default:
         throw new Error(`Unknown AI provider: ${provider}`);
     }
