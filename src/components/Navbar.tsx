@@ -2,22 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  MessageCircle, 
-  Settings, 
-  Moon, 
-  Sun, 
-  Menu, 
-  X, 
-  User, 
-  LogOut, 
-  LogIn, 
-  UserPlus, 
+import { useRouter } from 'next/navigation';
+import {
+  MessageCircle,
+  Settings,
+  Moon,
+  Sun,
+  Menu,
+  X,
+  User,
+  LogOut,
+  LogIn,
+  UserPlus,
   Bell,
   Home,
   History,
   BarChart3,
-  Sparkles
+  Sparkles,
+  Lock
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
@@ -32,13 +34,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const navigation = [
-  { name: 'Home', href: '/', icon: Home },
-  { name: 'Chat', href: '/chat', icon: MessageCircle },
-  { name: 'History', href: '/conversations', icon: History },
-  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Home', href: '/', icon: Home, requiresAuth: false },
+  { name: 'Chat', href: '/chat', icon: MessageCircle, requiresAuth: true },
+  { name: 'History', href: '/conversations', icon: History, requiresAuth: true },
+  { name: 'Dashboard', href: '/dashboard', icon: BarChart3, requiresAuth: true },
+  { name: 'Settings', href: '/settings', icon: Settings, requiresAuth: true },
 ];
 
 export function Navbar() {
@@ -46,7 +55,10 @@ export function Navbar() {
   const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [pendingRoute, setPendingRoute] = useState<string>('');
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -60,6 +72,19 @@ export function Navbar() {
     if (href === '/' && pathname === '/') return true;
     if (href !== '/' && pathname?.startsWith(href)) return true;
     return false;
+  };
+
+  const handleNavClick = (e: React.MouseEvent, href: string, requiresAuth: boolean) => {
+    if (requiresAuth && !user) {
+      e.preventDefault();
+      setPendingRoute(href);
+      setShowLoginDialog(true);
+    }
+  };
+
+  const handleLoginRedirect = () => {
+    setShowLoginDialog(false);
+    router.push(`/auth/login?redirect=${encodeURIComponent(pendingRoute)}`);
   };
 
   return (
@@ -81,19 +106,27 @@ export function Navbar() {
             <div className="hidden md:flex items-center space-x-1">
               {navigation.map((item) => {
                 const Icon = item.icon;
+                const isProtected = item.requiresAuth && !user;
+
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
+                    onClick={(e) => handleNavClick(e, item.href, item.requiresAuth)}
                     className={cn(
-                      "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                      "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative",
                       isActive(item.href)
                         ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                        : isProtected
+                          ? "text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
                     )}
                   >
                     <Icon className="w-4 h-4" />
                     <span>{item.name}</span>
+                    {isProtected && (
+                      <Lock className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                    )}
                   </Link>
                 );
               })}
@@ -213,24 +246,34 @@ export function Navbar() {
             <div className="px-4 py-3 space-y-1">
               {navigation.map((item) => {
                 const Icon = item.icon;
+                const isProtected = item.requiresAuth && !user;
+
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
+                    onClick={(e) => {
+                      handleNavClick(e, item.href, item.requiresAuth);
+                      if (!isProtected) setMobileMenuOpen(false);
+                    }}
                     className={cn(
-                      "flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium transition-colors",
+                      "flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium transition-colors relative",
                       isActive(item.href)
                         ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                        : isProtected
+                          ? "text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
                     )}
-                    onClick={() => setMobileMenuOpen(false)}
                   >
                     <Icon className="w-5 h-5" />
                     <span>{item.name}</span>
+                    {isProtected && (
+                      <Lock className="w-4 h-4 text-gray-400 dark:text-gray-500 ml-auto" />
+                    )}
                   </Link>
                 );
               })}
-              
+
               {/* Mobile auth buttons */}
               {!user && (
                 <div className="pt-4 space-y-2 border-t border-gray-200 dark:border-gray-700">
@@ -293,6 +336,44 @@ export function Navbar() {
 
       {/* Spacer to prevent content from hiding behind fixed navbar */}
       <div className="h-16"></div>
+
+      {/* Login Required Dialog */}
+      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-blue-600" />
+              Login Required
+            </DialogTitle>
+            <DialogDescription className="text-left">
+              You need to be logged in to access this feature. Please sign in to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-4">
+            <Button onClick={handleLoginRedirect} className="w-full">
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign In to Continue
+            </Button>
+            <div className="text-center text-sm text-gray-500">
+              Don't have an account?{' '}
+              <Link
+                href="/auth/signup"
+                className="text-blue-600 hover:underline font-medium"
+                onClick={() => setShowLoginDialog(false)}
+              >
+                Sign up here
+              </Link>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowLoginDialog(false)}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
