@@ -240,7 +240,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             "mistral": { "enabled": false, "api_keys": {} },
             "claude": { "enabled": false, "api_keys": {} },
             "llama": { "enabled": false, "api_keys": {} },
-            "deepseek": { "enabled": false, "api_keys": {} }
+            "deepseek": { "enabled": false, "api_keys": {} },
+            "openrouter": { "enabled": false, "api_keys": {} }
           }
         });
       

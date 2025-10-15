@@ -523,18 +523,10 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
     await new Promise(r => setTimeout(r, 300));
     
     try {
+      // Use a stable chat id reference for this send cycle; state may lag
+      let localChatId = chatId;
       // Check if the current provider has an API key
-      if (!hasApiKey(currentProvider)) {
-        // Add an error message
-        const errorMessage: Message = {
-          id: Date.now().toString(),
-          content: `Error: No API key configured for ${getProviderDisplayName(currentProvider)}. Please go to Settings and add your API key.`,
-          role: 'assistant',
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-        return;
-      }
+      const providerHasKey = hasApiKey(currentProvider);
 
       // Create a new chat in the database if this is the first message and user is logged in
       if (messages.length === 0 && user) {
@@ -554,6 +546,7 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
           if (chat) {
             console.log('Created new chat:', chat);
             setChatId(chat.id);
+            localChatId = chat.id;
             
             // Save the first message to the chat with metadata
             const savedUserMessage = await chatService.addMessage(
@@ -575,11 +568,11 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
           console.error('Error creating chat:', error);
           // Continue with the chat even if saving to DB fails
         }
-      } else if (chatId && user) {
+      } else if (localChatId && user) {
         // Save the message to an existing chat
         try {
           const savedUserMessage = await chatService.addMessage(
-            chatId,
+            localChatId,
             user.id,
             'user',
             userMessage,
@@ -711,7 +704,12 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       }
       
       // Make API call using the unified callAI function with adjusted settings
-      const response = await callAI(apiMessages, currentProvider, apiSettings);
+      let response: string;
+      if (providerHasKey) {
+        response = await callAI(apiMessages, currentProvider, apiSettings);
+      } else {
+        response = `Error: No API key configured for ${getProviderDisplayName(currentProvider)}. Please go to Settings and add your API key.`;
+      }
       const endTime = performance.now();
       const responseTime = Math.round(endTime - startTime) / 1000;
 
@@ -731,10 +729,10 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       setTimeout(() => setTypingAnimationComplete(true), 500);
       
       // Save the assistant's response to the database if user is logged in
-      if (chatId && user) {
+      if (localChatId && user) {
         try {
           const savedMessage = await chatService.addMessage(
-            chatId,
+            localChatId,
             user.id,
             'assistant',
             response,
@@ -751,7 +749,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
 
           // Update the chat with the current selected model name
           const modelName = getCurrentModelName();
-          await chatService.updateChat(chatId, user.id, { 
+          await chatService.updateChat(localChatId, user.id, { 
             model: modelName,
             last_message: response.substring(0, 100) + (response.length > 100 ? '...' : '')
           });

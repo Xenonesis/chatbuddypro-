@@ -233,7 +233,8 @@ async function ensureUserProfileExists(userId: string, user: any) {
             "mistral": { "enabled": false, "api_keys": {} },
             "claude": { "enabled": false, "api_keys": {} },
             "llama": { "enabled": false, "api_keys": {} },
-            "deepseek": { "enabled": false, "api_keys": {} }
+            "deepseek": { "enabled": false, "api_keys": {} },
+            "openrouter": { "enabled": false, "api_keys": {} }
           },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

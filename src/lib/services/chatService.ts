@@ -88,7 +88,40 @@ export const chatService = {
           .single();
 
         if (error) {
-          throw createEnhancedError(`Failed to create chat: ${error.message}`, {
+          // Fallback: if schema doesn't have optional columns, retry with minimal insert
+          const msg = (error as any)?.message || '';
+          const missingOptionalCols = msg.includes('column') && (msg.includes('user_email') || msg.includes('user_name') || msg.includes('tags') || msg.includes('is_archived') || msg.includes('message_count'));
+
+          if (missingOptionalCols) {
+            console.warn('Optional columns missing on chats table; retrying minimal insert');
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from('chats')
+              .insert({
+                id: chatId,
+                user_id: userId,
+                title: title.trim(),
+                model: model || '',
+                created_at: now,
+                updated_at: now,
+              })
+              .select('*')
+              .single();
+
+            if (fallbackError) {
+              throw createEnhancedError(`Failed to create chat (fallback): ${fallbackError.message}`, {
+                category: 'database',
+                severity: 'high',
+                userMessage: 'Failed to create new chat. Please try again.',
+                retryable: true,
+                originalError: fallbackError
+              });
+            }
+
+            console.log('Successfully created chat with minimal schema:', chatId);
+            return fallbackData as Chat;
+          }
+
+          throw createEnhancedError(`Failed to create chat: ${msg}`, {
             category: 'database',
             severity: 'high',
             userMessage: 'Failed to create new chat. Please try again.',
