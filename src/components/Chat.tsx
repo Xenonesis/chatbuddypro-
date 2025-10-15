@@ -76,6 +76,11 @@ type Message = {
   error?: Error;
 };
 
+// Helper to set apiKey on a provider settings object without using 'any'
+function withApiKey<T extends { apiKey: string }>(cfg: T, key: string): T {
+  return { ...cfg, apiKey: key };
+}
+
 type ChatProps = {
   initialMessages?: Message[];
   initialTitle?: string;
@@ -118,12 +123,13 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
   useEffect(() => {
     const fetchModels = async () => {
       if (currentProvider !== 'openrouter') return;
-      const apiKey = settings?.openrouter?.apiKey;
+      const apiKey = settings?.openrouter?.apiKey || apiKeys?.openrouter;
       if (!apiKey) {
         setOpenRouterModels([]);
         return;
       }
       setOpenRouterModelsLoading(true);
+      
       try {
         const models = await getOpenRouterModels(apiKey);
         setOpenRouterModels(models);
@@ -134,7 +140,8 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
       }
     };
     fetchModels();
-  }, [currentProvider, settings?.openrouter?.apiKey]);
+  }, [currentProvider, settings?.openrouter?.apiKey, apiKeys?.openrouter]);
+
   const [showProviderMenu, setShowProviderMenu] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
@@ -224,7 +231,7 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
         console.log(`Using default provider from settings: ${defaultProvider}`);
         setCurrentProvider(defaultProvider);
       } else {
-        // Fall back to the first available provider with an API key
+        // Fall back to the first available provider
         console.log(`Default provider not available, using ${availableProvidersList[0]}`);
         setCurrentProvider(availableProvidersList[0]);
       }
@@ -387,10 +394,11 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
   // Check if the current provider has an API key configured
   const hasApiKey = (provider: AIProvider): boolean => {
     // Check settings and environment variables only
-    const settingsHasKey = !!settings[provider]?.apiKey;
+    const settingsHasKey = !!(settings[provider]?.apiKey && settings[provider]?.apiKey.trim());
+    const dbHasKey = !!(apiKeys && apiKeys[provider] && apiKeys[provider].trim());
     const envHasKey = !!process.env[`NEXT_PUBLIC_${provider.toUpperCase()}_API_KEY`];
 
-    return settingsHasKey || envHasKey;
+    return settingsHasKey || dbHasKey || envHasKey;
   };
 
   // Effect to set initial provider - use ref to prevent infinite loops
@@ -638,6 +646,27 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
       // Adjust API settings for coding questions to allow for longer responses
       const apiSettings = {...settings};
 
+      if (!apiSettings[currentProvider]?.apiKey && apiKeys?.[currentProvider]) {
+        apiSettings[currentProvider] = withApiKey(
+          apiSettings[currentProvider],
+          apiKeys[currentProvider] as string
+        ) as typeof apiSettings[typeof currentProvider];
+      }
+
+      if (isCodeQuestion) {
+        // For coding questions, increase the max tokens to allow for complete code examples
+        if (apiSettings[currentProvider]?.maxTokens) {
+          const currentMaxTokens = apiSettings[currentProvider].maxTokens;
+          apiSettings[currentProvider].maxTokens = Math.max(currentMaxTokens, 8000);
+        }
+
+        // Also reduce temperature slightly for more precise code generation
+        if (apiSettings[currentProvider]?.temperature) {
+          const currentTemp = apiSettings[currentProvider].temperature;
+          apiSettings[currentProvider].temperature = Math.min(currentTemp, 0.7);
+        }
+      }
+      
       // Debug: Log the current settings being passed to API
       console.log(`Chat: About to call ${currentProvider} API with settings:`, {
         provider: currentProvider,
