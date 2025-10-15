@@ -161,6 +161,7 @@ export default function Chat({ initialMessages = [], initialTitle = '', initialM
   const [isInputVisible, setIsInputVisible] = useState(true);
   const [lastScrollTop, setLastScrollTop] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -927,6 +928,9 @@ The app will automatically try to fall back to the standard gemini-2.0-flash mod
         setIsInputVisible(false);
       }
       
+      // Toggle scroll-to-bottom button when user is far from bottom
+      setShowScrollToBottom(!isNearBottom && distanceFromBottom > 200);
+      
       // Set scrolling state to track active scrolling
       setIsScrolling(true);
       
@@ -947,6 +951,7 @@ The app will automatically try to fall back to the standard gemini-2.0-flash mod
     };
     
     chatContainer?.addEventListener('scroll', handleScroll);
+    handleScroll();
     
     return () => {
       if (scrollTimeoutRef.current) {
@@ -970,8 +975,6 @@ The app will automatically try to fall back to the standard gemini-2.0-flash mod
       window.removeEventListener('touchstart', handleInteraction);
     };
   }, []);
-
-
 
   // Add regenerate function to re-send the last user message
   const handleRegenerate = async () => {
@@ -1666,11 +1669,22 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
           </Button>
           
           <ApiDiagnostics provider={currentProvider} />
+          <Link href="/settings" className="hidden sm:block">
+            <Button
+              variant="outline"
+              size="icon"
+              className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-200 shadow-sm"
+              title="Open settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       </div>
       
       {/* Messages Area - Add bottom padding to accommodate the fixed input */}
       <div 
+        id="chat-container"
         ref={chatContainerRef}
         className="flex-1 overflow-y-auto px-2 sm:px-4 bg-gradient-to-b from-gray-50 to-white dark:from-slate-900 dark:to-slate-950 chat-scroll"
         style={{ paddingBottom: "calc(var(--input-height, 90px) + 20px)" }}
@@ -1757,9 +1771,14 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
                   <p className="text-xs text-slate-500 dark:text-slate-500 mb-3">Try asking:</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {[
-                      "Explain quantum computing",
-                      "Write a short poem",
-                      "Help with my resume"
+                      "Summarize this article",
+                      "Write a short resume summary",
+                      "Explain this error message",
+                      "Create a study plan for JavaScript",
+                      "Draft a professional email",
+                      "Generate a SQL query to find top customers",
+                      "Refactor this function for readability",
+                      "Design a Tailwind card component"
                     ].map((suggestion, index) => (
                       <button
                         key={index}
@@ -1917,7 +1936,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
             <div className="mt-2 flex items-center px-3 py-2 text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 rounded-md">
               <MicOff className="h-4 w-4 mr-2" />
               <span className="font-medium">
-                Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.
+                Your browser does not support voice input. Please try Chrome, Edge, or Safari.
               </span>
             </div>
           )}
@@ -1971,6 +1990,16 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
         </button>
       )}
 
+      {showScrollToBottom && (
+        <button
+          onClick={() => scrollToBottom('smooth')}
+          className="fixed bottom-24 right-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-full p-3 shadow-md hover:shadow-lg transition-all z-30"
+          aria-label="Scroll to bottom"
+        >
+          <ArrowDown className="h-5 w-5" />
+        </button>
+      )}
+      
       {/* Voice input listening indicator */}
       {isListening && settings.voiceInputSettings.enabled && (
         <div className="absolute bottom-24 left-0 right-0 mx-auto w-fit px-4 py-2 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800 z-10">
@@ -2026,7 +2055,7 @@ Remember: It's better to provide a COMPLETE solution that fully addresses the us
         <div className="absolute bottom-24 left-0 right-0 mx-auto w-fit px-4 py-2 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800 z-10">
           <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center">
             <AlertCircle className="h-4 w-4 mr-2" />
-            Your browser doesn't support voice input. Please try Chrome, Edge, or Safari.
+            Your browser does not support voice input. Please try Chrome, Edge, or Safari.
           </p>
         </div>
       )}
